@@ -1,0 +1,155 @@
+/* hkai 主樣式（由 header.php 內嵌樣式遷移） */
+
+/* 版面容器 */
+body {
+    font-family: system-ui, sans-serif;
+    margin: 0;
+    background: #11141d;
+    color: #e2e8f0;
+    display: flex;
+    height: 100vh;
+    font-size:10pt;
+}
+
+/* 狀態列 */
+#statusRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+#statusDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #64748b;
+}
+#statusDot.stable {
+    background: #22c55e;
+}
+#statusDot.running {
+    background: #f59e0b;
+}
+#statusDot.offline {
+    background: #ef4444;
+}
+
+/* agent 控制列 */
+#agentCtlRow {
+    display: flex;
+    gap: 8px;
+}
+.ctlBtn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #334155;
+    color: #e2e8f0;
+    cursor: pointer;
+    font-size: 12px;
+}
+.ctlBtn:hover {
+    background: #475569;
+}
+.ctlBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 手動啟動提示區 */
+#startHint {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #f59e0b;
+}
+#startHint.visible {
+    display: flex;
+}
+#startHint .path {
+    color: #e2e8f0;
+    word-break: break-all;
+    font-family: monospace;
+}
+
+/* ============================================
+   頂部 bar 共用幾何（左側 .sc_panel_header ×2 ＋ 主區 .sc_topbar——三條同一水平線）
+   固定高度＝不隨內容行高浮動，底線必定對齊；各自規則只留專屬樣式
+   底色／底線跟隨 sidebar 面板（#151926／#272e40——與側欄同一套）
+   ============================================ */
+.sc_panel_header,
+.sc_topbar {
+    height: 44px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #272e40;
+    background: #151926;
+    box-sizing: border-box;
+}
+
+/* 主區 */
+.sc_workspace {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 720px;
+    position:relative;
+}
+
+/* 全域任務狀態指示（body data-status 由 jsmods 切換——::after 內容隨狀態變換） */
+#globalStatus {
+    font-size: 12px;
+    white-space: nowrap;
+}
+body[data-status="working"] #globalStatus {
+    color: #f59e0b;
+}
+body[data-status="working"] #globalStatus::after {
+    content: "⇄ 處理中";
+}
+body[data-status="idle"] #globalStatus {
+    color: #64748b;
+}
+body[data-status="idle"] #globalStatus::after {
+    content: "閒置";
+}
+
+/* ============================================
+   全站捲軸統一（標準＝.sc_thread__viewport——透明軌＋深色拇指）
+   一處設定——所有捲動容器（訊息／列表／modal／settings／輸入框／泡泡）自動跟
+   ============================================ */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #272e40 transparent;
+}
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+    background: #272e40;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background: #272e40;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+}
+
+/* 其他 */
+pre {
+    background: #0c0e15;
+    padding: 8px;
+    border-radius: 6px;
+    overflow-x: auto;
+}

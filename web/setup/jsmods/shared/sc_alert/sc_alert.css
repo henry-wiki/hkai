@@ -1,0 +1,381 @@
+/* ============================================
+   sc_alert.css —— 通用訊息彈窗（Alert Modal ＋ Toast）
+   配對：同目錄 sc_alert.js
+   結構：sc_ 前綴＋snake（sc_alert_*／sc_toast_*；狀態用 data-state——同 sc_btn／sc_form／sc_empty_state 慣例）
+   類型（data-type）：error／warning／success／primary／dark／light（色票跟 app——紅／黃／綠／紫／灰）
+   底色幾何跟 sc_modal.css（#1e293b／#334155／radius 8）；z-index：alert 1200、toast 1300
+   按鈕：幾何用 shared sc_btn；只補 sc_alert_confirm 嘅類型色
+   ============================================ */
+
+/* 開啟期間鎖頁面捲動（html.sc_alert_lock——由 sc_alert.js 加／除） */
+html.sc_alert_lock {
+    overflow: hidden;
+}
+
+/* ==== 遮罩容器（fixed 置中；建立即 flex——進場靠 .visible 過渡） ==== */
+.sc_alert_overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    transition: opacity .18s ease;
+}
+.sc_alert_overlay.visible {
+    opacity: 1;
+}
+
+/* 半透明底（click 關閉——底色／模糊同 modal__mask） */
+.sc_alert_mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(4, 5, 8, 0.62);
+    backdrop-filter: blur(3px);
+}
+
+/* ==== 中央視窗（卡片——寬度由 inline max-width；進場上浮） ==== */
+.sc_alert_window {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    transform: translateY(14px);
+    transition: transform .2s ease;
+}
+.sc_alert_overlay.visible .sc_alert_window {
+    transform: none;
+}
+
+/* 頂部主色條（依類型換色——一眼分辦類型） */
+.sc_alert_window::before {
+    content: "";
+    display: block;
+    height: 3px;
+    background: linear-gradient(90deg, var(--alert_accent), transparent 160%);
+}
+
+/* ==== 類型主色（套用到指示條／icon／倒數／確認鈕——modal 與 toast 共用） ==== */
+.sc_alert_overlay[data-type="error"],
+.sc_toast[data-type="error"] {
+    --alert_accent: #f87171;
+    --alert_accent_soft: rgba(248, 113, 113, 0.12);
+}
+.sc_alert_overlay[data-type="warning"],
+.sc_toast[data-type="warning"] {
+    --alert_accent: #fbbf24;
+    --alert_accent_soft: rgba(251, 191, 36, 0.14);
+}
+.sc_alert_overlay[data-type="success"],
+.sc_toast[data-type="success"] {
+    --alert_accent: #34d399;
+    --alert_accent_soft: rgba(52, 211, 153, 0.12);
+}
+.sc_alert_overlay[data-type="primary"],
+.sc_toast[data-type="primary"] {
+    --alert_accent: #7c8cff;
+    --alert_accent_soft: rgba(124, 140, 255, 0.12);
+}
+.sc_alert_overlay[data-type="dark"],
+.sc_toast[data-type="dark"] {
+    --alert_accent: #94a3b8;
+    --alert_accent_soft: rgba(148, 163, 184, 0.12);
+}
+.sc_alert_overlay[data-type="light"],
+.sc_toast[data-type="light"] {
+    --alert_accent: #cbd5e1;
+    --alert_accent_soft: rgba(203, 213, 225, 0.12);
+}
+
+/* ==== 標頭（icon ＋ 標題／訊息 ＋ 關閉鈕） ==== */
+.sc_alert_header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 20px 18px 4px 20px;
+}
+
+/* 類型圖示（軟底＋主色） */
+.sc_alert_icon {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--alert_accent_soft);
+    color: var(--alert_accent);
+}
+.sc_alert_icon svg {
+    width: 21px;
+    height: 21px;
+    display: block;
+}
+
+/* 標題／訊息群組（flex:1——佔滿中間） */
+.sc_alert_heading {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.sc_alert_title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.4;
+}
+.sc_alert_message {
+    margin-top: 6px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #94a3b8;
+    word-break: break-word;
+}
+
+/* 關閉鈕（幾何同 modal__close） */
+.sc_alert_close {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 16px;
+    line-height: 1;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sc_alert_close:hover {
+    background: #334155;
+    color: #f8fafc;
+}
+
+/* ==== 程式輸出區塊（traceback／fatal——深底等寬、自動判定或 code:true） ==== */
+.sc_alert_code {
+    margin: 8px 0 2px;
+    padding: 10px 12px;
+    max-height: 240px;
+    overflow: auto;
+    background: #0D1016;
+    color: #dbe2ec;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.sc_alert_code::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.sc_alert_code::-webkit-scrollbar-thumb {
+    background: #3a3a3a;
+    border-radius: 4px;
+}
+
+/* ==== 底列（取消／確定——按鈕幾何用 shared button；只補顏色） ==== */
+.sc_alert_footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 16px 20px 18px;
+}
+.sc_alert_confirm {
+    background: var(--alert_accent);
+    border: none;
+    color: #0d0e12;
+    font-weight: 600;
+}
+.sc_alert_confirm:hover {
+    filter: brightness(1.08);
+}
+
+/* ==== 自動關閉倒數列（auto_close 開才出） ==== */
+.sc_alert_timer {
+    height: 3px;
+    margin: 0 20px 14px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+}
+.sc_alert_timer_bar {
+    display: block;
+    height: 100%;
+    width: 100%;
+    border-radius: 2px;
+    background: var(--alert_accent);
+    opacity: .8;
+}
+.sc_alert_timer_bar[data-state="run"] {
+    width: 0;
+    transition-property: width;
+    transition-timing-function: linear;
+}
+
+/* ============================================
+   Toast（右上角堆疊——獨立 block：toast）
+   ============================================ */
+
+/* 堆疊容器（fixed 右上；JS 首次使用時建立） */
+.sc_toast_stack {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1300;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+}
+
+/* 單則 toast（左側主色邊＋卡片底；進場滑入） */
+.sc_toast {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 30px 14px 14px;
+    overflow: hidden;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-left: 3px solid var(--alert_accent);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    animation: sc_toast_in .22s ease both;
+}
+.sc_toast[data-state="out"] {
+    animation: sc_toast_out .2s ease both;
+}
+.sc_toast_icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: var(--alert_accent);
+}
+.sc_toast_icon svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+.sc_toast_text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.sc_toast_title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.4;
+}
+.sc_toast_message {
+    margin-top: 2px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: #94a3b8;
+    word-break: break-word;
+}
+.sc_toast_close {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 14px;
+    line-height: 1;
+    padding: 4px;
+    cursor: pointer;
+}
+.sc_toast_close:hover {
+    color: #f8fafc;
+}
+
+/* 倒數進度條（移入暫停——sc_alert.js 控制 animationPlayState） */
+.sc_toast_bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: var(--alert_accent);
+    opacity: .8;
+    animation-name: sc_toast_bar_run;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+}
+.sc_toast:hover .sc_toast_bar {
+    animation-play-state: paused;
+}
+
+/* Toast 動畫（進場／退場／倒數） */
+@keyframes sc_toast_in {
+    from {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes sc_toast_out {
+    to {
+        opacity: 0;
+        transform: translateX(24px);
+    }
+}
+@keyframes sc_toast_bar_run {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+/* ==== 其他 ==== */
+
+/* 系統減少動態偏好 → 全部過渡／動畫停用 */
+@media (prefers-reduced-motion: reduce) {
+    .sc_alert_overlay,
+    .sc_alert_window,
+    .sc_alert_timer_bar,
+    .toast,
+    .sc_toast_bar {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* 窄屏（<520px）→ modal 貼底、toast 貼底全寬 */
+@media (max-width: 520px) {
+    .sc_alert_overlay {
+        padding: 14px;
+        align-items: flex-end;
+    }
+    .sc_alert_window {
+        max-width: 100% !important;
+    }
+    .sc_toast_stack {
+        top: auto;
+        bottom: 14px;
+        right: 14px;
+        left: 14px;
+        width: auto;
+    }
+}

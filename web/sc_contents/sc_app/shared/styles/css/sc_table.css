@@ -1,0 +1,13 @@
+/* ============================================
+   sc_table.css —— 通用表格元件（sc_ 前綴，避免 Bootstrap 衝突）
+   用法：全域自動載入（group "*"）；配合 <table class="sc_table">
+   基礎只做結構歸一（滿寬＋合併邊框）——padding／顏色／欄寬由使用端加
+   ============================================ */
+
+/* 結構歸一：滿寬、合併邊框（消除瀏覽器默認 border-spacing 空隙） */
+.sc_table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sc_table td {padding:3px;}

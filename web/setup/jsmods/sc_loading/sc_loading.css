@@ -1,0 +1,232 @@
+/****************************************hourglass*********************************************************/
+@keyframes lds-hourglass {
+  0% {
+    transform: rotate(0);
+    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19)
+  }
+  50% {
+    transform: rotate(900deg);
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1)
+  }
+  100% {
+    transform: rotate(1800deg)
+  }
+}
+
+
+@-webkit-keyframes lds-hourglass {
+  0% {
+    -webkit-transform: rotate(0);
+    -webkit-animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19)
+  }
+  50% {
+    -webkit-transform: rotate(900deg);
+    -webkit-animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1)
+  }
+  100% {
+    -webkit-transform: rotate(1800deg)
+  }
+}
+
+
+.lds-hourglass:after {
+  content: " ";
+  position: absolute;
+  margin: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: inline-block;
+  background: center center no-repeat;
+  background-size: cover;
+  width: 0;
+  height: 0;
+  background: none;
+  border-radius: 50%;
+  border: 10px solid;
+  border-color: #A3D7FF transparent #A3D7FF transparent;
+  animation: lds-hourglass 2s linear infinite;
+  -webkit-animation: lds-hourglass 2s linear infinite;
+}
+
+
+div.loading_in_corner div.loading_wrapper.pause .lds-hourglass:after {
+	animation-play-state: paused;
+	-webkit-animation-play-state: paused;
+}
+/****************************************hourglass*********************************************************/
+
+
+
+
+.page_loading {
+	position:fixed;left:0px;top:0px;bottom:0px;right:0px;margin:auto;
+	display: 	block;
+	width: 		100%;
+	height: 	100%;
+	z-index:999999;
+}
+
+/* 整頁遮罩的底色層——顏色／不透明度由 start_page_loading(settings.mask) 覆寫；spinner 唔受影響 */
+.page_loading .page_bgmask {
+	position:absolute;left:0px;top:0px;bottom:0px;right:0px;margin:auto;
+	display: 	block;
+	width: 		100%;
+	height: 	100%;
+	background: rgba(200,220,240,.3);
+}
+.page_loading:after {
+	position:absolute;left:0px;top:0px;bottom:0px;right:0px;margin:auto;
+	content: " ";
+	display: 		block;
+	width: 			90px;
+	height: 		90px;
+	border-radius: 	50%;
+	border: 		1px solid #476180;
+	border-color: 	#476180 transparent #476180 transparent;
+	animation: 		lds-dual-ring 1.5s linear infinite;
+}
+@keyframes lds-dual-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/****************************************dual-ring*********************************************************/
+@-webkit-keyframes lds-dual-ring {
+  0% {
+    -webkit-transform: rotate(0);
+    transform: rotate(0);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+@keyframes lds-dual-ring {
+  0% {
+    -webkit-transform: rotate(0);
+    transform: rotate(0);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+.lds-dual-ring {
+  position: relative;
+}
+.lds-dual-ring div {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0px;
+  left: 00px;
+  border-radius: 50%;
+  border: 3px solid #000;
+  border-color: #4F6273 transparent #4F6273 transparent;
+  -webkit-animation: lds-dual-ring 1.3s linear infinite;
+  animation: lds-dual-ring 0.8s linear infinite;
+}
+/****************************************facebook*********************************************************/
+
+
+.loading_mask.relative {position:relative;}
+.loading_mask.autosize {width:30px;height:30px;}
+.loading_mask.nobg {background:none;}
+.loading_mask {display:block;position:absolute;left:0px;top:0px;width:100%;height:100%;z-index:99;}
+
+
+
+
+.loading_mask .bgmask {
+	content: '';
+	position: absolute;top:0px;left:0px;
+	width:100%;height:100%;
+	background:rgba(255,255,255,.5);
+
+}
+.loading_mask .spinner {
+	content: '';
+	box-sizing: border-box;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 20px;
+	height: 20px;
+	margin-top: -10px;
+	margin-left: -10px;
+	border-radius: 50%;
+	border: 2px solid #ccc;
+	border-top-color: #333;
+	animation: loading_spin .6s linear infinite;
+
+}
+/* 載入中標籤（標準——圖示在文字左邊、FA 內建 spin；浮在遮罩正中央） */
+.loading_mask .loading_label {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 14px;
+	border-radius: 20px;
+	background: rgba(15, 23, 42, .88);
+	color: #e2e8f0;
+	font-size: 12px;
+	letter-spacing: .08em;
+	white-space: nowrap;
+}
+.loading_mask .loading_label .fa-solid {
+	animation: fa-spin 2s linear infinite;
+}
+.loading_mask .bgmask.dark {
+	background:rgba(0,0,0,.5);
+}
+
+
+.loading_mask .bgmask.hpos_top {
+}
+
+
+@keyframes loading_spin {
+  to {transform: rotate(360deg);}
+}
+
+
+html .body_loading {
+	position:fixed;left:0px;top:0px;bottom:0px;right:0px;margin:auto;
+	display: 	block;
+	width: 		100%;
+	height: 	100%;
+	background: rgba(255,255,255,1);
+	z-index:999999;
+}
+html .body_loading:after {
+	position:absolute;left:0px;top:0px;bottom:0px;right:0px;margin:auto;
+	content: " ";
+	display: 		block;
+	width: 			90px;
+	height: 		90px;
+	border-radius: 	50%;
+	border: 		1px solid #476180;
+	border-color: 	#476180 transparent #476180 transparent;
+	animation: 		body_loading 1.5s linear infinite;
+}
+html.cdnfilesloaded .body_loading {display:none !important;}
+
+
+@keyframes body_loading {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

@@ -1,0 +1,425 @@
+/* sc_ai_chats prompt 樣式（自 sc_ai_chats.css 拆出——Composer 浮層（等待列＋輸入盒＋對話選項）） */
+/* 載入：plugin __init__.php asset 註冊（緊隨 sc_ai_chats.css——覆寫順序不變） */
+/* 2026-09-29 跟 reference3「seamless composer」：浮層絕對定位（漸層做唯一邊界、冇外框）＋盒內 grid（輸入上、mode 左下、send 右下） */
+
+/* ============================================
+   Composer 浮層（絕對定位釘喺 .sc_thread 底——上透下實漸層；pointer-events 交子元素）
+   ============================================ */
+.sc_composer {
+    position: absolute;
+    z-index: 8;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 74px 16px 14px;
+    background: linear-gradient(to bottom, rgba(17,20,29,0) 0%, rgba(17,20,29,.08) 20%, rgba(17,20,29,.62) 52%, rgba(17,20,29,.97) 100%);
+    pointer-events: none;
+}
+.sc_composer > * {
+    pointer-events: auto;
+}
+
+/* 底罩（半透明漸變——首 100px：0→.6；之後：.6→.9；掠過嘅訊息透出但唔模糊；零 backdrop-filter） */
+.sc_composer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgba(17,20,29,0) 0, rgba(17,20,29,.6) 100px, rgba(17,20,29,.9) 100%);
+}
+
+/* 底罩（半透明漸變——首 100px：0→.9；之後定值 .9；掠過嘅訊息透出但唔模糊；零 backdrop-filter） */
+.sc_composer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgba(17,20,29,0) 0, rgba(17,20,29,.9) 100px, rgba(17,20,29,.9) 100%);
+}
+
+/* ============================================
+   緊急槽：等待列（我方設計——一框到底＋分隔線；唔跟 reference3 嘅 strip）
+   2026-10-05（晚）：容器＝單一框（深底半透＋blur）；item 無自身框／底——分隔線隔開
+   ============================================ */
+.sc_composer__queue {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+/* 等待列（佇列——未開始回覆嘅訊息；一框、內部分隔線——同 task card 同一區） */
+.sc_composer__queue_list {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(17, 20, 29, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    overflow: hidden;
+}
+.sc_composer__queue_list[hidden] {
+    display: none;
+}
+.queue_item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 10px;
+}
+/* 分隔線（item 之間——item 自身無框） */
+.queue_item + .queue_item {
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+.queue_text {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #eaecf4;
+    font-size: 12px;
+}
+.queue_cancel {
+    flex: 0 0 auto;
+    border: none;
+    background: transparent;
+    color: #8496b5;
+    font-size: 13px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.queue_cancel:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+/* 等待列工具列（chips 下面——留位，按鈕後續加入；not remove，maybe useful in future） */
+.sc_composer__queue_toolbar {
+}
+
+
+/* ============================================
+   上工具列（盒上一行——附件／加入內容／最頂／最底／清除排隊／靈感問題；跟 reference3 prompt-toolbar）
+   ============================================ */
+.sc_composer__prompt_toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px;
+    width: 100%;
+    min-height: 29px;
+    margin: 0 0 3px;
+}
+/* 工具掣（透明底、hover 藍灰——跟 reference3 tool-button） */
+.sc_composer__tool_button {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 5px;
+    height: 27px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 4px;
+    color: #8496b5;
+    background: transparent;
+    font-size: 9.5px;
+    font-weight: 680;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.sc_composer__tool_button:hover,
+.sc_composer__tool_button:focus-visible {
+    color: #d6e2f8;
+    background: rgba(53,73,112,.46);
+    outline: none;
+}
+.sc_composer__tool_button i {
+    font-size: 12px;
+    color: #8299dc;
+}
+/* 靈感問題（紫——跟 reference3 is-spark） */
+.sc_composer__tool_button--spark {
+    color: #baa9f2;
+}
+.sc_composer__tool_button--spark:hover {
+    color: #e1d8ff;
+    background: rgba(99,75,157,.3);
+}
+
+/* agent 選擇（工具列右側——跟 mode 鈕同款 segmented 底線；margin-left auto 右貼） */
+.sc_composer__toolbar_right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+}
+.sc_composer__agent_tabs {
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.sc_composer__agent_tabs .sc_btn {
+    position: relative;
+    height: 25px;
+    min-width: 40px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 3px;
+    color: #7f90aa;
+    background: transparent;
+    box-shadow: none;
+    font-size: 10px;
+}
+.sc_composer__agent_tabs .sc_btn:hover {
+    color: #c8d5e9;
+    background: rgba(70,91,130,.28);
+}
+.sc_composer__agent_tabs .sc_btn--active {
+    color: #bfcfff;
+    background: transparent;
+    box-shadow: none;
+}
+.sc_composer__agent_tabs .sc_btn--active::after {
+    content: "";
+    position: absolute;
+    right: 7px;
+    bottom: 1px;
+    left: 7px;
+    height: 2px;
+    background: #7390ff;
+}
+
+/* ============================================
+   輸入盒（seamless：冇框、冇圓角；grid 底行＝leading／mode 左下、send 右下）
+   ============================================ */
+.sc_composer__editor {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        "attach  attach  attach"
+        "field   field   field"
+        "leading options send";
+    align-items: end;
+    width: 100%;
+    min-height: 83px;
+    padding: 8px 8px 7px;
+    background: linear-gradient(120deg, rgba(30,41,59,.7), rgba(19,28,44,.52));
+    box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+.sc_composer__editor:focus-within {
+    box-shadow: 0 10px 30px rgba(0,0,0,.19), inset 0 1px rgba(137,159,227,.15);
+}
+/* 附件暫存區 */
+.sc_composer__attachments {
+    grid-area: attach;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 8px 2px;
+}
+.sc_composer__attachments[hidden] {
+    display: none;
+}
+/* 文字輸入主體 */
+.sc_composer__field {
+    grid-area: field;
+}
+#sc_input {
+    width: 100%;
+    min-height: 42px;
+    max-height: 180px;
+    padding: 8px 8px 6px;
+    resize: none;
+    background: none;
+    border: none;
+    outline: none;
+    color: #dce5f3;
+    font: inherit;
+    font-size: 12px;
+    line-height: 19px;
+}
+#sc_input::placeholder {
+    color: #71839f;
+}
+/* 底部工具列（display:contents——leading／trailing 直接入盒 grid，唔再係獨立一行） */
+.sc_composer__toolbar {
+    display: contents;
+}
+.sc_composer__tools_leading {
+    grid-area: leading;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.sc_composer__tools_trailing {
+    grid-area: send;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+/* send／stop 主按鈕（跟 reference3：藍底方角小掣 33×27） */
+.sc_composer__send_group .sc_btn {
+    width: 33px;
+    height: 27px;
+    padding: 0;
+    border-radius: 3px;
+}
+.sc_composer__send_group .sc_btn--primary {
+    color: #edf2ff;
+    background: #4f6eea;
+    box-shadow: none;
+}
+.sc_composer__send_group .sc_btn--primary:hover {
+    background: #617fff;
+}
+/* ============================================
+   mini loading（按鈕 click 等待期——純 CSS 轉圈；JS 加／除 .loading；藏內容、蓋轉圈）
+   ============================================ */
+[data-action='stop'].loading,
+.queue_cancel.loading {
+    position: relative;
+    pointer-events: none;
+}
+[data-action='stop'].loading > *,
+.queue_cancel.loading {
+    visibility: hidden;
+}
+[data-action='stop'].loading::after,
+.queue_cancel.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    visibility: visible;
+    animation: sc_composer_mini_loading 0.7s linear infinite;
+}
+@keyframes sc_composer_mini_loading {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* 工具掣（只限工具列內嘅 data-action；唔可以裸 [data-action]——會誤中 generate_sample 等文字掣） */
+.sc_composer__tools_leading [data-action],
+.sc_composer__tools_trailing [data-action] {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    color: #8496b5;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sc_composer__tools_leading [data-action]:hover,
+.sc_composer__tools_trailing [data-action]:hover {
+    background: rgba(53,73,112,.46);
+    color: #d6e2f8;
+}
+.sc_composer__badge {
+    font-size: 11px;
+    color: #6d8cff;
+}
+/* chip（附件預覽） */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 240px;
+    min-width: 0;
+    background: #1a2030;
+    border: 1px solid #2a2c33;
+    border-radius: 7px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #9aa0ab;
+}
+.chip small { color: #6b7078; }
+.chip button { color: #6b7078; font-size: 10px; padding: 2px; flex: none; }
+.chip button:hover { color: #f87171; }
+/* 對話選項（mode 鈕＋模型顯示＋sample——盒內底行；跟 reference3 composer-bottom） */
+.sc_composer__options {
+    grid-area: options;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    min-width: 0;
+    padding: 4px 2px 0;
+    font-size: 12px;
+    color: #687a96;
+}
+/* mode 鈕（segmented——透明底；active 出底線，跟 reference3 mode-switch） */
+.sc_composer__mode_tabs {
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+.sc_composer__mode_tabs .sc_btn {
+    position: relative;
+    height: 25px;
+    min-width: 40px;
+    padding: 0 7px;
+    border: 0;
+    border-radius: 3px;
+    color: #7f90aa;
+    background: transparent;
+    box-shadow: none;
+    font-size: 10px;
+}
+.sc_composer__mode_tabs .sc_btn:hover {
+    color: #c8d5e9;
+    background: rgba(70,91,130,.28);
+}
+.sc_composer__mode_tabs .sc_btn--active {
+    color: #bfcfff;
+    background: transparent;
+    box-shadow: none;
+}
+.sc_composer__mode_tabs .sc_btn--active::after {
+    content: "";
+    position: absolute;
+    right: 7px;
+    bottom: 1px;
+    left: 7px;
+    height: 2px;
+    background: #7390ff;
+}
+/* 模型顯示（盒內底行——status 文字樣式；蓋 providers 嘅框） */
+.sc_composer__options .sc_composer__model_picker {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #687a96;
+    font-size: 9px;
+    cursor: pointer;
+}
+.sc_composer__options .sc_composer__model_picker:hover {
+    background: transparent;
+    color: #b9c8e0;
+}
+/* composer 錯誤（錯 sid——對話查唔到；簡單紅字——字色＝app 錯誤紅；文字置中 h+v） */
+.sc_composer__error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    color: #ef4444;
+}

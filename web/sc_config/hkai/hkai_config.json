@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "doc": "hkai 靜態設定 SSOT（PHP/Python 共用）。名稱不含路徑——由 storage_dir 拼接。daemon_engine＝現行引擎（值＝同名設定組——aider_daemon／goose_daemon）。chat_mode＝各引擎組內（UI 模條目 {mode／description}——key 在＝UI 出嗰粒掣、順序＝寫嘅順序；一個模多個候選嗰陣：mode＝默認、description 列明候選）——引擎各讀自己嗰組；UI 讀現行引擎（daemon_engine）。server_settings＝server 定址（host／port——runtime.json 為動態覆蓋層：儲存／測試／啟動時寫入；PHP 與 Python 兩端同讀此節）。instructions＝默認文本 item（system_prompt／system_env——storage 工作檔相對名、manifest 為出廠默認）。 外部／私隱路徑唔住此檔（見 sc_config/assets/app.php env_file＋.env）。",
+  "filenames": {
+    "heartbeat": "aider_daemon.heartbeat",
+    "conf": "runtime.json",
+    "process_list": "process_status/process_list.jsonl",
+    "system_env_markdown": "instructions/system_env.md",
+    "server_status": "server_status.json"
+  },
+  "folders": {
+    "messages": "messages/polling",
+    "archive": "messages/archive",
+    "history": "localdb/history",
+    "process_status": "process_status",
+    "bridge": "bridge"
+  },
+  "instructions": {
+    "system_prompt": {
+      "path": "instructions/system_prompt.md",
+      "editable": 1
+    },
+    "system_env": {
+      "path": "instructions/system_env.md",
+      "editable": 0
+    }
+  },
+  "chat_engine": [
+    "goose_daemon",
+    "aider_daemon"
+  ],
+  "aider_daemon": {
+    "heartbeat_check_interval": 1.0,
+    "heartbeat_self_kill_sec": 30,
+    "idle_timeout_sec": 900,
+    "max_workers": 3,
+    "request_timeout_sec": 180,
+    "summarize_token_abort": 60000,
+    "warm_workers": true,
+    "warm_prewarm_workers": 1,
+    "warm_idle_recycle_sec": 60,
+    "chat_mode": {
+      "ask": {
+        "mode": "ask",
+        "description": "問答（唔改檔）"
+      },
+      "architect": {
+        "mode": "architect",
+        "description": "先提案、後執行"
+      },
+      "build": {
+        "mode": "code",
+        "description": "直接改檔"
+      }
+    }
+  },
+  "goose_daemon": {
+    "heartbeat_check_interval": 1.0,
+    "heartbeat_self_kill_sec": 30,
+    "idle_timeout_sec": 900,
+    "max_workers": 3,
+    "child_memory_limit_mb": 3072,
+    "warm_workers": false,
+    "warm_prewarm_workers": 1,
+    "warm_idle_recycle_sec": 60,
+    "transport": "acp",
+    "chat_mode": {
+      "ask": {
+        "mode": "chat",
+        "description": "純問答、零工具"
+      },
+      "plan": {
+        "mode": "smart_approve",
+        "description": "default is : smart_approve\r\napprove : 每次工具都問（出卡）\r\nsmart_approve : 只問敏感工具"
+      },
+      "build": {
+        "mode": "auto",
+        "description": "工具全自動"
+      }
+    }
+  },
+  "server_settings": {
+    "host": "127.0.0.1",
+    "port": 8000
+  },
+  "stream": {
+    "enabled": true,
+    "base_url": "http://127.0.0.1:8000",
+    "allowed_origins": [
+      "http://sc-hkai.lab:8426",
+      "http://127.0.0.1:*"
+    ]
+  }
+}

@@ -1,0 +1,622 @@
+
+.sc_flex_row.detail_product_code {
+	align-items:center;
+
+}
+.sc_flex_row.detail_product_code .product_code {
+	width:100%;
+	overflow:hidden;
+	white-space:nowrap;
+	text-overflow:ellipsis;
+
+	padding-right:9px;
+}
+
+.sc_flex_row.detail_product_code>.search_btn {}
+
+
+
+
+
+
+.product_thumblist {position:absolute;left:0px;top:0px;width:100%;height:100%;}
+
+/* ============ 專案表單（新增／編輯 modal——body 版式：區塊＋modal-form__row） ============ */
+/* 區塊（project-section——標題＋說明＋該區欄位列） */
+.project-section + .project-section {
+	margin-top: 26px;
+	padding-top: 24px;
+	border-top: 1px solid var(--modal_line_soft);
+}
+.project-section__heading {
+	margin-bottom: 12px;
+}
+.project-section__title {
+	font-size: 13.5px;
+	font-weight: 700;
+	color: var(--modal_text);
+}
+.project-section__description {
+	margin-top: 4px;
+	font-size: 11.5px;
+	color: var(--modal_text_dim);
+}
+/* 必填標記 */
+.form_required {
+	color: var(--modal_danger);
+	margin-left: 4px;
+}
+/* 欄位說明（modal-form__row 內提示） */
+.form_sub {
+	font-size: 10.5px;
+	color: var(--modal_text_dim);
+	margin-top: 6px;
+}
+/* 提示狀態色（路徑解析結果——sc_ai_projects fetch_project_setting） */
+.form_sub.ok {
+	color: var(--modal_ok);
+}
+.form_sub.bad {
+	color: var(--modal_danger);
+}
+/* 行內輸入＋按鈕列（slug 輸入＋產生按鈕） */
+.form_inline {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.form_inline .modal__input {
+	flex: 1;
+}
+.project_modal_btn {
+	border: none;
+	background: var(--modal_bg3);
+	color: var(--modal_text_mute);
+	font-size: 12.5px;
+	font-weight: 600;
+	padding: 8px 16px;
+	cursor: pointer;
+	transition: background 0.12s ease, color 0.12s ease;
+}
+.project_modal_btn:hover {
+	background: var(--modal_bg_active);
+	color: var(--modal_text);
+}
+.project_modal_btn.primary {
+	background: var(--modal_accent);
+	color: #ffffff;
+	font-weight: 700;
+}
+.project_modal_btn.primary:hover {
+	background: var(--modal_accent_hi);
+}
+.project_modal_btn.primary:disabled {
+	opacity: .45;
+	cursor: not-allowed;
+}
+.project_modal_btn.success {
+	background: var(--modal_ok_dim);
+	color: var(--modal_ok);
+}
+.project_modal_btn.success:hover {
+	background: rgba(0, 210, 106, 0.22);
+}
+.project_modal_btn.danger {
+	background: var(--modal_danger_dim);
+	color: var(--modal_danger);
+}
+.project_modal_btn.danger:hover {
+	background: rgba(255, 71, 87, 0.22);
+}
+
+/* content 自捲 override（基座 content 交給 content-main 捲——專案表單沿用 content 捲） */
+[data-modal='project_modal'] .modal__content {
+	overflow-y: auto;
+}
+
+/* modal footer 左右分欄 */
+.project_modal__footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	width: 100%;
+}
+.project_modal__footer_left {
+	flex: 1;
+}
+.project_modal__footer_right {
+	display: flex;
+	gap: 8px;
+}
+
+/* textarea */
+.form_textarea {
+	resize: vertical;
+	min-height: 56px;
+}
+
+/* [ NEW ] 表單 loading 模式（fetch_project_setting 期間——半透明遮罩） */
+.form_loading {
+	position: relative;
+	pointer-events: none;
+	opacity: 0.5;
+	transition: opacity 0.2s ease;
+}
+.form_loading::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: transparent;
+	z-index: 1;
+}
+
+/* ============ Modal tabs（表單 Form / Setup） ============ */
+.modal__tabs {
+	display: flex;
+	gap: 2px;
+	padding: 0 14px;
+	border-bottom: 1px solid var(--modal_line);
+}
+.modal_tab {
+	border: none;
+	background: transparent;
+	color: var(--modal_text_dim);
+	font-size: 12.5px;
+	font-weight: 600;
+	padding: 9px 14px 10px;
+	cursor: pointer;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+.modal_tab:hover {
+	color: var(--modal_text);
+}
+.modal_tab.on {
+	color: var(--modal_text);
+	border-bottom-color: var(--modal_accent);
+}
+.modal_pane {
+	display: none;
+}
+.modal_pane.on {
+	display: block;
+}
+
+/* ============ 檢查卡（check_item——Git／診斷共用） ============ */
+.check_group {
+	font-size: 10px;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+	color: var(--modal_text_dim);
+	margin: 14px 0 8px;
+}
+.check_item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px;
+	border: 1px solid var(--modal_line);
+	background: var(--modal_bg0);
+	margin-bottom: 8px;
+}
+.check_item .mark {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 12px;
+	font-weight: 700;
+	flex-shrink: 0;
+}
+.check_item.pass .mark {
+	background: rgba(0, 210, 106, .15);
+	color: var(--modal_ok);
+}
+.check_item.fail .mark {
+	background: rgba(255, 71, 87, .15);
+	color: var(--modal_danger);
+}
+.check_item .cinfo {
+	min-width: 0;
+	flex: 1;
+}
+.check_item .cname {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--modal_text);
+}
+.check_item .cdesc {
+	font-size: 11px;
+	color: var(--modal_text_dim);
+	margin-top: 2px;
+}
+.check_item .act {
+	flex-shrink: 0;
+	font-family: inherit;
+	border: 1px solid var(--modal_line);
+	background: var(--modal_bg3);
+	color: var(--modal_text);
+	font-size: 11.5px;
+	font-weight: 600;
+	padding: 6px 10px;
+	cursor: pointer;
+	transition: border-color 0.12s ease;
+}
+.check_item .act:hover {
+	border-color: var(--modal_accent);
+}
+.check_item .act:disabled {
+	opacity: .45;
+	cursor: not-allowed;
+}
+
+/* ============ Git 狀態（Git tab——摘要＝check_item 樣式） ============ */
+.git_summary {
+	margin-bottom: 8px;
+}
+.git_footer {
+	font-size: 10px;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+	color: var(--modal_text_dim);
+	margin: 14px 0 8px;
+}
+
+/* ============ Git pane（Git tab——摘要行／最近提交） ============ */
+.git {
+	min-width: 420px;
+	padding: 16px 18px;
+}
+.git_headline {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 11px 12px;
+	border: 1px solid var(--modal_line);
+	background: var(--modal_bg0);
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 600;
+}
+.git_headline.clean {
+	color: var(--modal_ok);
+	border-color: rgba(0, 210, 106, .25);
+}
+.git_headline.dirty {
+	color: var(--modal_warn);
+	border-color: rgba(255, 176, 32, .25);
+}
+.git_headline.conflict {
+	color: var(--modal_danger);
+	border-color: rgba(255, 71, 87, .3);
+}
+.git_headline_diff {
+	margin-left: auto;
+	font-size: 11.5px;
+	color: var(--modal_text_mute);
+}
+.git_commits {
+	display: flex;
+	flex-direction: column;
+}
+
+/* ============ 規則（Rule pane——專案 AGENTS.md 編輯器；編輯器本體＝共用 instructions-editor 組件樣式） ============ */
+.modal_pane.on[data-pane='rule'] {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+.pane_body {
+	flex: 1;
+	min-height: 0;
+	min-width: 420px;
+}
+/* tab 頁 footer 左側註記（上排＝目標檔路徑；下排＝更新狀態字眼——footer 動作掣一律常顯） */
+.pane_foot_path {
+	display: block;
+	color: var(--modal_text_dim);
+	font-size: 11px;
+}
+.pane_foot_note {
+	display: block;
+	color: var(--modal_text_dim);
+	font-size: 11px;
+}
+
+/* ============ 專案列表容器（project list——自 sc_sidebar.css 遷入） ============ */
+/* project list container */
+.sc_project_list {
+    padding: 0px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ============ 專案列表項目（三行——完全照 chat item：無圓角、左側 bar、行內掣） ============ */
+.sc_project_card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 12px;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid #272e40;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+.sc_project_card:hover {
+    background: #1f2637;
+}
+.sc_project_card--active {
+    background: #252e46;
+    border-left-color: #7c8cff;
+}
+/* 三行：名稱行（名＋時間＋編輯掣）／路徑行（獨佔）／數字行（排隊＋訊息數＋模型） */
+.sc_project_card__primary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+/* 第三行：數字行（排隊＋訊息數＋最近模型） */
+.sc_project_card__meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    min-height: 14px;   /* 數字行保高——行高穩定 */
+    font-size: 10.5px;
+}
+.sc_project_card__name {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #eaecf4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc_project_card__updated {
+    flex: 0 0 auto;
+    font-size: 10px;
+    color: #6f7a94;
+}
+
+.sc_project_card__meta .sc_project_card__sync--on {
+    flex: 0 0 auto;
+    color: #f0b35e;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.sc_project_card__meta .sc_project_card__sync--off {
+    flex: 0 0 auto;
+    color: #5a6478;
+    font-variant-numeric: tabular-nums;
+}
+.sc_project_card__chat_count {
+    flex: 0 0 auto;
+    color: #6f7a94;
+    font-variant-numeric: tabular-nums;
+}
+.sc_project_card__chat_count b {
+    color: #eaecf4;
+    font-weight: 600;
+}
+/* 進行中——底線 barber pole（6px、深淺藍斜紋、一直向右移動；polling class 在＝亮——純 CSS 閘） */
+.sc_project_card.polling::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    background-image: repeating-linear-gradient(45deg, #1d4ed8 0px, #1d4ed8 8px, #60a5fa 8px, #60a5fa 16px);
+    animation: project_loading_slide 0.7s linear infinite;
+}
+@keyframes project_loading_slide {
+    from { background-position: 0 0; }
+    to { background-position: 22.64px 0; }
+}
+/* 無排隊（data-queue='0'）／無訊息（data-count='0'）→ 隱藏（純 CSS 閘） */
+.sc_project_card [data-queue='0'] {
+    display: none;
+}
+.sc_project_card [data-count='0'] {
+    display: none;
+}
+.sc_project_card__model {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 10.5px;
+    color: #8fb8e8;
+    direction: rtl;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* 編輯掣（常顯 .3、hover .6、hover 轉琥珀——完全照 chat 歸檔掣） */
+.sc_project_card .sc_project_card__menu_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: none;
+    background: transparent;
+    color: #62697a;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.3;
+}
+.sc_project_card .sc_project_card__menu_btn:hover {
+    opacity: 0.6;
+    color: #f0b35e;
+}
+
+/* == 歸檔視覺（2026-10-04——歸檔開關；色值用 app 現行 palette，對照 sc_ai_chats 歸檔視覺） == */
+
+/* 歸檔卡（sc_project_card--archived——斜紋底＋名稱轉灰＋時間轉琥珀；結構同正常卡不變） */
+.sc_project_card--archived {
+    background-color: #1d2027;
+    background-image:
+        linear-gradient(rgba(240,179,94,0.07), rgba(240,179,94,0.07)),
+        repeating-linear-gradient(135deg, rgba(240,179,94,0.055) 0 1px, transparent 1px 6px);
+}
+.sc_project_card--archived .sc_project_card__name {
+    color: #9aa0ab;
+}
+.sc_project_card--archived .sc_project_card__updated {
+    color: #f0b35e;
+}
+
+/* 還原掣（歸檔卡列面常駐——模型藍系；對照 menu_btn 結構） */
+.sc_project_card .sc_project_card__restore_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: 1px solid rgba(143,184,232,0.30);
+    background: rgba(143,184,232,0.08);
+    color: #8fb8e8;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sc_project_card .sc_project_card__restore_btn:hover {
+    border-color: rgba(143,184,232,0.55);
+    background: rgba(143,184,232,0.16);
+}
+
+/* 歸檔語境整區底（.sc_project_list.archive——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
+.sc_project_list.archive {
+    background-image: linear-gradient(180deg, rgba(240,179,94,0.09), rgba(240,179,94,0.03));
+}
+
+/* 專案列移動動畫（FLIP——project_list_rank_refresh 加減 .moving；transform 值由 JS 帶） */
+.sc_project_list.moving .sc_project_card {
+    transition: transform 0.28s ease;
+}
+
+
+/* ============ Diagnostics pane（診斷 tab——檔案隱患掃描） ============ */
+.modal_pane.on[data-pane='diagnostics'] {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+.diagnostics {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 420px;
+}
+.diagnostics_headline {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 11px 12px;
+	border: 1px solid var(--modal_line);
+	background: var(--modal_bg0);
+	margin-bottom: 8px;
+	font-size: 13px;
+	font-weight: 600;
+}
+.diagnostics_headline.clean {
+	color: var(--modal_ok);
+	border-color: rgba(0, 210, 106, .25);
+}
+.diagnostics_headline.warning {
+	color: var(--modal_warn);
+	border-color: rgba(255, 176, 32, .25);
+}
+.diagnostics_headline.danger {
+	color: #fb923c;
+	border-color: rgba(251, 146, 60, .25);
+}
+.diagnostics_headline.critical {
+	color: var(--modal_danger);
+	border-color: rgba(255, 71, 87, .3);
+}
+.diagnostics_headline_state {
+	margin-left: auto;
+	font-size: 11.5px;
+	color: var(--modal_text_mute);
+}
+.diagnostics_summary {
+	padding: 11px 12px;
+	border: 1px solid var(--modal_line);
+	background: var(--modal_bg0);
+	margin-bottom: 8px;
+}
+.diagnostics_row {
+	font-size: 11.5px;
+	line-height: 1.55;
+}
+.diagnostics_row > * {
+	padding: 3px;
+	vertical-align: top;
+}
+.diagnostics_key {
+	width: 64px;
+	white-space: nowrap;
+	text-align: left;
+	font-weight: normal;
+	color: var(--modal_text_dim);
+}
+.diagnostics_val {
+	color: var(--modal_text);
+	word-break: break-all;
+}
+.diagnostics_th {
+	font-weight: normal;
+	color: var(--modal_text_dim);
+}
+.diagnostics_level {
+	white-space: nowrap;
+	font-weight: 600;
+}
+.diagnostics_level.warning {
+	color: var(--modal_warn);
+}
+.diagnostics_level.danger {
+	color: #fb923c;
+}
+.diagnostics_level.critical {
+	color: var(--modal_danger);
+}
+.diagnostics_pane {
+	display: flex;
+	align-items: stretch;
+	flex: 1;
+	min-height: 0;
+}
+.diagnostics_section {
+	display: none;
+}
+.diagnostics_section.on {
+	display: block;
+}
+.diagnostics_path {
+	color: var(--modal_text);
+	word-break: break-all;
+}
+.diagnostics_length {
+	white-space: nowrap;
+	text-align: right;
+	color: var(--modal_text_mute);
+}
+.diagnostics_note {
+	margin-top: 8px;
+	font-size: 11.5px;
+	color: var(--modal_text_dim);
+}

@@ -1,0 +1,1285 @@
+/* sc_ai_messages 訊息樣式（自 sc_ai_chats.css 拆出——訊息容器／捲動／氣泡／thinking／summarize／回答／Markdown／活動列／錯誤卡／topnav） */
+/* 載入：plugin __init__.php asset 註冊（緊隨 sc_ai_chats.css——覆寫順序不變） */
+
+/* 訊息氣泡 */
+.msg {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.msg.agent {
+    align-self: flex-start;
+    background: #1c2334;
+}
+.msg .meta {
+    display: block;
+    font-size: 11px;
+    color: #9fa8bd;
+    margin-bottom: 4px;
+}
+
+
+/************************************************************************************************/
+
+.agent_message {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+.seg--error {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px 14px;
+    margin: 4px 0;
+    background: #fef3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #856404;
+}
+.seg--error .seg__icon {
+    flex-shrink: 0;
+    font-size: 16px;
+}
+.seg--error .seg__text {
+    line-height: 1.4;
+}
+
+
+.agent_message .seg--thinking {
+    position: relative;
+    padding: 10px 0px;
+
+    line-height: 1.5;
+
+    font-size: 11px;
+}
+.agent_message .seg--thinking .seg__text {
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(168, 85, 247, 0.35);
+
+    color: #a9a9a9;
+    font-size: 12px;
+    line-height: 1.65;
+    width: 100%;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+}
+/* hover 整段 → opacity +0.3（.6 → .9） */
+.agent_message .seg--thinking:hover .seg__text {
+    opacity: 0.9;
+}
+.agent_message .seg--thinking .seg__body {
+    position: relative;
+}
+.agent_message .seg--thinking .seg__scroll {
+    max-height: 200px;
+    overflow: auto;
+    /* pure CSS 黏底（read-only 窗——內容增長自動貼底） */
+    display: flex;
+    flex-direction: column-reverse;
+}
+/* 上下半透漸變（未完結暗示） */
+.agent_message .seg--thinking .seg__body::before,
+.agent_message .seg--thinking .seg__body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 28px;
+    pointer-events: none;
+}
+.agent_message .seg--thinking .seg__body::before {
+    top: 0;
+    background: linear-gradient(to bottom, #11141d, rgba(17, 20, 29, 0));
+}
+.agent_message .seg--thinking .seg__body::after {
+    bottom: 0;
+    background: linear-gradient(to top, #11141d, rgba(17, 20, 29, 0));
+}
+/* ==== Thinking 工具列（動作鈕——段右上；常駐顯示——唔使 hover，純 CSS） ==== */
+.agent_message .seg--thinking .seg__bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    gap: 6px;
+    padding: 3px 6px;
+}
+/* Thinking 用時（段右下——獨立容器；m:ss 喺 .response_elapsed） */
+.agent_message .seg--thinking .seg__elapsed {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    padding: 3px 6px;
+}
+.agent_message .seg--thinking .seg__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 12px;
+}
+.agent_message .seg--thinking .seg__action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+/* ==== Summarize 區塊（seg--sum——結構同 thinking，獨立命名） ==== */
+/* 空段唔顯示（有內容先 show——JS 有內容時解除 hidden；骨架保留寫入用） */
+.agent_message .seg--sum.hidden,
+.agent_message .seg--thinking.hidden,
+.agent_message .seg--result.hidden {
+    display: none;
+}
+
+.agent_message .seg--sum {
+    position: relative;
+    padding: 10px 0px;
+
+    line-height: 1.5;
+
+    font-size: 11px;
+}
+/* 水印字（盒全蓋——純裝飾：唔食 pointer；底＝黑 0.1；字白 16px；hover 底 0.3） */
+.agent_message .seg__mark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.1);
+    opacity:.3;
+    color: #333333;
+    font-size: 16px;
+    pointer-events: none;
+    transition: background 0.15s ease;
+}
+.agent_message .seg:hover .seg__mark {
+    background: rgba(0, 0, 0, 0.2);
+    opacity:.6;
+    color:#fafafa;
+}
+
+.agent_message .seg__mark>div {
+    background:rgba(0,0,0,.9);
+    border:1px solid #393939;
+    padding:9px 12px;
+}
+
+.agent_message .seg--sum .seg__text {
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(168, 85, 247, 0.35);
+
+    color: #a9a9a9;
+    font-size: 12px;
+    line-height: 1.65;
+    width: 100%;
+    opacity: 0.3;
+    transition: opacity 0.15s ease;
+}
+/* hover 整段 → opacity +0.3（.3 → .6） */
+.agent_message .seg--sum:hover .seg__text {
+    opacity: 0.6;
+}
+.agent_message .seg--sum .seg__body {
+    position: relative;
+}
+.agent_message .seg--sum .seg__scroll {
+    max-height: 100px;
+    overflow: auto;
+    /* pure CSS 黏底（read-only 窗——內容增長自動貼底；第一子＝貼底：result） */
+    display: flex;
+    flex-direction: column-reverse;
+}
+/* 上下半透漸變（未完結暗示） */
+.agent_message .seg--sum .seg__body::before,
+.agent_message .seg--sum .seg__body::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 28px;
+    pointer-events: none;
+}
+.agent_message .seg--sum .seg__body::before {
+    top: 0;
+    background: linear-gradient(to bottom, #11141d, rgba(17, 20, 29, 0));
+}
+.agent_message .seg--sum .seg__body::after {
+    bottom: 0;
+    background: linear-gradient(to top, #11141d, rgba(17, 20, 29, 0));
+}
+/* ==== Summarize 工具列（動作鈕——段右上；常駐顯示——唔使 hover，純 CSS） ==== */
+.agent_message .seg--sum .seg__bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    display: flex;
+    gap: 6px;
+    padding: 3px 6px;
+}
+/* Summarize 用時（段右下——獨立容器；m:ss 喺 .response_elapsed） */
+.agent_message .seg--sum .seg__elapsed {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    z-index: 1;
+    padding: 3px 6px;
+}
+.agent_message .seg--sum .seg__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 12px;
+}
+.agent_message .seg--sum .seg__action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+.agent_message .seg--result {
+    max-width: 100%;
+    padding: 12px 0px;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+}
+/* 答案底＋左側綠線（底＝極深藍底＋極淺點陣（純 CSS：一格一點）；底／線隨文字——線同 thinking／sum 結構） */
+.agent_message .seg--result .seg__text {
+    padding: 6px 12px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(34, 197, 94, 0.35);
+
+    background-color: #1b2340;
+    background-image: radial-gradient(circle, #7c8cff16 1px, transparent 1.5px);
+    background-size: 12px 12px;
+}
+/* 失敗訊息（無法送出）：紅左線＋紅底＋標題紅字——色喺顯示層（source 唔帶色） */
+.message_wrapper[data-status='failed'] .agent_message .seg--result .seg__text {
+    background: rgba(248, 113, 113, 0.07);
+    border-left-color: rgba(248, 113, 113, 0.45);
+}
+.message_wrapper[data-status='failed'] .agent_message .seg--result strong {
+    color: #f87171;
+}
+/* ==== 回答底部動作列（複製鈕——鏡像 .prompt_action 樣式） ==== */
+/* 預設隱藏——訊息 completed 才顯示（data-status 由 server render 與 poll 同步） */
+.agent_message .seg--result .seg__bar {
+    display: none;
+    justify-content: space-between;
+    gap: 6px;
+    padding-left: 12px;
+    margin-top: 6px;
+}
+.message_wrapper[data-status='completed'] .agent_message .seg--result .seg__bar {
+    display: flex;
+}
+/* 工具列動作組（放大／複製＋模型——靠左；右邊用時靠 space-between 谷開） */
+.agent_message .seg--result .seg__bar .seg__bar_actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.agent_message .seg--result .seg__bar .seg__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 12px;
+}
+.agent_message .seg--result .seg__bar .seg__action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+/* ==== 訊息模型標示（plain——provider/model；動作列 copy 之後） ==== */
+.agent_message .seg--result .seg__bar .message_model,
+.user_message .user_prompt_bar .message_model {
+    align-self: center;
+    min-width: 0;
+    margin-left: 2px;
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==== 段用時計時器（thinking／summarize＝右下獨立容器；result＝工具列右側；m:ss） ==== */
+.agent_message .seg--result .seg__bar .response_elapsed {
+    align-self: center;
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    padding: 3px 6px;
+}
+.agent_message .seg--thinking .seg__elapsed .response_elapsed {
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    padding: 3px 6px;
+}
+.agent_message .seg--sum .seg__elapsed .response_elapsed {
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    padding: 3px 6px;
+}
+
+/* ==== Zoom modal（全文檢視——95% 寬） ==== */
+[data-modal='zoom_content'] .modal__window {
+    width: 95%;
+    max-width: 95%;
+}
+[data-modal='zoom_content'] .zoom_content {
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.7;
+    font-size: 13px;
+    color: #eaecf4;
+}
+[data-modal='zoom_content'] .sc_markdown_body > :first-child {
+    margin-top: 0;
+}
+[data-modal='zoom_content'] .sc_markdown_body > :last-child {
+    margin-bottom: 0;
+}
+[data-modal='zoom_content'] .sc_markdown_body p,
+[data-modal='zoom_content'] .sc_markdown_body ul,
+[data-modal='zoom_content'] .sc_markdown_body ol,
+[data-modal='zoom_content'] .sc_markdown_body blockquote,
+[data-modal='zoom_content'] .sc_markdown_body table,
+[data-modal='zoom_content'] .sc_markdown_body pre {
+    margin: 8px 0;
+}
+[data-modal='zoom_content'] .sc_markdown_body ul,
+[data-modal='zoom_content'] .sc_markdown_body ol {
+    padding-left: 22px;
+}
+[data-modal='zoom_content'] .sc_markdown_body h1,
+[data-modal='zoom_content'] .sc_markdown_body h2,
+[data-modal='zoom_content'] .sc_markdown_body h3,
+[data-modal='zoom_content'] .sc_markdown_body h4 {
+    margin: 12px 0 6px;
+    line-height: 1.3;
+}
+[data-modal='zoom_content'] .sc_markdown_body code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.92em;
+}
+[data-modal='zoom_content'] .sc_markdown_body pre {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0c0e15;
+    overflow-x: auto;
+}
+[data-modal='zoom_content'] .sc_markdown_body pre code {
+    padding: 0;
+    background: transparent;
+}
+/* 超長 inline code 升格塊（render_element 落 .sc_markdown_code_block——同 pre 出一致；zoom 窗版） */
+[data-modal='zoom_content'] .sc_markdown_body code.sc_markdown_code_block {
+    display: block;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0c0e15;
+    overflow-x: auto;
+    white-space: pre;
+}
+[data-modal='zoom_content'] .sc_markdown_body blockquote {
+    padding-left: 10px;
+    border-left: 3px solid rgba(255, 255, 255, 0.15);
+    color: #8b8b8b;
+}
+[data-modal='zoom_content'] .sc_markdown_body table {
+    border-collapse: collapse;
+}
+[data-modal='zoom_content'] .sc_markdown_body th,
+[data-modal='zoom_content'] .sc_markdown_body td {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+[data-modal='zoom_content'] .sc_markdown_body a {
+    color: #6ea8fe;
+}
+
+/* ==== Markdown 輸出（thinking／result／summarize 三塊共用——JS render_element 加上 .sc_markdown_body） ==== */
+.agent_message .sc_markdown_body {
+    white-space: normal;
+}
+/* 串流中未完成的尾巴（保持純文字＋換行） */
+.agent_message .sc_markdown_body .sc_markdown_tail {
+    white-space: pre-wrap;
+}
+.agent_message .sc_markdown_body > :first-child {
+    margin-top: 0;
+}
+.agent_message .sc_markdown_body > :last-child {
+    margin-bottom: 0;
+}
+.agent_message .sc_markdown_body p,
+.agent_message .sc_markdown_body ul,
+.agent_message .sc_markdown_body ol,
+.agent_message .sc_markdown_body blockquote,
+.agent_message .sc_markdown_body table,
+.agent_message .sc_markdown_body pre {
+    margin: 8px 0;
+}
+.agent_message .sc_markdown_body ul,
+.agent_message .sc_markdown_body ol {
+    padding-left: 22px;
+}
+.agent_message .sc_markdown_body h1,
+.agent_message .sc_markdown_body h2,
+.agent_message .sc_markdown_body h3,
+.agent_message .sc_markdown_body h4 {
+    margin: 12px 0 6px;
+    line-height: 1.3;
+}
+.agent_message .sc_markdown_body h1 {
+    font-size: 1.25em;
+}
+.agent_message .sc_markdown_body h2 {
+    font-size: 1.15em;
+}
+.agent_message .sc_markdown_body h3 {
+    font-size: 1.05em;
+}
+.agent_message .sc_markdown_body code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 0.92em;
+}
+.agent_message .sc_markdown_body pre {
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0c0e15;
+    overflow-x: auto;
+}
+.agent_message .sc_markdown_body pre code {
+    padding: 0;
+    background: transparent;
+}
+/* 超長 inline code 升格塊（render_element 落 .sc_markdown_code_block——同 pre 出一致） */
+.agent_message .sc_markdown_body code.sc_markdown_code_block {
+    display: block;
+    margin: 8px 0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0c0e15;
+    overflow-x: auto;
+    white-space: pre;
+}
+.agent_message .sc_markdown_body blockquote {
+    padding-left: 10px;
+    border-left: 3px solid rgba(255, 255, 255, 0.15);
+    color: #8b8b8b;
+}
+.agent_message .sc_markdown_body table {
+    border-collapse: collapse;
+}
+.agent_message .sc_markdown_body th,
+.agent_message .sc_markdown_body td {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.agent_message .sc_markdown_body a {
+    color: #6ea8fe;
+}
+.agent_message .sc_mermaid_diagram {
+    margin: 10px 0;
+    max-width: 100%;
+}
+.agent_message .sc_mermaid_diagram svg {
+    max-width: 100%;
+    height: auto;
+}
+/* 方式2／方式3：SVG data-URI 或 canvas 轉出的圖片 */
+.agent_message .sc_mermaid_diagram img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Mermaid 繪製失敗（語法問題）——原文塊上方警示（render_block catch 落 data-render_failed="1"） */
+.agent_message pre[data-render_failed="1"] {
+    border-left: 3px solid #fbbf24;
+}
+.agent_message pre[data-render_failed="1"]::before {
+    content: "⚠ 圖表語法有問題——以下為原文";
+    display: block;
+    margin-bottom: 6px;
+    color: #fbbf24;
+    font-size: 12px;
+}
+
+
+/* 導航點跳轉呼吸位（scrollIntoView 對齊時留 8px） */
+.message_wrapper {
+    scroll-margin-top: 8px;
+}
+
+/* 空殼骨架（後台兩層制 template 外殼、slot 未灌——空佔位先頂住位；灰條高度＝數值可調） */
+.message_wrapper > .user_message:empty {
+    min-height: 40px;
+    border-radius: 10px;
+    background: #1e293b;
+}
+
+.user_message {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.user_message .user_prompt {
+    max-width: 80%;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 10px 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 14px;
+    line-height: 1.5;
+
+    align-self: flex-end;
+    background: #273055;
+    color: #eef0fa;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+}
+
+/* 完成後活動日誌收走（純 CSS 閘——後端旗標 data-working='0'；唔加 JS toggle） */
+.message_wrapper[data-working='0'] .log_message {
+    display: none;
+}
+
+.log_message .activity_monitor {
+    max-width: 80%;
+    background: #11141d;
+    font-size: 11px;
+    align-self: flex-end;
+    color: #9fa8bd;
+    font-family: monospace;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    overflow: hidden;
+    height: 24px;
+}
+/* 活動日誌行容器——column-reverse 在這裡，新行 prepend 於視覺底部 */
+.log_message .activity_monitor > .activity_lines {
+    display: flex;
+    flex-direction: column-reverse;
+    width: 100%;
+    overflow: hidden;
+    flex: 1;
+}
+/* 總用時列（回答底、日誌前——左右分隔線＋中央用時（caption＋m:ss）；工作緊每秒遞增、完成後凍結） */
+.total_elapsed {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 6px 0;
+    color: #64748b;
+    font-size: 11px;
+    white-space: nowrap;
+}
+.total_elapsed::before,
+.total_elapsed::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid #272e40;
+}
+
+/* 活動日誌行（stage 前綴；5 級 level 顏色：info 淺灰 / success 綠 / warn 黃＋微亮背景 / error 紅＋背景＋左紅線 / debug 暗灰；block 單行＋超長省略） */
+.activity_line {
+    padding: 3px 6px;
+    font-size: 12px;
+
+
+
+    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    box-sizing: border-box;
+}
+.activity_level_info {
+    color: #eaecf4;
+}
+
+/* 活動日誌 loading 動畫——3 點波浪式（純 CSS3——跟隨文字顏色）
+   固定 size 15×6：容器佔足 3 點總寬（0／6／12 偏移）；點由 ::before 畫（唔再靠 box-shadow 溢出佔位） */
+.loading-dots {
+    display: inline-block;
+    position: relative;
+    width: 15px;
+    height: 6px;
+    margin-right: 4px;
+}
+.loading-dots::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background-color: currentColor;
+    animation: waveDots 1.2s infinite ease-in-out;
+}
+@keyframes waveDots {
+    0%, 100% { box-shadow: 0 0 0 currentColor, 6px 0 0 currentColor, 12px 0 0 currentColor; transform: translateY(0); }
+    25% { transform: translateY(-3px); box-shadow: 0 0 0 currentColor, 6px 0 0 currentColor, 12px 0 0 currentColor; }
+    50% { transform: translateY(0); box-shadow: 0 0 0 currentColor, 6px -3px 0 currentColor, 12px 0 0 currentColor; }
+    75% { transform: translateY(0); box-shadow: 0 0 0 currentColor, 6px 0 0 currentColor, 12px -3px 0 currentColor; }
+}
+/* 活動日誌 icon 區——loading dots 容器（預設隱藏；streaming 時 .loading 顯示） */
+.log_message .activity_monitor > .activity_state_icon {
+    display: none;
+}
+.log_message .activity_monitor.loading > .activity_state_icon {
+    display: inline-block;
+}
+.activity_level_success {
+    color: #10b981;
+}
+.activity_level_warn {
+    color: #f59e0b;
+    background-color: rgba(245, 158, 11, 0.1);
+}
+.activity_level_error {
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid #ef4444;
+}
+.activity_level_debug {
+    color: #64748b;
+}
+/* 活動日誌行：state 前綴色（css_class 由 parser 依 state 附加——與 state 100% 同名：activity_state_{state}——覆蓋 level 色） */
+.activity_state_initiating {
+    color: #9fa8bd;
+}
+.activity_state_connecting {
+    color: #60a5fa;
+}
+.activity_state_summarizing {
+    color: #8b5cf6;
+}
+.activity_state_replying,
+.activity_state_success {
+    color: #22c55e;
+}
+.activity_state_err_network,
+.activity_state_err_server {
+    color: #ef4444;
+}
+.activity_state_cancelled {
+    color: #f59e0b;
+}
+
+
+/* 功能列：hover 時才顯示，靠右對齊 */
+.user_message .user_prompt_bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    padding: 2px 0;
+    opacity: .3;
+    transition: opacity 0.15s ease;
+}
+.user_message:hover .user_prompt_bar {
+    opacity: 1;
+}
+
+/* 按鈕統一樣式 */
+.user_message .user_prompt_bar .prompt_action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 12px;
+}
+.user_message .user_prompt_bar .prompt_action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+
+/* 訊息容器外層（捲動層的定位父——按鈕浮層 absolute 於此，不隨捲動） */
+.sc_thread {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 訊息容器（column 標準順序——DOM 前 = 視覺頂；scroll anchoring 關閉容器、只錨定底部 anchor，行為由 sc_ai_chats.scroll.js 主導）
+   opacity: 0 —— 初始隱藏（零閃方案：載入反應（load_message_list after）先跳底再放開——首幀即底部） */
+.sc_thread__viewport {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+    /* 底部留位（composer 浮層——訊息捲到浮層後面） */
+    padding-bottom: 250px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    /* 滾動兩屬性備註（速查·開發參考）：
+       overflow-anchor（滾動錨定）——默認 auto：上方內容一變高，瀏覽器自動調 scrollTop、畫面唔跳；none＝關。
+       向上載入歷史（JS 手動校正 scrollTop）必須 none——開住＝「瀏覽器自動＋JS 手動」雙重修正＝劇跳。
+       本容器＝none：位置全交自訂系統（只錨底部 anchor）。
+       overscroll-behavior（邊界滾動）——默認 auto：捲到盡頭會鏈去外層（scroll chaining）＋觸控有橡皮筋；contain＝封鎖鏈式滾動、保留橡皮筋；none＝連橡皮筋／下拉刷新都禁。
+       測試：Windows 滑鼠滾輪測唔到橡皮筋——用觸控板／實機。 */
+    overflow-anchor: none;
+    overscroll-behavior: contain;
+
+    opacity: 0;
+}
+
+/* 訊息不夠多時，將內容推到底部（:first-child＝空狀態；空狀態隱藏時由下方 [hidden] + * 規則接手） */
+.sc_thread__viewport > :first-child {
+    margin-top: auto;
+}
+
+/* 底部固定錨點（永遠保持 .sc_thread__viewport 最後一個子元素——JS insertBefore 保證） */
+#sc_scroll_anchor {
+    overflow-anchor: auto;
+    height: 1px;
+    flex-shrink: 0;
+}
+
+/* 未選對話的空狀態（長駐 .sc_thread__viewport 內——flex item 填滿＋置中；覆蓋 first-child 推底規則） */
+.sc_thread__viewport > .sc_empty_state {
+    flex: 1;
+    margin-top: 0;
+}
+
+/* 空狀態節點[hidden]隱藏（base 元件 display:flex 蓋過 UA hidden 規則——補返；只覆蓋 .sc_thread 範圍） */
+.sc_thread .sc_empty_state[hidden] {
+    display: none;
+}
+
+/* 空狀態長駐窗口（未選顯示／有對話隱藏）——隱藏時令之後節點（第一條訊息／底錨）補回推底規則（:first-child 畀空狀態節點佔咗——推首節點＝連訊息一齊推落底） */
+.sc_thread__viewport > .sc_empty_state[hidden] + * {
+    margin-top: auto;
+}
+
+/* 未選專案的空狀態（共用 .sc_empty_state 覆蓋整個訊息容器——置中顯示） */
+.sc_thread > .sc_empty_state {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+
+/* ==== 訊息導航點（右側 rail——absolute 錨 .sc_thread、右置中；純前台由 message_list 產生） ==== */
+.sc_thread__scroll_rail {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 5;
+    visibility: hidden;
+}
+/* 導航點顯示閘門（默認隱藏——露面／收埋由 message_rail_active_observer 掛 .on（觀察器就緒先露面；窗口重載收埋）；顯示與否交 CSS 決定） */
+.sc_thread__scroll_rail.on {
+    visibility: visible;
+}
+.sc_thread__scroll_rail .msg_dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.sc_thread__scroll_rail .msg_dot:hover {
+    background: #64748b;
+}
+.sc_thread__scroll_rail .msg_dot.active {
+    background: linear-gradient(180deg, #22d3ee, #a855f7);
+    box-shadow: 0 0 6px rgba(168, 85, 247, 0.8);
+    transform: scale(1.25);
+}
+
+/* ==== 浮問題條（.sc_thread 頂——absolute 錨 .sc_thread；常駐、條件齊先顯〔data-visible 純 CSS 閘〕；顯示＝填當前問題內容、撳＝跳去原問題） ==== */
+.sc_float_user_prompt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 6;
+    max-height: 60px;
+    overflow: hidden;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 1px solid rgba(91, 125, 165, 0.46);
+    background: rgba(20, 35, 56, 0);
+    color: #eaf0f7;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.40);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.sc_float_user_prompt:hover {
+    background: rgba(27, 46, 72, 0);
+    border-color: rgba(121, 153, 190, 0.64);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.46), 0 0 0 1px color-mix(in srgb, rgba(121, 153, 190, 0.64) 18%, transparent);
+}
+/* 右上角標（圖釘——示意呢條係你嘅問題；font icon＝Font Awesome 6） */
+.sc_float_user_prompt::after {
+    content: "\f08d";
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 11px;
+    opacity: 0.62;
+}
+/* 顯隱閘（默認隱藏——條件齊先顯；顯示與否交 CSS 決定） */
+.sc_float_user_prompt[data-visible='0'] {
+    display: none;
+}
+
+/* 訊息主區頂欄（topnav——導覽鈕／路徑列／右上工具鈕；HTML 出自 cls/sc_ai_chats_view.php） */
+.sc_topbar {
+    gap: 6px;
+}
+.sc_topbar .sc_topbar__nav_btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background: #334155;
+    color: #e2e8f0;
+    cursor: pointer;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.sc_topbar .sc_topbar__nav_btn:hover {
+    background: #475569;
+}
+.sc_topbar .sc_topbar__nav_btn svg {
+    width: 15px;
+    height: 15px;
+}
+/* 長路徑顯示策略：顯尾（臨尾＝專案名）＋開頭省略號——RTL 容器令裁切與省略號去左邊，
+   bdi 隔離路徑為 LTR 內容（防 \ 中性字元喺 RTL 語境反序）；短字串仍靠左 */
+.sc_topbar__path {
+    direction: rtl;
+    text-align: left;
+    position: relative;
+    flex: 1;
+    padding: 6px 30px 6px 10px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    background: #11141d;
+    color: #9fa8bd;
+    font-size: 12px;
+    font-family: monospace;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.sc_topbar__path bdi {
+    direction: ltr;
+}
+/* 複製路徑掣（列右側——絕對定位唔影響文字溢出裁切；hover 微亮＝同 sc_icon_btn 家族） */
+.sc_topbar__path_copy {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 18px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #64748b;
+    font-size: 11px;
+    cursor: pointer;
+}
+.sc_topbar__path_copy:hover {
+    color: #eaecf4;
+    background: #1e293b;
+}
+.sc_topbar__path:has(bdi:empty)::before {
+    content: attr(data-placeholder);
+    color: #475569;
+}
+
+/* 右上工具按鈕區（margin-left:auto 推至最右——按鈕視覺同 .sc_icon_btn 家族，唔另設專門樣式） */
+.sc_topbar .sc_topbar__actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+    padding-right: 12px;
+}
+
+/* 右群工具鈕（照 reference3 topnav——模型／成員／分享／通知／帳戶；透明底＋hover 微亮＝同 .sc_icon_btn 同一視覺家族；功能位預留） */
+.sc_topbar__model {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #a8b7d0;
+    font-size: 11px;
+    cursor: pointer;
+}
+.sc_topbar__model:hover {
+    background: #1f2637;
+    color: #eaecf4;
+}
+.sc_topbar__model small {
+    color: #64748b;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+.sc_topbar__model:has(bdi:empty) bdi {
+    display: none;
+}
+.sc_topbar__people {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 5px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    cursor: pointer;
+}
+.sc_topbar__people:hover {
+    background: #1f2637;
+}
+.sc_topbar__people_stack {
+    display: flex;
+    align-items: center;
+}
+.sc_topbar__people_stack span {
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    margin-left: -5px;
+    border: 1px solid #151926;
+    border-radius: 50%;
+    background: #4666bc;
+    color: #dbe5fa;
+    font-size: 8px;
+    font-weight: 800;
+}
+.sc_topbar__people_stack span:first-child {
+    margin-left: 0;
+    background: #8262ad;
+}
+.sc_topbar__share {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #9fa8bd;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.sc_topbar__share:hover {
+    background: #1f2637;
+    color: #eaecf4;
+}
+.sc_topbar__share svg {
+    width: 15px;
+    height: 15px;
+}
+.sc_topbar__notify {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+}
+.sc_topbar__notify:hover {
+    background: #1f2637;
+    color: #eaecf4;
+}
+.sc_topbar__notify svg {
+    width: 15px;
+    height: 15px;
+}
+.sc_topbar__notify_dot {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    border: 1px solid #151926;
+    border-radius: 50%;
+    background: #e8778d;
+}
+.sc_topbar__account_wrap {
+    position: relative;
+    display: inline-flex;
+}
+.sc_topbar__account {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 4px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+}
+.sc_topbar__account:hover {
+    background: #1f2637;
+    color: #eaecf4;
+}
+.sc_topbar__account_avatar {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid #4c5e80;
+    border-radius: 5px;
+    background: #2c3b59;
+    color: #e0e9f9;
+    font-size: 9px;
+    font-weight: 800;
+}
+.sc_topbar__account svg {
+    width: 11px;
+    height: 11px;
+    color: #71839f;
+}
+
+/* 帳戶選單（預留——純設計骨架；開合＝純 CSS：wrapper:focus-within（0 JS；點其他位 focus 走＝自動收）） */
+.sc_topbar__account_menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    right: 0;
+    display: none;
+    width: 204px;
+    padding: 7px;
+    border: 1px solid #2c3342;
+    border-radius: 8px;
+    background: #171b23;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+}
+.sc_topbar__account_wrap:focus-within .sc_topbar__account_menu {
+    display: block;
+}
+.sc_topbar__account_summary {
+    padding: 6px 7px 8px;
+    color: #d4def0;
+    font-size: 11px;
+    font-weight: 740;
+}
+.sc_topbar__account_summary span {
+    display: block;
+    margin-top: 3px;
+    color: #7789a6;
+    font-size: 9px;
+    font-weight: 500;
+}
+.sc_topbar__account_menu hr {
+    height: 1px;
+    margin: 4px 0;
+    border: 0;
+    background: #2c3342;
+}
+.sc_topbar__account_menu button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 29px;
+    padding: 0 7px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #aebdd4;
+    font-size: 11px;
+    text-align: left;
+    cursor: pointer;
+}
+.sc_topbar__account_menu button:hover {
+    background: #232937;
+    color: #e7effe;
+}
+.sc_topbar__account_menu button.danger {
+    color: #da8797;
+}
+
+/* 權限請求卡（goose ACP 工具權限——Allow／Deny＋自動拒絕倒數） */
+.permission_prompt {
+    margin: 8px 0 4px;
+    padding: 10px 14px;
+    background: #1a2130;
+    border: 1px solid #33405c;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #d4def0;
+}
+.permission_prompt__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.permission_prompt__title {
+    color: #e7effe;
+    font-size: 12px;
+    font-weight: 700;
+}
+.permission_prompt__countdown {
+    color: #7789a6;
+    font-size: 11px;
+}
+.permission_prompt__tool {
+    margin-bottom: 6px;
+    color: #9fa8bd;
+    font-size: 12px;
+    word-break: break-word;
+}
+.permission_prompt__args {
+    max-height: 140px;
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    overflow: auto;
+    background: #131824;
+    border-radius: 6px;
+    color: #aebdd4;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.permission_prompt__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+.permission_prompt__btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.permission_prompt__btn--allow {
+    background: #00d26a;
+    color: #06281a;
+}
+.permission_prompt__btn--deny {
+    background: #3a4256;
+    color: #e7effe;
+}
+.permission_prompt__btn.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+.permission_prompt__apply_all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    color: #7789a6;
+    font-size: 11px;
+    cursor: pointer;
+    user-select: none;
+}

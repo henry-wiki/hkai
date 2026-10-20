@@ -1,0 +1,27 @@
+# HKAI.exe 設定（改完重開 HKAI.exe 即生效·唔使 build）
+mode = "live"                    # live = 用本檔；builtin = 用 exe 內建值
+on_close_script = "runtime/on_close.ps1"
+web_dir = ".."                         # docroot（相對 exe）＝ sc-hkai 站台根（index.php 所在）
+ports = [[7000, 7999], [3000, 3999], [13000, 13999]]
+
+[splash]
+width = 360
+height = 240
+min_ms = 1000
+
+# --- PHP（UI 由 php -S 提供·唔需要 Apache）------------------------------
+# 換版本＝改下面 exe 路徑（例如 bin/php-8.3.14/php.exe），唔使 rebuild
+[[children]]
+exe = "bin/php-8.4.26/php.exe"
+args = ["-S", "127.0.0.1:{port}", "-t", "{web}", "{web}/url_rewrite.php"]
+
+[children.env]
+PHP_CLI_SERVER_WORKERS = "4"
+
+# --- Apache（只服務 sites\ 嘅 2484 埠·暫時停用）-------------------------
+# 要開返就 uncomment 下面兩段
+# [[children]]
+# exe = "bin/apache/bin/httpd.exe"
+# args = ["-f", "bin/apache/conf/httpd.conf"]
+#
+# [children.env]

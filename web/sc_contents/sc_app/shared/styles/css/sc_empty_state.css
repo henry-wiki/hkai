@@ -1,0 +1,16 @@
+/* ============================================
+   sc_empty_state.css —— 共用空狀態區塊（面板／主區共用）
+   用法：<div class='sc_empty_state'>文字</div>
+   定位由使用端覆寫（如主區覆蓋層在 sc_ai_chats.css）
+   ============================================ */
+
+.sc_empty_state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 24px;
+    text-align: center;
+    font-size: 13px;
+    color: #62697a;
+}

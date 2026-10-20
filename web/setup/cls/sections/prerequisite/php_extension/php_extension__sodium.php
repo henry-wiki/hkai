@@ -1,0 +1,58 @@
+<?php
+
+namespace sc\setup\sections\prerequisite;
+
+// == HKAI setup 檢查單元：php_extension__sodium.php（前置檢查「擴展 sodium（敏感值加解密）」——單項自足）
+// == 職責：呢一項嘅全部——setup_check()＝包裝〔叫 setup_test → UI 格式〕；setup_test()＝唯一真實檢查動作（回原果）
+// == 接入：php_extension()->sodium()（php_extension 域本體門）
+// == 載入：顯式（無 autoloader）——prerequisite 格檢查橋按需 require 本檔
+
+class php_extension__sodium_Class
+{
+    private static $instance = null;
+
+    public static function getInstance()
+    {
+        if (self::$instance === null) {
+            self::$instance = new self();
+        }
+
+        return self::$instance;
+    }
+
+    private function __construct()
+    {
+    }
+
+    // 測試（唯一真實檢查動作——擴展已載入？回原果）
+    public function setup_test()
+    {
+        // 判定：擴展已載入 → 原果 pass
+        if (extension_loaded("sodium")) {
+            return ["ok" => true, "status" => "pass", "hint" => "", "detail" => "", "reading" => ""];
+        }
+
+        // 其餘（未載入）→ 原果 fail
+        return ["ok" => false, "status" => "fail", "hint" => setup()->i18n()->get("check.php_extension.sodium.hint_fail"), "detail" => "", "reading" => ""];
+    }
+
+    // 檢查（包裝層——零檢查碼：叫 setup_test 原果 → UI 格式）
+    public function setup_check()
+    {
+        $check_result = [];
+        $check_result["label"] = setup()->i18n()->get("check.php_extension.sodium.label");
+
+        $test_result = $this->setup_test();
+        $test_status = $test_result["status"];
+        $test_hint   = $test_result["hint"];
+
+        $check_result["status"] = $test_status;
+
+        // 判定：原果帶 hint → 入對應格（force layout 用）
+        if ($test_hint !== "") {
+            $check_result["result_content"][$test_status]["hint"] = $test_hint;
+        }
+
+        return $check_result;
+    }
+}

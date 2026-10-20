@@ -1,0 +1,306 @@
+/* ============================================
+   sc_sidebar.css —— 左側欄（App Rail + project sidebar + chat sidebar）
+   命名：snake_case（class 一律 _ 分隔）
+   ============================================ */
+
+/* ============ Project Sidebar ============ */
+/* 左側 project 欄（100% follow prototype design） */
+.sc_sidebar--projects {
+    /* 欄寬由 JS 寫 --sc_sidebar_w（拖曳調寬）；收合規則 width:0 特異性更高、照蓋過 */
+    width: var(--sc_sidebar_w, 220px);
+    flex-shrink: 0;
+    border-right: 1px solid #272e40;
+    background: #151926;
+    display: flex;
+    flex-direction: column;
+    /* clip＋margin 8px：內容照 clip（收合唔漏），但 grip 凸出欄邊 4px 唔會被食 */
+    overflow: clip;
+    overflow-clip-margin: 10px;
+    position: relative;
+    transition: width .22s ease, opacity .16s ease;
+}
+
+/* sc_panel_header（bar 幾何／底色見 main.css 共用規則——此處只留側欄標題的身分樣式；標題＝回首頁連結） */
+.sc_panel_header {
+    justify-content: space-between;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+/* 標題兩行疊（kicker 上／title 下——跟參考 panel-head 結構） */
+.sc_panel_header__label {
+    min-width: 0;
+}
+/* kicker 行（小字大寫間距——專案欄＝Workspace／對話欄＝目前專案名；空＝唔佔位） */
+.sc_panel_header__kicker {
+    margin-bottom: 2px;
+    color: #6f83aa;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.sc_panel_header__kicker:empty {
+    display: none;
+}
+/* 標題行（主字白＋英文細字灰——跟參考 header-title／span） */
+.sc_panel_header__title {
+    overflow: hidden;
+    color: #e6edf9;
+    font-size: 13px;
+    font-weight: 760;
+    text-overflow: ellipsis;
+}
+.sc_panel_header__title span {
+    color: #7889a4;
+    font-weight: 540;
+}
+/* 標題錨點（回首頁——唔要 anchor 預設樣式） */
+a.sc_panel_header__title {
+    display: block;
+    text-decoration: none;
+}
+.sc_panel_header__actions {
+    display: flex;
+    gap: 4px;
+}
+
+/* sc_icon_btn（prototype 一致） */
+.sc_icon_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+.sc_icon_btn:hover {
+    background: #1f2637;
+    color: #eaecf4;
+}
+
+/* ============ Chat Sidebar ============ */
+/* 次欄：chat list（100% follow prototype design） */
+.sc_sidebar--chats {
+    /* 欄寬由 JS 寫 --sc_sidebar_w（拖曳調寬）；收合規則 width:0 特異性更高、照蓋過 */
+    width: var(--sc_sidebar_w, 260px);
+    flex-shrink: 0;
+    border-right: 1px solid #272e40;
+    background: #151926;
+    display: flex;
+    flex-direction: column;
+    /* clip＋margin 8px：內容照 clip（收合唔漏），但 grip 凸出欄邊 4px 唔會被食 */
+    overflow: clip;
+    overflow-clip-margin: 10px;
+    position: relative;
+    transition: width .22s ease, opacity .16s ease;
+}
+
+/* chat list container */
+.sc_chat_list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+
+/* 拖拉調寬（只有 grip 可以拖——line 純定位 wrapper：唔食 hover、唔食 drag、完全唔現線形） */
+.sc_sidebar__resize_line {
+    position: absolute;
+    z-index: 10;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 100%;
+    pointer-events: none;
+}
+/* 中段 grip（直線正中——水平貼線＋垂直置中；常態 0.1、hover／拖曳 0.9；唯一可拖嘅位） */
+.sc_sidebar__resize_grip {
+    position: absolute;
+    top: 50%;
+    left: 2px;
+    display: grid;
+    place-items: center;
+    width: 17px;
+    height: 42px;
+    transform: translateY(-50%);
+    border: 1px solid #35445f;
+    border-radius: 6px;
+    color: #7f91ae;
+    background: #18243a;
+    box-shadow: 0 5px 14px rgba(0,0,0,.28);
+    opacity: .1;
+    pointer-events: auto;
+    cursor: col-resize;
+    transition: .16s ease;
+}
+.sc_sidebar__resize_grip::before {
+    content: "";
+    width: 6px;
+    height: 18px;
+    background: radial-gradient(circle, currentColor 1.05px, transparent 1.3px) 0 0 / 3px 4px;
+}
+.sc_sidebar__resize_grip:hover,
+body.is-resizing .sc_sidebar__resize_grip {
+    border-color: #6685f6;
+    color: #b9c9ff;
+    background: #21335b;
+    opacity: .9;
+}
+/* 拖曳中熄欄寬過渡（即時跟手） */
+body.is-resizing .sc_sidebar--projects,
+body.is-resizing .sc_sidebar--chats {
+    transition: none;
+}
+
+/* ============ App Rail（最左 52px 功能列——永遠存在；logo 喺最頂、其後收合掣） ============ */
+.sc_rail {
+    position: relative;
+    z-index: 8;
+    width: 52px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid #272e40;
+    background: #0e1118;
+}
+/* 品牌 logo（最頂——回首頁；hover 底色＋放大微轉，跟參考 brand-button） */
+.sc_rail__brand {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    color: #dce5ff;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: none;
+}
+.sc_rail__brand:hover,
+.sc_rail__brand:focus-visible {
+    background: #172238;
+    outline: none;
+}
+.sc_rail__brand_mark {
+    width: 25px;
+    height: 25px;
+    filter: drop-shadow(0 3px 7px rgba(81, 109, 255, 0.34));
+    transition: transform 0.18s ease;
+}
+.sc_rail__brand:hover .sc_rail__brand_mark {
+    transform: rotate(-6deg) scale(1.06);
+}
+.sc_rail__btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: #8191aa;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+.sc_rail__btn:hover,
+.sc_rail__btn:focus-visible {
+    background: #182236;
+    color: #dce6ff;
+    outline: none;
+}
+.sc_rail__btn svg {
+    width: 19px;
+    height: 19px;
+}
+.sc_rail__btn i {
+    font-size: 19px;
+    line-height: 1;
+}
+/* 亮燈（純 CSS 閘——跟 body 收合旗標：清單顯示緊＝亮；旗標未落（'1' 以外）一律當展開） */
+body:not([data-projects-collapsed='1']) .sc_rail__btn--projects,
+body:not([data-projects-collapsed='1']) .sc_rail__btn[data-action='toggle_all_sidebars'],
+body:not([data-chats-collapsed='1']) .sc_rail__btn[data-action='toggle_all_sidebars'],
+body:not([data-chats-collapsed='1']) .sc_rail__btn--chats {
+    background: #1a2742;
+    color: #dce6ff;
+}
+/* 作用中指示（左邊豎條） */
+body:not([data-projects-collapsed='1']) .sc_rail__btn--projects::before,
+body:not([data-projects-collapsed='1']) .sc_rail__btn[data-action='toggle_all_sidebars']::before,
+body:not([data-chats-collapsed='1']) .sc_rail__btn[data-action='toggle_all_sidebars']::before,
+body:not([data-chats-collapsed='1']) .sc_rail__btn--chats::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    width: 3px;
+    height: 24px;
+    border-radius: 0 3px 3px 0;
+    background: #6d8cff;
+}
+/* 分隔線（logo 與收合掣之間） */
+.sc_rail__rule {
+    width: 24px;
+    height: 1px;
+    margin: 6px 0 7px;
+    background: #272e40;
+}
+/* 彈性空隙（頂部功能格與底部設定／說明之間） */
+.sc_rail__spacer {
+    flex: 1;
+}
+/* 說明鈕（底部——「?」純文字，跟參考大字重） */
+.sc_rail__btn--help {
+    font-size: 16px;
+    font-weight: 700;
+}
+/* 兩態 icon（純 CSS 閘——兩欄全收＝「展開」icon；有欄開＝「收合」icon） */
+.sc_rail__icon_open {
+    display: none;
+}
+body[data-projects-collapsed='1'][data-chats-collapsed='1'] .sc_rail__icon_open {
+    display: block;
+}
+body[data-projects-collapsed='1'][data-chats-collapsed='1'] .sc_rail__icon_close {
+    display: none;
+}
+
+/* 專案欄收合（向左收——寬度＋淡出；節點長駐可逆） */
+body[data-projects-collapsed='1'] .sc_sidebar--projects {
+    width: 0;
+    opacity: 0;
+    border-right-color: transparent;
+}
+
+/* 對話欄收合（向右收——寬度＋淡出；節點長駐可逆） */
+body[data-chats-collapsed='1'] .sc_sidebar--chats {
+    width: 0;
+    opacity: 0;
+    border-right-color: transparent;
+}
+
+/* topbar 收合掣 icon 兩態（純 CSS 閘——收起態＝「展開」icon） */
+.sc_topbar__icon_open {
+    display: none;
+}
+body[data-chats-collapsed='1'] .sc_topbar__icon_open {
+    display: block;
+}
+body[data-chats-collapsed='1'] .sc_topbar__icon_close {
+    display: none;
+}
+
+/* 資料庫 lightbox（rail 掣開——iframe 全填 modal body；Adminer 原版照跑） */
+.sc_dbviewer__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}

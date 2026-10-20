@@ -1,0 +1,187 @@
+/* ============================================
+   sc_btn.css —— 通用按鈕元件（sc_ 前綴，避免 Bootstrap 衝突）
+   結構：Variant（外觀）+ State（行為，data-state 單一值互斥）
+   用法：全域自動載入（group "*"）
+   ============================================ */
+
+/* ============================================
+   Variant：外觀（可疊加）
+   ============================================ */
+
+/* 基礎 */
+.sc_btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    background: #1d2027;
+    color: #94a3b8;
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: background .15s, color .15s, opacity .15s;
+}
+.sc_btn:hover {
+    color: #e2e8f0;
+}
+
+/* 主要 */
+.sc_btn--primary {
+    border: none;
+    background: linear-gradient(135deg, #7c8cff, #9d7bff);
+    color: #0d0e12;
+    font-weight: 600;
+}
+.sc_btn--primary:hover {
+    filter: brightness(1.1);
+}
+
+/* 危險 */
+.sc_btn--danger {
+    border: 1px solid #7f1d1d;
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+.sc_btn--danger:hover {
+    background: #991b1b;
+    color: #fff;
+}
+
+/* 幽靈 */
+.sc_btn--ghost {
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+}
+.sc_btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+}
+
+/* ============================================
+   State：行為（data-state 單一值互斥）
+   ============================================ */
+
+/* loading：不可點 + spinner + 文字隱藏（保留佔位） */
+.sc_btn[data-state="loading"] {
+    pointer-events: none;
+    color: transparent;
+}
+.sc_btn[data-state="loading"]::after {
+    content: "";
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #94a3b8;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: sc_btn_spin .6s linear infinite;
+}
+/* primary loading：spinner 用深色（對比淺色背景） */
+.sc_btn--primary[data-state="loading"]::after {
+    border-color: #0d0e12;
+    border-right-color: transparent;
+}
+/* ghost loading：spinner 用亮色（對比深色背景） */
+.sc_btn--ghost[data-state="loading"]::after {
+    border-color: #94a3b8;
+    border-right-color: transparent;
+}
+/* danger loading：spinner 用亮色 */
+.sc_btn--danger[data-state="loading"]::after {
+    border-color: #fca5a5;
+    border-right-color: transparent;
+}
+
+/* disabled：不可點 + 灰色 */
+.sc_btn[data-state="disabled"] {
+    pointer-events: none;
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* locked：不可點 + 鎖頭 */
+.sc_btn[data-state="locked"] {
+    pointer-events: none;
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+/* success：短暫綠色（手動切回 idle） */
+.sc_btn[data-state="success"] {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
+    pointer-events: none;
+}
+
+/* error：紅色 + 可重試 */
+.sc_btn[data-state="error"] {
+    border-color: #991b1b;
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+/* ============================================
+   Size：尺寸
+   ============================================ */
+.sc_btn--sm {
+    padding: 5px 10px;
+    font-size: 11.5px;
+}
+.sc_btn--lg {
+    padding: 10px 22px;
+    font-size: 14px;
+}
+
+/* ============================================
+   Button Wrapper：載入遮罩定位容器（sc_loading.start_button_loading 以 css_loading 絕對定位於 wrapper）
+   結構：.sc_btn_wrapper > .sc_btn（button）
+   ============================================ */
+.sc_btn_wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* ============================================
+   Button Group：多按鈕橫排（間距＋垂直對齊）
+   ============================================ */
+.sc_btn_group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 分段控件（tab-like：共用外框 + border-left 分隔 + active 半透明） */
+.sc_btn_group--segmented {
+    border: 1px solid #2a2c33;
+    border-radius: 8px;
+    overflow: hidden;
+    gap: 0;
+}
+.sc_btn_group--segmented .sc_btn {
+    border: none;
+    border-radius: 0;
+    border-left: 1px solid #2a2c33;
+    padding: 4px 12px;
+    font-size: 12px;
+}
+.sc_btn_group--segmented .sc_btn:first-child {
+    border-left: none;
+}
+.sc_btn_group--segmented .sc_btn--active {
+    background: rgba(79, 140, 255, .18);
+    color: #4f8cff;
+}
+
+/* ============================================
+   Animation
+   ============================================ */
+@keyframes sc_btn_spin {
+    to { transform: rotate(360deg); }
+}

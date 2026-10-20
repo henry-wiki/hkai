@@ -1,0 +1,523 @@
+/* ============================================================
+   setup.css —— 獨立 setup 入口樣式（零依賴——唔載 app 任何 css）
+   色票＝sc_modal.css :root 同值（深色主題）；check_item／nav／button＝app 對應類子集（外觀 1:1）
+   ============================================================ */
+
+:root {
+    --modal_bg0:          #0b0d11;
+    --modal_bg1:          #13161c;
+    --modal_bg2:          #191d25;
+    --modal_bg3:          #222733;
+    --modal_bg_active:    #2b3140;
+    --modal_line:         #262c38;
+    --modal_text:         #f2f5fa;
+    --modal_text_mute:    #9da8ba;
+    --modal_text_dim:     #5d6778;
+    --modal_accent:       #2f81ff;
+    --modal_accent_hi:    #5597ff;
+    --modal_accent_dim:   rgba(47, 129, 255, .13);
+    --modal_ok:           #00d26a;
+    --modal_ok_dim:       rgba(0, 210, 106, .12);
+    --modal_warn:         #ffb020;
+    --modal_warn_dim:     rgba(255, 176, 32, .12);
+    --modal_danger:       #ff4757;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 40px 24px;
+    background: var(--modal_bg0);
+    color: var(--modal_text);
+    font-family: "Segoe UI", "Microsoft JhengHei", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+}
+
+/* 版本閘畫面（PHP 太舊——單張卡） */
+.setup_gate {
+    max-width: 560px;
+    margin: 80px auto;
+    padding: 24px;
+    background: var(--modal_bg1);
+    border: 1px solid var(--modal_line);
+    border-top: 2px solid var(--modal_danger);
+}
+.setup_gate h1 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: var(--modal_danger);
+}
+.setup_gate p {
+    margin: 6px 0;
+    color: var(--modal_text_mute);
+}
+
+/* 中央模態盒（content > modal——對應 app .modal__window 外觀） */
+.setup_modal {
+    width: 960px;
+    max-width: 100%;
+    height: min(86vh, 760px);
+    min-height: 420px;
+    margin: 0 auto;
+    display: flex;
+    background: var(--modal_bg1);
+    border: 1px solid var(--modal_line);
+    border-top: 2px solid var(--modal_accent);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+/* modal 左（對應 app .modal__navigation） */
+.setup_modal__left {
+    width: 200px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 8px 14px;
+    border-right: 1px solid var(--modal_line);
+    background: var(--modal_bg2);
+    overflow-y: auto;
+}
+
+/* nav 一覽（ul>li>div——去清單預設） */
+.setup_nav_list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* nav 項（純顯示「你在哪格」——唔可點擊；切換靠底列掣） */
+.setup_nav_button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: transparent;
+    color: var(--modal_text_mute);
+    font: inherit;
+    font-size: 13px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.setup_nav_button.is-active {
+    background: var(--modal_accent_dim);
+    border-left-color: var(--modal_accent);
+    color: var(--modal_accent_hi);
+    font-weight: 600;
+}
+
+/* modal 右（對應 app .modal__content） */
+.setup_modal__right {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 單組（顯示＝is-active——三件：標題條／內容／底列） */
+.setup_section {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.setup_section.is-active {
+    display: flex;
+}
+
+/* 標題條（對應 app .modal__title 所在頂條） */
+.setup_section-head {
+    flex: none;
+    padding: 17px 24px 15px;
+    border-bottom: 1px solid var(--modal_line);
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+.setup_section-head::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 9px;
+    background: var(--modal_accent);
+}
+
+/* 內容（捲動——對應 app .modal__content-main） */
+.setup_section-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+    position:relative;
+}
+
+/* 底列（對應 app .modal__content-footer） */
+.setup_section-foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 13px 24px;
+    border-top: 1px solid var(--modal_line);
+    background: var(--modal_bg2);
+}
+
+/* 底列兩組（左＝重新檢查＋報數；右＝上一步／下一步） */
+.setup_section-foot__left,
+.setup_section-foot__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.setup_section-foot__left {
+    margin-right: auto;
+}
+
+/* 掣（對應 app .button／.button--primary／success 子集） */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    border: none;
+    background: var(--modal_bg3);
+    color: var(--modal_text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.button:hover {
+    background: var(--modal_bg_active);
+}
+.button:active {
+    transform: translateY(1px);
+}
+.button--primary {
+    background: var(--modal_accent);
+    color: #ffffff;
+}
+.button--primary:hover {
+    background: var(--modal_accent_hi);
+}
+.button--success {
+    background: var(--modal_ok_dim);
+    color: var(--modal_ok);
+}
+.button--success:hover {
+    background: rgba(0, 210, 106, 0.22);
+}
+.button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* 轉圈動畫（「檢查中…」字標用） */
+@keyframes setup_foot_spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 重新檢查掣文字（閒置／檢查中——跟底列 is-checking 純 css 閘） */
+.setup_foot_refresh_loading {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+.setup_foot_refresh_loading::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--modal_bg3);
+    border-top-color: var(--modal_accent);
+    border-radius: 50%;
+    animation: setup_foot_spin 0.7s linear infinite;
+}
+.setup_section-foot.is-checking .setup_foot_refresh_idle {
+    display: none;
+}
+.setup_section-foot.is-checking .setup_foot_refresh_loading {
+    display: inline-flex;
+}
+
+/* 檢查卡（同 app check_item 家族 1:1） */
+.check_item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--modal_line);
+    background: var(--modal_bg0);
+    margin-bottom: 8px;
+}
+.check_item .mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.check_item.pass .mark {
+    background: rgba(0, 210, 106, .15);
+    color: var(--modal_ok);
+}
+.check_item.fail .mark {
+    background: rgba(255, 71, 87, .15);
+    color: var(--modal_danger);
+}
+.check_item.warn .mark {
+    background: var(--modal_warn_dim);
+    color: var(--modal_warn);
+}
+
+/* 安裝行狀態（框架同 check_item 1:1——只加 data-install_status 閘門） */
+.check_item[data-install_status='init'] .mark {
+    background: var(--modal_bg3);
+    color: var(--modal_text_dim);
+}
+.check_item[data-install_status='loading'] .mark {
+    position: relative;
+    color: transparent;
+    background: transparent;
+}
+.check_item[data-install_status='loading'] .mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--modal_bg3);
+    border-top-color: var(--modal_accent);
+    border-radius: 50%;
+    animation: setup_foot_spin 0.7s linear infinite;
+}
+/* 檢查項狀態（data-status 閘門——init／loading＝轉圈待查·查緊；真卡出 pass／fail／warn） */
+.check_item[data-status='init'] .mark,
+.check_item[data-status='loading'] .mark {
+    position: relative;
+    color: transparent;
+    background: transparent;
+}
+.check_item[data-status='init'] .mark::before,
+.check_item[data-status='loading'] .mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--modal_bg3);
+    border-top-color: var(--modal_accent);
+    border-radius: 50%;
+    animation: setup_foot_spin 0.7s linear infinite;
+}
+.check_item[data-status='init'],
+.check_item[data-status='loading'] {
+    opacity: .55;
+}
+
+/* 重新檢查掣右旁統計（checking／all·pass·fail——js 填字） */
+.check_counts {
+    color: var(--modal_text_dim);
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+/* 組徽章：待查（中性） */
+.check_group-badge.pending {
+    background: var(--modal_bg3);
+    color: var(--modal_text_dim);
+}
+
+.check_item .note_light {
+    flex-shrink: 0;
+    margin-left: 8px;
+    font-size: 14px;
+    opacity: 0.85;
+}
+.check_item .cinfo {
+    min-width: 0;
+    flex: 1;
+}
+.check_item .cname {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--modal_text);
+}
+.check_item .cdesc {
+    font-size: 11px;
+    color: var(--modal_text_dim);
+    margin-top: 2px;
+}
+.check_item .cvalue {
+    font-size: 11px;
+    color: var(--modal_text_mute);
+    margin-top: 2px;
+}
+
+.check_item .cdesc a,
+.check_item .cdesc a:visited {
+    color: var(--modal_accent);
+}
+
+.check_item .cdesc a:hover {
+    color: var(--modal_accent_hi);
+}
+
+/* 卡內控件區（互動元件位——input／select／textarea；row 一行＋錯誤字眼喺下面） */
+.check_item .ccontrol {
+    margin-top: 8px;
+}
+.check_item .input_row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.check_item .input_field {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 10px;
+    background: var(--modal_bg2);
+    border: 1px solid var(--modal_line);
+    color: var(--modal_text);
+    font: inherit;
+    font-size: 12px;
+}
+.check_item .input_field:focus {
+    outline: none;
+    border-color: var(--modal_accent);
+}
+.check_item .input_msg {
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--modal_text_mute);
+}
+.check_item .input_msg.is-ok {
+    color: var(--modal_ok);
+}
+.check_item .input_msg.is-danger {
+    color: var(--modal_danger);
+}
+
+.check_item .input_msg.is-warn {
+    color: var(--modal_warn);
+}
+
+/* 捲軸（深色細條——跟 app 觀感） */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--modal_bg3);
+    border: 2px solid var(--modal_bg1);
+}
+::-webkit-scrollbar-track {
+    background: var(--modal_bg1);
+}
+
+/* welcome 格（置中 hero——icon＋描述） */
+.check_hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    min-height: 100%;
+    padding: 32px 24px;
+    text-align: center;
+}
+.check_hero__icon {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+}
+.check_hero__desc {
+    max-width: 430px;
+    margin: 0;
+    color: var(--modal_text_mute);
+    line-height: 1.9;
+}
+
+/* welcome 格語言選擇（hero 底——pill 掣；預設＝偵測語言） */
+.check_hero__lang {
+    display: flex;
+    gap: 8px;
+}
+.setup_lang_button {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 16px;
+    text-decoration: none;
+    border: 1px solid var(--modal_line);
+    background: transparent;
+    color: var(--modal_text_mute);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.setup_lang_button:hover {
+    background: var(--modal_bg3);
+    color: var(--modal_text);
+}
+.setup_lang_button.is-active {
+    background: var(--modal_accent_dim);
+    border-color: var(--modal_accent);
+    color: var(--modal_accent_hi);
+    font-weight: 600;
+}
+.check_hero__version {
+    color: var(--modal_text_mute);
+    font-size: 12px;
+}
+
+
+/* 檢查組（前置檢查六組——組標題＋徽章；徽章跟實況計數） */
+.check_group {
+    margin-bottom: 14px;
+}
+.check_group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 2px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--modal_line);
+}
+.check_group-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--modal_text);
+}
+.check_group-badge {
+    flex-shrink: 0;
+    font-size: 10.5px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+.check_group-badge.pass {
+    background: rgba(0, 210, 106, .15);
+    color: var(--modal_ok);
+}
+.check_group-badge.fail {
+    background: rgba(255, 71, 87, .15);
+    color: var(--modal_danger);
+}
+.check_group-badge.warn {
+    background: var(--modal_warn_dim);
+    color: var(--modal_warn);
+}

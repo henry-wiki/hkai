@@ -1,0 +1,115 @@
+/* ============================================
+   sc_ai_status_bar.css —— 欄底 status bar（plugin: sc_ai_status_bar）
+   三條 bar 分別嵌喺 project 欄／chat 欄／main 內（各 panel 最後一個 child——唔再係全局 fixed footer）
+   命名沿用 plugin 產出的 .sc_statusbar / .sc_statusbar__item / .sc-text
+   ============================================ */
+
+/* 欄底 status bar（高度 26px；底色／上框線跟隨側欄與主區——#131418／#2a2c33） */
+.sc_statusbar {
+    flex: none;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    background: #131418;
+    border-top: 1px solid #2a2c33;
+    font-size: 12px;
+    color: #9aa0ab;
+}
+
+/* item（icon ＋ 文字——單行不換行、超出省略） */
+.sc_statusbar__item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 100%;
+    padding: 0 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: default;
+    user-select: none;
+}
+.sc_statusbar__item:hover {
+    background: rgba(255, 255, 255, .06);
+}
+
+/* 狀態色（由 plugin 預設值或前端模組附加 class） */
+.sc_statusbar__item.ok {
+    color: #34d399;
+}
+.sc_statusbar__item.bad {
+    color: #f87171;
+}
+.sc_statusbar__item.warn {
+    color: #f0b35e;
+}
+
+/* 可點擊 item（server 端有 click 設定才加此 class——未設定者維持 cursor:default） */
+.sc_statusbar__item--clickable {
+    cursor: pointer;
+}
+
+/* 文字槽（plugin 產出的內層 span——flex item 可正常 text-overflow） */
+.sc-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 主區 bar：左（Git／模型）右（連線／時鐘）分開 */
+.sc_statusbar--workspace {
+    justify-content: space-between;
+}
+.sc_statusbar--workspace .sc_statusbar__left,
+.sc_statusbar--workspace .sc_statusbar__right {
+    display: flex;
+    /* align-items: center; */
+    min-width: 0;
+    height: 100%;
+}
+
+/* 掛載槽（外部模組注入——空時不佔位） */
+.sc_statusbar__indicators {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    height: 100%;
+}
+
+/* 歸檔掣（chat 欄右側——sc_ai_chats 貢獻；margin-left:auto 推至最右） */
+.sc_statusbar__archive {
+    flex: none;
+    margin-left: auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: #62697a;
+    padding: 0 10px;
+    cursor: pointer;
+}
+.sc_statusbar__archive:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #f0b35e;
+}
+
+/* 歸檔入口（chat 欄右側——sc_ai_chats 貢獻；連結形式；margin-left:auto 推至最右） */
+.sc_statusbar__archive {
+    flex: none;
+    margin-left: auto;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    border: none;
+    background: transparent;
+    color: #62697a;
+    padding: 0 10px;
+    cursor: pointer;
+    text-decoration: none;
+}
+.sc_statusbar__archive:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #f0b35e;
+}

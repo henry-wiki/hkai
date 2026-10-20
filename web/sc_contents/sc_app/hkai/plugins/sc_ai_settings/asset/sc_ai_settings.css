@@ -1,0 +1,649 @@
+/* sc_ai_settings.css —— settings plugin 樣式（Zed 風格深色設定介面） */
+
+/* ===== 深色主題 token（單一值源＝sc_modal.css 色票——此處只做 settings 域別名；改色只改 sc_modal.css） ===== */
+:root {
+    --set_bg:        var(--modal_bg1);
+    --set_bg_read:   var(--modal_bg0);
+    --set_bg_side:   var(--modal_bg2);
+    --set_bg_hover:  var(--modal_bg3);
+    --set_bg_active: var(--modal_bg_active);
+    --set_border:    var(--modal_line);
+    --set_text:      var(--modal_text);
+    --set_text_mute: var(--modal_text_mute);
+    --set_accent:    var(--modal_accent);
+}
+
+/* nav 項（1 層） */
+.settings_nav_button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: transparent;
+    color: var(--set_text_mute);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.settings_nav_button:hover {
+    background: var(--set_bg_hover);
+    color: var(--set_text);
+}
+.settings_nav_button.active {
+    background: var(--modal_accent_dim);
+    border-left-color: var(--set_accent);
+    color: var(--modal_accent_hi);
+    font-weight: 600;
+}
+/* nav 項的 chevron——只給「有子選單」的項目
+   控制方式：要「有」子選單 → 該項加 class `settings_nav_parent` ＋ 其後放一個 .settings_nav_children
+            要「沒有」子選單 → 什麼都不加（不顯示 chevron，如 Log viewer／Process viewer） */
+.settings_nav_parent::before {
+    content: '\f054';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    width: 12px;
+    flex-shrink: 0;
+    font-size: 10px;
+    color: var(--set_text_mute);
+    transition: transform 0.15s ease;
+}
+.settings_nav_parent.open::before {
+    transform: rotate(90deg);
+}
+/* 無子選單者：留同寬空位——文字與有 chevron 的項目對齊 */
+.settings_nav_button:not(.settings_nav_parent)::before {
+    content: '';
+    width: 12px;
+    flex-shrink: 0;
+}
+
+/* nav 子項（2 層）——預設收起，父項加 .open 才展開 */
+.settings_nav_children {
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    padding-left: 18px;
+}
+.settings_nav_button.open + .settings_nav_children {
+    display: flex;
+}
+.settings_nav_children .settings_nav_button {
+    font-size: 12px;
+    padding: 6px 10px;
+}
+
+/* 分區（設定頁內容——每功能一節：小標＋列；照 DARK PRO v3 稿 sec 結構） */
+.settings_section {
+    margin-bottom: 30px;
+}
+.settings_section:last-child {
+    margin-bottom: 0;
+}
+/* 分區標題（小字距大寫——主色方塊＋亮主色；照稿 sec__title） */
+.settings_section_title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--modal_accent_hi);
+    margin-bottom: 6px;
+}
+.settings_section_title::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    flex: none;
+    background: var(--modal_accent);
+}
+
+/* ===== 設定列（左＝內容、右＝選項）——可無限擴展，也可改成 table ===== */
+.settings_row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--set_border);
+}
+.settings_row:last-child {
+    border-bottom: none;
+}
+.settings_row_main {
+    flex: 1;
+    min-width: 0;
+}
+.settings_row_label {
+    font-size: 14px;
+    color: var(--set_text);
+}
+.settings_row_desc {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--set_text_mute);
+}
+.settings_row_control {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 列內控制項：下拉（原生 select 深色化） */
+.settings_select {
+    padding: 5px 10px;
+    border: 1px solid var(--set_border);
+    border-radius: 6px;
+    background: var(--set_bg_hover);
+    color: var(--set_text);
+    font-size: 13px;
+    cursor: pointer;
+}
+.settings_select:focus {
+    outline: none;
+    border-color: var(--set_accent);
+}
+
+/* 列內控制項：開關（純 CSS——不依賴 Bootstrap） */
+.settings_switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+    flex-shrink: 0;
+}
+.settings_switch input {
+    display: none;
+}
+.settings_switch .settings_switch_track {
+    position: absolute;
+    inset: 0;
+    background: var(--modal_bg3);
+    transition: background 0.15s ease;
+}
+.settings_switch .settings_switch_track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    background: var(--modal_text_dim);
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+.settings_switch input:checked + .settings_switch_track {
+    background: var(--set_accent);
+}
+.settings_switch input:checked + .settings_switch_track::after {
+    transform: translateX(18px);
+    background: #ffffff;
+}
+
+/* ===== server 狀態文字（Host／Port 列——按鈕左側；四態顏色＋前置圓點） ===== */
+.settings_server_status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--set_text_mute);
+    background: var(--set_bg_hover);
+}
+.settings_server_status::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    flex: none;
+    background: currentColor;
+}
+.settings_server_status--running {
+    color: var(--modal_ok);
+    background: var(--modal_ok_dim);
+}
+.settings_server_status--starting {
+    color: var(--modal_warn);
+    background: var(--modal_warn_dim);
+}
+.settings_server_status--stopping {
+    color: var(--modal_warn);
+    background: var(--modal_warn_dim);
+}
+/* 活動狀態點呼吸（live 訊號——stopped 靜止；照稿 .bd blink） */
+.settings_server_status--running::before,
+.settings_server_status--starting::before,
+.settings_server_status--stopping::before {
+    animation: settings_server_status_blink 1.5s ease-in-out infinite;
+}
+@keyframes settings_server_status_blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.35;
+    }
+}
+
+/* ===== server 日誌（Live logs——flex 柱：新行 prepend＝最新喺頂；唔摺行、可橫捲；時間／層級上色） ===== */
+.settings_server_log {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--set_bg_read);
+    color: var(--set_text_mute);
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 11.5px;
+    line-height: 1.85;
+    max-height: 170px;
+    overflow: auto;
+}
+/* 行（唔摺行——長行橫向捲） */
+.settings_server_log_line {
+    white-space: pre;
+    flex: none;
+}
+/* 時間（dim） */
+.settings_server_log_time {
+    color: var(--modal_text_dim);
+}
+/* 層級（藍＝INFO；橙＝WARNING；紅＝ERROR；其餘淡） */
+.settings_server_log_level {
+    color: var(--set_text_mute);
+}
+.settings_server_log_level--info {
+    color: var(--modal_accent_hi);
+}
+.settings_server_log_level--warn {
+    color: var(--modal_warn);
+}
+.settings_server_log_level--error {
+    color: var(--modal_danger);
+}
+
+/* （各容器細捲軸由全域提供——styles/css/main.css） */
+
+/* ===== Process Viewer 分頁（Cyber：等寬字 ＋ 霓虹點綴——一律走 --set_* token） ===== */
+.process_viewer {
+    --pv_alive:  var(--modal_ok);
+    --pv_idle:   #8a8a8a;
+    --pv_accent: #22d3ee;
+    --pv_warn:   var(--modal_warn);
+    --pv_dead:   var(--modal_danger);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* 摘要列（狀態徽章 ＋ 各層計數 ＋ daemon 啟動時間） */
+.process_viewer_summary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 10px 12px;
+    margin-bottom: 18px;
+    border: 1px solid var(--set_border);
+    border-radius: 6px;
+    background: linear-gradient(180deg, rgba(34, 211, 238, 0.07), rgba(34, 211, 238, 0));
+}
+.process_viewer_state {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border: 1px solid currentColor;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+}
+.process_viewer_state--alive {
+    color: var(--pv_alive);
+    box-shadow: 0 0 8px rgba(0, 210, 106, 0.22);
+}
+.process_viewer_state--idle {
+    color: var(--pv_idle);
+}
+.process_viewer_count {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--set_text_mute);
+}
+.process_viewer_count em {
+    font-style: normal;
+    letter-spacing: 0.04em;
+}
+.process_viewer_count b {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--set_text);
+}
+.process_viewer_since {
+    margin-left: auto;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--set_text_mute);
+}
+
+/* 區塊（標題 ＋ 內容——虛線分隔，Cyber 語彙） */
+.process_viewer_block {
+    margin-bottom: 18px;
+}
+.process_viewer_block_title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+    border-bottom: 1px dashed var(--set_border);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    color: var(--set_text_mute);
+}
+
+/* 列（活躍列／掃描列共用） */
+.process_viewer_rows {
+    display: flex;
+    flex-direction: column;
+}
+.process_viewer_row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--set_text);
+}
+.process_viewer_row:hover {
+    background: var(--set_bg_hover);
+}
+.process_viewer_program {
+    min-width: 150px;
+    color: var(--set_text_mute);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.process_viewer_extra {
+    margin-left: auto;
+    color: var(--set_text_mute);
+    font-size: 11px;
+}
+
+/* 狀態點（存活——呼吸光暈） */
+.process_viewer_dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.process_viewer_dot--alive {
+    background: var(--pv_alive);
+    box-shadow: 0 0 6px var(--pv_alive);
+    animation: process_viewer_pulse 2s ease-in-out infinite;
+}
+@keyframes process_viewer_pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
+}
+
+/* 空狀態 */
+.process_viewer_empty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--set_text_mute);
+}
+
+/* 終止鈕（活躍列最右側——Cyber：紅框、hover 發光） */
+.process_viewer_kill {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border: 1px solid var(--pv_dead);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--pv_dead);
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    opacity: 0.65;
+}
+.process_viewer_kill:hover {
+    opacity: 1;
+    background: rgba(255, 71, 87, 0.12);
+    box-shadow: 0 0 8px rgba(255, 71, 87, 0.35);
+}
+
+/* ============ Instructions 頁（CodeMirror——右側內容欄整塊＝編輯畫面） ============ */
+/* 內容欄上下排（工具列＋編輯器；去 padding／外捲——捲動交 CodeMirror 內部）——共用組件（settings 內容欄／project 規則頁） */
+.instructions-editor {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+}
+/* 工具列（插入列表／粗體——細粒貼 settings 主題） */
+.instructions-editor__toolbar {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--set_border);
+}
+.instructions-editor__toolbar-btn {
+    padding: 2px 8px;
+    border: 1px solid var(--set_border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--set_text_mute);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+}
+.instructions-editor__toolbar-btn:hover {
+    border-color: var(--set_accent);
+    background: var(--set_bg_hover);
+    color: var(--set_text);
+}
+.instructions-editor__toolbar-btn--bold {
+    font-weight: 700;
+}
+.instructions-editor__toolbar-btn--italic {
+    font-style: italic;
+    font-weight: 700;
+}
+/* 編輯切換掣圖示（svg——13px 貼字級；stroke 跟 currentColor） */
+.instructions-editor__toolbar-btn svg {
+    display: block;
+    width: 13px;
+    height: 13px;
+}
+/* 格式掣組（閱讀模式收起——display 交閘門；編輯模式橫排） */
+.instructions-editor__toolbar-group {
+    display: flex;
+    gap: 6px;
+}
+/* 閱讀模式閘門（data-edit_mode='0'）：格式掣組收起、只露編輯（鉛筆）圖示 */
+.instructions-editor[data-edit_mode='0'] .instructions-editor__toolbar-group {
+    display: none;
+}
+.instructions-editor[data-edit_mode='0'] .instructions-editor__icon_view {
+    display: none;
+}
+/* 編輯模式閘門（data-edit_mode='1'）：編輯（鉛筆）圖示收起——露檢視（眼睛）圖示 */
+.instructions-editor[data-edit_mode='1'] .instructions-editor__icon_edit {
+    display: none;
+}
+/* footer 左側更新時間（靠左——按鈕靠右） */
+.instructions-editor__updated_at {
+    margin-right: auto;
+    color: var(--set_text_mute);
+    font-size: 11px;
+}
+
+/* 閱讀模式閘門：按鈕收起（更新時間保留）——編輯模式先出掣（Environment 頁無 data-edit_mode＝Update 一律顯示） */
+.instructions-editor[data-edit_mode='0'] ~ .modal__content-footer [data-btn='reset_instructions'] {
+    display: none;
+}
+.instructions-editor[data-edit_mode='0'] ~ .modal__content-footer [data-btn='save_instructions'] {
+    display: none;
+}
+/* 編輯區貼邊全幅（高度隨 flex 撐滿；底色接 modal 底＝無縫） */
+.instructions-editor__mount {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+}
+.instructions-editor__mount .CodeMirror {
+    height: 100%;
+    background: var(--set_bg);
+}
+/* 閱讀模式底色（稍暗——一望知唔可編輯；編輯模式＝原 --set_bg） */
+.instructions-editor[data-edit_mode='0'] .instructions-editor__mount .CodeMirror {
+    background: var(--set_bg_read);
+}
+
+/* CodeMirror markdown 上色（material-darker 主題冇定義嗰啲 token——補上：標題／粗體／斜體／連結／引言／程式碼） */
+.instructions-editor__mount .cm-s-material-darker .cm-header {
+    color: #89ddff;
+    font-weight: 700;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-strong {
+    color: #f78c6c;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-em {
+    color: #c792ea;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-link {
+    color: #82aaff;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-url {
+    color: #82aaff;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-quote {
+    color: #ffcb6b;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-comment {
+    color: #c3e88d;
+}
+.instructions-editor__mount .cm-s-material-darker .cm-formatting {
+    color: rgba(238, 255, 255, 0.35);
+}
+
+/* 關於 HKAI 分頁（settings about section——值＝hkai_config.json about 節） */
+.sc_about__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0 14px;
+    border-bottom: 1px solid var(--set_border);
+}
+.sc_about__logo {
+    width: 40px;
+    height: 40px;
+}
+.sc_about__title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.sc_about__name {
+    font-size: 15px;
+    color: var(--set_text);
+}
+.sc_about__tagline {
+    font-size: 11px;
+    color: var(--modal_text_dim);
+}
+.sc_about__rows {
+    padding: 10px 0;
+}
+.sc_about__row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+}
+.sc_about__label {
+    width: 84px;
+    flex: none;
+    white-space: nowrap;
+    color: var(--modal_text_dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+}
+.sc_about__value {
+    flex: 1;
+    color: var(--set_text);
+    font-size: 12px;
+}
+.sc_about__check {
+    flex: none;
+    padding: 3px 10px;
+    border: 1px solid var(--set_border);
+    background: transparent;
+    color: var(--set_text_mute);
+    font-size: 11px;
+    cursor: pointer;
+}
+.sc_about__check:hover {
+    color: var(--set_text);
+    background: var(--set_bg_hover);
+}
+.sc_about__foot {
+    padding-top: 12px;
+    border-top: 1px solid var(--set_border);
+}
+.sc_about__copyright {
+    color: var(--modal_text_dim);
+    font-size: 11px;
+}
+
+/* 設定提示（琥珀警告——如 API key 已改未重啟） */
+.settings_notice {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--set_text);
+    padding: 9px 12px;
+    margin-bottom: 12px;
+    border-left: 2px solid var(--modal_text_dim);
+    background: var(--modal_bg2);
+}
+.settings_notice--warning {
+    border-left-color: var(--modal_warn);
+    background: var(--modal_warn_dim);
+}
+
+/* ===== provider 鎖匙列（三態：saved 唯讀＋重設／resetting 輸入＋儲存＋取消／empty 輸入＋儲存——純 CSS 按 data-provider_state 放行） ===== */
+/* saved（已設）：收起輸入位、取消、儲存 */
+.provider_key_row[data-provider_state='saved'] [data-provider_part='input'],
+.provider_key_row[data-provider_state='saved'] [data-provider_part='cancel'],
+.provider_key_row[data-provider_state='saved'] [data-provider_part='save'] {
+    display: none;
+}
+/* resetting（輸入中）：收起唯讀值、重設 */
+.provider_key_row[data-provider_state='resetting'] [data-provider_part='readonly'],
+.provider_key_row[data-provider_state='resetting'] [data-provider_part='reset'] {
+    display: none;
+}
+/* empty（未設）：收起唯讀值、重設、取消 */
+.provider_key_row[data-provider_state='empty'] [data-provider_part='readonly'],
+.provider_key_row[data-provider_state='empty'] [data-provider_part='reset'],
+.provider_key_row[data-provider_state='empty'] [data-provider_part='cancel'] {
+    display: none;
+}

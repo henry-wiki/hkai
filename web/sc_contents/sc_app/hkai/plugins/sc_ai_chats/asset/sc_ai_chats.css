@@ -1,0 +1,258 @@
+/* sc_ai_chats 主題樣式（自 main.css 遷移——對話列表；訊息樣式見 sc_ai_messages.css、prompt 樣式見 sc_ai_prompt.css；版面配置仍留 main.css） */
+/* sidebar 樣式已遷移至 jsmods/sc_sidebar/sc_sidebar.css */
+
+/* 兩行：上行＝標題＋時間；下行＝模型 · N 條訊息 · N 條排隊（一律純文字——色／大小／粗細分層，無框） */
+.sc_chat_card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 6px;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid #272e40;
+    text-decoration: none;
+    color: inherit;
+}
+/* 對話列移動動畫（FLIP——chat_list_move_to_top 加減 .moving；transform 值由 JS 帶） */
+.sc_chat_list.moving .sc_chat_card {
+    transition: transform 0.28s ease;
+}
+.sc_chat_card:hover {
+    background: #1f2637;
+}
+.sc_chat_card--active {
+    background: #252e46;
+    border-left-color: #7c8cff;
+}
+.sc_chat_card__link {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.6;
+    transition: opacity 0.15s ease;
+}
+.sc_chat_card:hover .sc_chat_card__link,
+.sc_chat_card--active .sc_chat_card__link {
+    opacity: 1;
+}
+.sc_chat_card__primary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sc_chat_card__primary .sc_chat_card__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #eaecf4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc_chat_card__primary .sc_chat_card__updated {
+    flex: 0 0 auto;
+    font-size: 10px;
+    color: #6f7a94;
+}
+.sc_chat_card__meta .sc_chat_card__model {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 10.5px;
+    color: #8fb8e8;
+    direction: rtl;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sc_chat_card__meta .sc_chat_card__msg_count {
+    flex: 0 0 auto;
+    /* 右端收邊（meta 行兩端：模型左／數右） */
+    margin-left: auto;
+    font-size: 10.5px;
+    color: #6f7a94;
+    font-variant-numeric: tabular-nums;
+}
+/* 無訊息（data-count='0'）→ 隱藏（純 CSS 閘） */
+.sc_chat_card__meta .sc_chat_card__msg_count[data-count='0'] {
+    display: none;
+}
+.sc_chat_card__meta .sc_chat_card__msg_count b {
+    color: #eaecf4;
+    font-weight: 600;
+}
+/* 進行中——底線 barber pole（6px、深淺藍斜紋、一直向右移動；polling class 在＝亮——純 CSS 閘） */
+.sc_chat_card.polling::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 6px;
+    background-image: repeating-linear-gradient(45deg, #1d4ed8 0px, #1d4ed8 8px, #60a5fa 8px, #60a5fa 16px);
+    animation: chat_loading_slide 0.7s linear infinite;
+}
+@keyframes chat_loading_slide {
+    from { background-position: 0 0; }
+    to { background-position: 22.64px 0; }
+}
+/* 歸檔掣（hover 才現——列面保持乾淨；hover 變琥珀） */
+.sc_chat_card .sc_chat_card__archive_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: none;
+    background: transparent;
+    color: #62697a;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.3;
+}
+.sc_chat_card .sc_chat_card__archive_btn:hover {
+    opacity: 0.6;
+    color: #f0b35e;
+}
+
+/* == 歸檔視覺（2026-10-04 設計稿落——琥珀標識；色值用 app 現行 palette） == */
+
+/* 歸檔卡（sc_chat_card--archived——斜紋底＋標題轉灰＋時間轉琥珀；左線留俾 active 藍線；結構同正常卡不變） */
+.sc_chat_card--archived {
+    background-color: #1d2027;
+    background-image:
+        linear-gradient(rgba(240,179,94,0.07), rgba(240,179,94,0.07)),
+        repeating-linear-gradient(135deg, rgba(240,179,94,0.055) 0 1px, transparent 1px 6px);
+}
+.sc_chat_card--archived .sc_chat_card__title {
+    color: #9aa0ab;
+}
+.sc_chat_card--archived .sc_chat_card__updated {
+    color: #f0b35e;
+}
+
+/* 已歸檔 badge（archive icon＋字——列面即見） */
+.sc_chat_card .sc_chat_card__badge {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    align-self: center;
+    padding: 2px 5px;
+    color: #f0b35e;
+    border: 1px solid rgba(240,179,94,0.48);
+    background: rgba(240,179,94,0.14);
+    font-size: 8.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+/* 還原掣（歸檔卡列面常駐——模型藍系；對照 archive_btn 結構） */
+.sc_chat_card .sc_chat_card__restore_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: 1px solid rgba(143,184,232,0.30);
+    background: rgba(143,184,232,0.08);
+    color: #8fb8e8;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sc_chat_card .sc_chat_card__restore_btn:hover {
+    border-color: rgba(143,184,232,0.55);
+    background: rgba(143,184,232,0.16);
+}
+
+/* 歸檔清單語境（.sc_chat_list.archive——說明條；class 由 chat_list_fetch act 依後端旗標上） */
+.sc_chat_list.archive .sc_chat_list__explainer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 8px 8px 6px;
+    padding: 7px 8px;
+    color: #f0b35e;
+    border-left: 2px solid #f0b35e;
+    background: rgba(240,179,94,0.10);
+    font-size: 9.5px;
+    line-height: 1.4;
+}
+.sc_chat_list.archive .sc_chat_list__explainer i {
+    font-size: 9.5px;
+}
+
+/* 歸檔語境 header（.sc_sidebar--chats.archive——kicker 轉琥珀＋頭部淡琥珀底；act 同步上呢個 class；純背景——邊線保持原狀） */
+.sc_sidebar--chats.archive .sc_panel_header__kicker {
+    color: #f0b35e;
+}
+.sc_sidebar--chats.archive .sc_panel_header {
+    background: rgba(240,179,94,0.08);
+}
+
+/* == 歸檔視覺（2026-10-04 設計稿落——琥珀標識；色值用 app 現行 palette） == */
+
+/* 歸檔卡（sc_chat_card--archived——斜紋底＋標題轉灰＋時間轉琥珀；結構同正常卡不變） */
+.sc_chat_card--archived {
+    background-color: #1d2027;
+    background-image:
+        linear-gradient(rgba(240,179,94,0.07), rgba(240,179,94,0.07)),
+        repeating-linear-gradient(135deg, rgba(240,179,94,0.055) 0 1px, transparent 1px 6px);
+}
+.sc_chat_card--archived .sc_chat_card__title {
+    color: #9aa0ab;
+}
+.sc_chat_card--archived .sc_chat_card__updated {
+    color: #f0b35e;
+}
+
+/* 還原掣（歸檔卡列面常駐——模型藍系；對照 archive_btn 結構） */
+.sc_chat_card .sc_chat_card__restore_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: 1px solid rgba(143,184,232,0.30);
+    background: rgba(143,184,232,0.08);
+    color: #8fb8e8;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.sc_chat_card .sc_chat_card__restore_btn:hover {
+    border-color: rgba(143,184,232,0.55);
+    background: rgba(143,184,232,0.16);
+}
+
+/* 刪除掣（真正刪除——永久；hover 才現——列面保持乾淨；hover 變紅 #ef4444） */
+.sc_chat_card .sc_chat_card__delete_btn {
+    flex: 0 0 auto;
+    align-self: center;
+    border: none;
+    background: transparent;
+    color: #62697a;
+    font-size: 10.5px;
+    line-height: 1;
+    padding: 3px 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.3;
+}
+.sc_chat_card .sc_chat_card__delete_btn:hover {
+    opacity: 0.6;
+    color: #ef4444;
+}
+
+/* 歸檔語境整區底（.sc_chat_list.archive——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
+.sc_chat_list.archive {
+    background-image: linear-gradient(180deg, rgba(240,179,94,0.09), rgba(240,179,94,0.03));
+}
+

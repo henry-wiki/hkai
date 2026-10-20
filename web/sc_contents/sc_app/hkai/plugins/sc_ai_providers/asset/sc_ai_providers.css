@@ -1,0 +1,295 @@
+/* ============================================
+   sc_ai_providers.css —— Model Selection modal（左 provider 清單 + model table + footer effort 按鈕）
+   命名：snake_case（model_selector_ 前綴——遮罩/modal 結構沿用 sc_modal 基座）
+   ============================================ */
+
+/* chat_options 顯示元素（model_display_name | reasoning_effort——點擊開 modal；樣式對齊 .modeBtn；靠右由前置的 .sc_composer__suggestions margin-left:auto 推擠） */
+.sc_composer__model_picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    background: #1e293b;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 12px;
+    max-width: 55%;
+}
+.sc_composer__model_picker:hover {
+    background: #334155;
+    color: #e2e8f0;
+}
+.sc_composer__model_provider {
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+.sc_composer__model_name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sc_composer__model_effort {
+    flex-shrink: 0;
+    color: #64748b;
+}
+/* 未選模型 → 只顯示提示（has_model 由 server 初次渲染＋JS 更新時切換） */
+.sc_composer__model_empty {
+    display: none;
+}
+.sc_composer__model_picker:not(.sc_composer__model_picker--has_model) .sc_composer__model_empty {
+    display: inline;
+}
+.sc_composer__model_picker:not(.sc_composer__model_picker--has_model) .sc_composer__model_provider,
+.sc_composer__model_picker:not(.sc_composer__model_picker--has_model) .sc_composer__model_name,
+.sc_composer__model_picker:not(.sc_composer__model_picker--has_model) .sc_composer__model_effort {
+    display: none;
+}
+
+/* overlay/modal/header/close 基座——jsmods/sc_modal/sc_modal.css.css 通用基座（.modal__overlay / .modal__window / .modal__header / .modal__close） */
+
+/* 側欄＝基座 .modal__navigation（搜尋框＋ .modal__navigation-content 清單——樣式全交 sc_modal.css）；provider 掣（選中＝左 2px 光棒＋主色暗底——同 settings 左選單同款） */
+.side_provider_item {
+    display:block;
+    width:100%;
+}
+.side_provider_tab_button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: transparent;
+    color: var(--modal_text_mute);
+    cursor: pointer;
+    font-size: 13px;
+    word-break: break-all;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.side_provider_tab_button:hover {
+    background: var(--modal_bg3);
+    color: var(--modal_text);
+}
+.side_provider_tab_button.active {
+    background: var(--modal_accent_dim);
+    border-left-color: var(--modal_accent);
+    color: var(--modal_accent_hi);
+    font-weight: 600;
+}
+
+/* 右欄：provider 頁捲動容器（position relative——scroll 定位計算基準；捲動動畫交 JS（jQuery animate）；底列固定由 .modal__content-footer 承擔） */
+.model_selector_table_wrap {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* provider 頁（右邊單一內容位——撳左欄＝清走舊頁換新頁；同設定 modal 一 nav 一頁） */
+
+/* model table（fixed 佈局——欄寬由 td class 控制；thead sticky——底色較視窗深一階，捲動時與內容區分） */
+.model_selector_table {
+    width: 100%;
+    border-collapse: collapse;
+
+}
+.model_selector_table .thead
+{
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    opacity:.9;
+}
+.model_selector_table .thead td {
+    background: #0f172a;
+
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    padding: 8px;
+
+}
+.model_selector_td_context {
+    width: 100px;
+    text-align: right;
+}
+.model_selector_td_price {
+    width: 130px;
+    text-align: right;
+}
+.model_selector_td_index {
+    width: 100px;
+    text-align: right;
+}
+
+/* provider 節行（colspan 全寬——scroll 錨點；捲動定位標的）——sticky：表頭下方固定，捲動時分隔帶常駐 */
+.model_selector_table td {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: #94a3b8;
+    vertical-align: middle;
+    overflow: hidden;
+    white-space:nowrap;
+}
+
+
+/* provider 節行內部（td flex：左 search｜右 last update + refresh） */
+.model_selector_provider_head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+/* provider 行內 search（結構同左欄 search wrap 一致——搬入行內；闊度固定） */
+.model_selector_provider_head .modal__search_wrap {
+    margin: 0;
+    width: 220px;
+}
+.model_selector_provider_meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.model_selector_provider_time {
+    font-size: 10px;
+    font-weight: 400;
+    color: #64748b;
+}
+.model_selector_provider_refresh {
+    padding: 2px 8px;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 11px;
+}
+.model_selector_provider_refresh:hover {
+    background: #334155;
+    color: #e2e8f0;
+}
+.model_selector_provider_refresh:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+/* 空態提示列（provider 無 model 列——未下載/搜尋無結果） */
+.model_selector_empty_row td {
+    font-style: italic;
+    color: #64748b;
+}
+
+/* model 列（hover / selected 高亮） */
+.model_selector_model_row {
+    cursor: pointer;
+}
+.model_selector_model_row:hover td {
+    background: #334155;
+    color: #e2e8f0;
+}
+.model_selector_model_row.selected td {
+    background: #2563eb;
+    color: #fff;
+}
+
+/* name cell（兩行——name 主行 + model_id 小字 placeholder 式） */
+.model_selector_model_name {
+    line-height: 1.3;
+}
+.model_selector_model_mid {
+    font-size: 10px;
+    font-family: monospace;
+    color: #64748b;
+    line-height: 1.3;
+}
+.model_selector_model_row.selected .model_selector_model_mid {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* 數值欄（context / price / index——靠右） */
+.model_selector_td_context {
+    text-align: right;
+}
+.model_selector_td_price {
+    text-align: right;
+}
+.model_selector_td_index {
+    text-align: right;
+}
+
+/* 快取命中輸入價（價 cell 第二行——細字弱化；空 → 純 CSS 唔顯示） */
+.model_selector_price_cache {
+    font-size: 10px;
+    font-family: monospace;
+    color: #64748b;
+    line-height: 1.3;
+}
+.model_selector_model_row.selected .model_selector_price_cache {
+    color: rgba(255, 255, 255, 0.75);
+}
+.model_selector_price_cache:empty {
+    display: none;
+}
+
+/* efforts 帶（每 provider 頁——內容底列之上；撳親頁＝重新掛） */
+.modal__content-model_selector_efforts {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 24px;
+    border-top: 1px solid var(--modal_line);
+    background: var(--modal_bg2);
+}
+.model_selector_efforts_empty {
+    font-size: 12px;
+    color: var(--modal_text_dim);
+}
+
+/* footer 基座——modal.css 的 .modal__content-footer（每 provider 頁自帶；左選中 model 名＋clear selection、右 Apply〔共通 .button 系〕） */
+.modal__content-footer-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-right: auto;
+}
+/* clear selection＝純文字連結（暗淡、唔搶眼——hover 先現形） */
+.model_selector_clear_selection {
+    padding: 0;
+    border: none;
+    background: none;
+    color: var(--modal_text_dim);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.model_selector_clear_selection:hover {
+    color: var(--modal_text);
+    text-decoration: underline;
+}
+.model_selector_effort_button {
+    padding: 5px 12px;
+    border: none;
+    background: var(--modal_bg3);
+    color: var(--modal_text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.model_selector_effort_button:hover {
+    background: var(--modal_bg_active);
+}
+.model_selector_effort_button.active {
+    background: var(--modal_accent);
+    color: #ffffff;
+}

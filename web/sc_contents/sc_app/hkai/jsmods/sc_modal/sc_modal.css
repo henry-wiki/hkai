@@ -1,0 +1,492 @@
+/* ============================================
+   sc_modal.css —— 通用 modal 基座＋表單組件（DARK PRO v3 皮：零圓角／無框化／色只表意／線只結構）
+   結構：.modal__overlay（透明定位容器）> .modal__mask（半透明底——click 關閉）+ .modal__window（視窗）
+   視窗內：.modal__header > .modal__tabs（optional）> .modal__body > .modal__footer（optional）
+   側欄：.modal__navigation（search ＋ .modal__navigation-content）；內容：.modal__content（-main／-footer）
+   表單：modal-form > modal-form__row（icon＋info＋content）；控件＝.modal__input；錯誤契約＝§18（form_row／form_err／invalid）
+   尺寸：.modal__window--sm／--md／--lg／--xl（未帶＝基座 960px）
+   ============================================ */
+
+/* ===== DARK PRO v3 色票（modal 系統單一值源——改一處換全色） ===== */
+:root {
+    --modal_bg0:          #0b0d11;
+    --modal_bg1:          #13161c;
+    --modal_bg2:          #191d25;
+    --modal_bg3:          #222733;
+    --modal_bg_active:    #2b3140;
+    --modal_line:         #262c38;
+    --modal_line_soft:    #1d222c;
+    --modal_text:         #f2f5fa;
+    --modal_text_mute:    #9da8ba;
+    --modal_text_dim:     #5d6778;
+    --modal_accent:       #2f81ff;
+    --modal_accent_hi:    #5597ff;
+    --modal_accent_dim:   rgba(47, 129, 255, .13);
+    --modal_ok:           #00d26a;
+    --modal_ok_dim:       rgba(0, 210, 106, .12);
+    --modal_warn:         #ffb020;
+    --modal_warn_dim:     rgba(255, 176, 32, .12);
+    --modal_danger:       #ff4757;
+    --modal_danger_dim:   rgba(255, 71, 87, .12);
+}
+
+/* ===== 遮罩容器（透明——底色交由 .modal__mask；預設隱藏——.visible 顯示） ===== */
+.modal__overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.modal__overlay.visible {
+    display: flex;
+}
+
+/* 半透明黑底（與 .modal__window 同層——click 直接關閉 modal；被 window 蓋住的區域點不到） */
+.modal__mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 7, 10, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+/* 中央視窗（預設 960px；高 min(86vh,760px)；頂端 2px 主色線＝視窗記號） */
+.modal__window {
+    width: 960px;
+    max-width: 94vw;
+    height: min(86vh, 760px);
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--modal_bg1);
+    border: 1px solid var(--modal_line);
+    border-top: 2px solid var(--modal_accent);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+/* 進場（.visible 顯示時淡入上浮） */
+.modal__overlay.visible .modal__window {
+    animation: modal_enter 0.18s ease;
+}
+@keyframes modal_enter {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+/* 尺寸變體（只收 max-width——高度照基座） */
+.modal__window--sm {
+    max-width: 460px;
+}
+.modal__window--md {
+    max-width: 660px;
+}
+.modal__window--lg {
+    max-width: 900px;
+}
+.modal__window--xl {
+    max-width: 1100px;
+}
+/* 危險語境（如刪除確認——頂線轉紅） */
+.modal__window--danger {
+    border-top-color: var(--modal_danger);
+}
+/* 警示主題（歸檔語境——accent 三件整套換琥珀：頂線／標題記號／tab／主掣 同轉） */
+.modal__window--warning {
+    --modal_accent:     #f0b35e;
+    --modal_accent_hi:  #f5c67f;
+    --modal_accent_dim: rgba(240, 179, 94, .13);
+}
+
+/* 標題列（always——標題＋副標＋關閉鈕） */
+.modal__header {
+    flex: none;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 18px 22px 15px;
+    border-bottom: 1px solid var(--modal_line);
+    color: var(--modal_text);
+}
+.modal__header-content {
+    flex: 1;
+    min-width: 0;
+}
+.modal__title {
+    font-size: 15.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+/* 標題前主色方塊（8px——視覺記號） */
+.modal__title::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    flex: none;
+    background: var(--modal_accent);
+}
+.modal__window--danger .modal__title::before {
+    background: var(--modal_danger);
+}
+.modal__subtitle {
+    font-size: 12.5px;
+    color: var(--modal_text_mute);
+    margin-top: 4px;
+}
+
+/* 關閉鈕 */
+.modal__close {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: none;
+    background: none;
+    color: var(--modal_text_dim);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.modal__close:hover {
+    background: var(--modal_danger_dim);
+    color: var(--modal_danger);
+}
+
+/* 分頁列（optional——header 與 body 之間；無 tabs 時為空容器） */
+.modal__tabs {
+    display: none;
+}
+.modal__tabs:not(:empty) {
+    display: flex;
+    border-bottom: 1px solid var(--modal_line);
+}
+
+/* 內容區（always——flex 分欄：左 navigation ＋ 右 content；無 navigation 時 content 自動全寬） */
+.modal__body {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+.modal__body_no_scroll {
+    overflow-y: hidden;
+}
+
+/* 底列（optional——modal 級動作列） */
+.modal__footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 24px;
+    border-top: 1px solid var(--modal_line);
+    background: var(--modal_bg2);
+}
+
+/* ===== 側欄導覽（optional——有 navigation 的 modal：body 左右分欄） ===== */
+.modal__navigation {
+    width: 200px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--modal_line);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--modal_bg2);
+}
+
+/* 側欄搜尋框（固定於頂——清單在此之下捲動） */
+.modal__search_wrap {
+    position: relative;
+    flex: none;
+    margin: 13px 12px 8px;
+}
+.modal__search_wrap .modal__search_icon {
+    position: absolute;
+    left: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--modal_text_dim);
+    font-size: 13px;
+    pointer-events: none;
+}
+.modal__search_input {
+    width: 100%;
+    padding: 7px 9px 7px 28px;
+    border: 1px solid transparent;
+    background-color: var(--modal_bg1);
+    color: var(--modal_text);
+    font: inherit;
+    font-size: 12.5px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.12s ease;
+}
+.modal__search_input::placeholder {
+    color: var(--modal_text_dim);
+}
+.modal__search_input:focus {
+    border-color: var(--modal_accent);
+}
+
+/* 導覽清單捲動區 */
+.modal__navigation-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 8px 14px;
+}
+
+/* ===== 內容欄（always——flex:1 自動填滿；無 navigation 時全寬） ===== */
+.modal__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 內容捲動區（捲動在此——下方 footer 固定） */
+.modal__content-main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+}
+
+/* 內容底列（固定於內容欄底部——動作鈕靠右） */
+.modal__content-footer {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 13px 24px;
+    border-top: 1px solid var(--modal_line);
+    background: var(--modal_bg2);
+}
+
+/* ===== 通用按鈕（button＝次要色；button--primary；modal 動作鈕） ===== */
+.button,
+.button--secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    border: none;
+    background: var(--modal_bg3);
+    color: var(--modal_text);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+.button:hover,
+.button--secondary:hover {
+    background: var(--modal_bg_active);
+}
+.button:active {
+    transform: translateY(1px);
+}
+.button--primary {
+    background: var(--modal_accent);
+    color: #ffffff;
+}
+.button--primary:hover {
+    background: var(--modal_accent_hi);
+}
+.button--danger {
+    background: var(--modal_danger_dim);
+    color: var(--modal_danger);
+}
+.button--danger:hover {
+    background: rgba(255, 71, 87, 0.22);
+}
+.button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.button.is_loading i {
+    margin-right: 6px;
+}
+
+/* ===== 輸入控件（modal__input——modal 內 input／select／textarea 統一） ===== */
+.modal__input {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid transparent;
+    background-color: var(--modal_bg2);
+    color: var(--modal_text);
+    font: inherit;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 12.5px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+.modal__input:hover {
+    background-color: var(--modal_bg3);
+}
+.modal__input:focus {
+    border-color: var(--modal_accent);
+    background-color: var(--modal_bg3);
+}
+.modal__input.invalid {
+    border-color: var(--modal_danger);
+}
+.modal__input[readonly] {
+    color: var(--modal_text_mute);
+    cursor: default;
+}
+/* 下拉（select）——自繪箭嘴（背景圖逐態保留——換態只用 background-color） */
+select.modal__input {
+    appearance: none;
+    padding-right: 28px;
+    font-family: inherit;
+    background-image: linear-gradient(45deg, transparent 49%, var(--modal_text_mute) 50%), linear-gradient(-45deg, transparent 49%, var(--modal_text_mute) 50%);
+    background-position: calc(100% - 15px) 55%, calc(100% - 10px) 55%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+}
+select.modal__input:hover {
+    background-color: var(--modal_bg3);
+}
+select.modal__input:focus {
+    background-color: var(--modal_bg3);
+}
+
+/* ===== 表單列（modal-form__*——三欄：icon＋info＋content；行間全闊細線） ===== */
+.modal-form__row {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) minmax(210px, 400px);
+    gap: 3px;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--modal_line);
+}
+.modal-form__row:last-child {
+    border-bottom: none;
+}
+/* 左欄：標題＋說明 */
+.modal-form__info {
+    min-width: 0;
+}
+.modal-form__label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--modal_text);
+}
+.modal-form__desc {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--modal_text_mute);
+    margin: 3px 0 0;
+}
+/* 控制項下備註（低調說明——如未生效嘅選項） */
+.modal-form__note {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--modal_text_dim);
+    margin-top: 5px;
+}
+/* 右欄：控制項容器 */
+.modal-form__content {
+    min-width: 0;
+}
+/* 雙欄控制（Host＋Port 並排——可附動作鈕） */
+.modal-form__content_double {
+    display: flex;
+    gap: 8px;
+}
+.modal-form__content_double button {
+    flex-shrink: 0;
+}
+/* Port 固定寬（容 5 位數） */
+.modal-form__content_double .modal-form__port {
+    width: 60px;
+    text-align: center;
+    flex-shrink: 0;
+}
+/* 輸入成對（同一組——例 Host＋Port 並排） */
+.modal-form__input_pair {
+    display: flex;
+    gap: 8px;
+}
+.modal-form__input_pair .modal-form__port {
+    width: 60px;
+    text-align: center;
+    flex-shrink: 0;
+}
+/* 表單內動作鈕（貼輸入下方——例：自動分配連接埠） */
+.modal-form__port_assign {
+    margin-top: 8px;
+}
+/* 狀態 icon（pass／warning／error——glyph 由 JS 切 fa class；空＝淡鉛筆） */
+.modal-form__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-form__icon i {
+    font-size: 14px;
+    color: var(--modal_text_dim);
+}
+.modal-form__icon:empty::before {
+    content: "\f040";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 14px;
+    color: var(--modal_text_dim);
+}
+.modal-form__icon--pass i {
+    color: var(--modal_ok);
+}
+.modal-form__icon--warning i {
+    color: var(--modal_warn);
+}
+.modal-form__icon--error i {
+    color: var(--modal_danger);
+}
+
+/* ===== 表單錯誤契約（§18——apply_form_errors：.form_row.show-err .form_err＋欄位 .invalid） ===== */
+.form_err {
+    font-size: 11px;
+    color: var(--modal_danger);
+    margin-top: 5px;
+    display: none;
+}
+.form_row.show-err .form_err {
+    display: block;
+}
+
+/* 響應式（窄螢幕 → 表單列上下排列） */
+@media (max-width: 760px) {
+    .modal-form__row {
+        grid-template-columns: 1fr;
+        gap: 11px;
+        align-items: start;
+    }
+}

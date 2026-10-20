@@ -1,0 +1,629 @@
+{
+  "schema_version": 2,
+  "doc": "hkai 訊息狀態機（FSM）＋事件目錄唯一契約——PHP 與 Python 共用；改本檔＝改運行時行為。單一詞彙：值一律叫 status（＝msg_status 嗰批——舊稱 state 同義）。 狀態機：status＝status 定義（order／terminal）＋ boundary（各 status 區間描述）；event_to_status＝事件→status 對照（event 唯一決定——由 transitions 歸納）；transitions＝轉移表；event_to_display_state＝event→顯示 state（活動列顏色分組；未列＝\"\"）。 事件目錄：events＝全部 event 元資料（新增/改名 event 必須同步更新本檔）；domains＝事件分域；event_map＝status→events 審計分組；stream_log＝stream_log 結構。contract=true＝runtime 讀 event 名（改名即破壞——如 request.php ERROR retryable、poll/log.php 顯示分組）。文檔：.docs/msg-log-event-catalog.md 由本檔生成（check_event_registry.py --gen-doc）。response_status＝回應段狀態（response 級——poll／completed／aborted）。",
+  "consumers": [
+    "php:plugins/sc_ai_chats/cls/sc_ai_chats_fsm.php",
+    "py:../../../../services/aider_daemon/msg/msg_state_machine.py"
+  ],
+  "status": {
+    "note": "狀態機（單一詞彙——值一律叫 status）",
+    "order": [
+      "queued",
+      "connecting",
+      "summarizing",
+      "replying"
+    ],
+    "terminal": [
+      "completed",
+      "failed",
+      "cancelled"
+    ],
+    "boundary": {
+      "queued": "派工至子程序 spawn 完成（短窗）",
+      "connecting": "spawn 至首個 chunk 到達（含摘要前等待）",
+      "summarizing": "摘要首 chunk 至主回答首輸出",
+      "replying": "主回答首輸出（CONNECTED）至串流收尾"
+    }
+  },
+  "response_status": {
+    "note": "回應段狀態（response 級——poll＝進行中、completed＝完成、aborted＝折斷（任何中止／失敗之總稱；與 completed 對稱））",
+    "order": [
+      "poll"
+    ],
+    "terminal": [
+      "completed",
+      "aborted"
+    ]
+  },
+  "event_to_status": {
+    "QUERY_ACCEPTED": "queued",
+    "QUERY_DISPATCHED": "queued",
+    "SUBPROCESS_SPAWNED": "connecting",
+    "SUMMARY_STREAM_OPENED": "summarizing",
+    "CONNECTION_ESTABLISHED": "replying",
+    "SUBPROCESS_STARTUP_TIMEOUT": "failed",
+    "CONNECT_TIMEOUT": "failed",
+    "SUMMARY_STREAM_CLOSED": "replying",
+    "SUMMARY_TOKEN_LIMIT_REACHED": "replying",
+    "SUMMARY_STREAM_FAILED": "failed",
+    "RESPONSE_COMPLETED": "replying",
+    "REPLY_STREAM_FAILED": "failed",
+    "COMPLETED": "completed",
+    "FAILED": "failed",
+    "FAILURE_RECORDED": "failed",
+    "MEMORY_GUARD_ABORT": "failed",
+    "CANCELLATION_REQUESTED": "cancelled"
+  },
+  "transitions": [
+    {
+      "from": "*",
+      "event": "QUERY_ACCEPTED",
+      "to": "queued"
+    },
+    {
+      "from": "queued",
+      "event": "QUERY_DISPATCHED",
+      "to": "queued"
+    },
+    {
+      "from": "queued",
+      "event": "SUBPROCESS_SPAWNED",
+      "to": "connecting"
+    },
+    {
+      "from": "connecting",
+      "event": "SUMMARY_STREAM_OPENED",
+      "to": "summarizing"
+    },
+    {
+      "from": "*",
+      "event": "CONNECTION_ESTABLISHED",
+      "to": "replying"
+    },
+    {
+      "from": "connecting",
+      "event": "SUBPROCESS_STARTUP_TIMEOUT",
+      "to": "failed"
+    },
+    {
+      "from": "connecting",
+      "event": "CONNECT_TIMEOUT",
+      "to": "failed"
+    },
+    {
+      "from": "summarizing",
+      "event": "SUMMARY_STREAM_CLOSED",
+      "to": "replying"
+    },
+    {
+      "from": "summarizing",
+      "event": "SUMMARY_TOKEN_LIMIT_REACHED",
+      "to": "replying"
+    },
+    {
+      "from": "summarizing",
+      "event": "SUMMARY_STREAM_FAILED",
+      "to": "failed"
+    },
+    {
+      "from": "replying",
+      "event": "RESPONSE_COMPLETED",
+      "to": "replying"
+    },
+    {
+      "from": "replying",
+      "event": "REPLY_STREAM_FAILED",
+      "to": "failed"
+    },
+    {
+      "from": "*",
+      "event": "COMPLETED",
+      "to": "completed"
+    },
+    {
+      "from": "*",
+      "event": "FAILED",
+      "to": "failed"
+    },
+    {
+      "from": "*",
+      "event": "FAILURE_RECORDED",
+      "to": "failed"
+    },
+    {
+      "from": "*",
+      "event": "MEMORY_GUARD_ABORT",
+      "to": "failed"
+    },
+    {
+      "from": "*",
+      "event": "CANCELLATION_REQUESTED",
+      "to": "cancelled"
+    }
+  ],
+  "event_to_display_state": {
+    "FAILED": "err_server",
+    "FAILURE_RECORDED": "err_server",
+    "MEMORY_GUARD_ABORT": "err_server",
+    "SUBPROCESS_STARTUP_TIMEOUT": "err_server",
+    "REPLY_STREAM_FAILED": "err_server",
+    "SUMMARY_RETRY_TRIGGERED": "err_server",
+    "SUMMARY_STREAM_FAILED": "err_server",
+    "SUMMARY_TOKEN_LIMIT_REACHED": "err_server",
+    "TOOL_FAILED": "err_server",
+    "CONNECT_TIMEOUT": "err_network",
+    "TOOL_WARNING_RECORDED": "err_network",
+    "COMPLETED": "success",
+    "RESPONSE_COMPLETED": "success",
+    "QUERY_ACCEPTED": "initiating",
+    "SUBPROCESS_SPAWN_REQUESTED": "connecting",
+    "SUBPROCESS_SPAWNED": "connecting",
+    "SUBPROCESS_INITIALIZING": "connecting",
+    "SUBPROCESS_READY": "connecting",
+    "WAITING_FOR_RESPONSE": "connecting",
+    "SUMMARY_STREAM_OPENED": "summarizing",
+    "SUMMARY_STREAM_CLOSED": "summarizing",
+    "CONNECTION_ESTABLISHED": "replying",
+    "REPLY_STREAM_STARTED": "replying",
+    "CANCELLATION_REQUESTED": "cancelled"
+  },
+  "domains": {
+    "lifecycle": "訊息生命週期（UI 狀態機契約——多數不可改名）",
+    "llm": "LLM 呼叫層（每 completion 一組）",
+    "summarize": "摘要子功能（升級串流／重複偵測／範圍標記）",
+    "system": "自家系統機制（SYS_ 前綴——攔截安裝與偵測）",
+    "tool": "aider tool 分流訊息",
+    "stream_log": "msg_stream_log 結構（非 event——kind 記錄）"
+  },
+  "events": [
+    {
+      "name": "CANCELLATION_REQUESTED",
+      "domain": "lifecycle",
+      "writer": "php:sc_ai_chats_request.php",
+      "level": "INFO",
+      "frequency": "",
+      "contract": false,
+      "description": "",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "CANCELLED",
+      "domain": "lifecycle",
+      "writer": "（未來 cancel 功能——未實作）",
+      "level": "INFO",
+      "frequency": "每 message 最多一次",
+      "contract": false,
+      "description": "使用者取消（writer 尚未實作——見 .docs/2026-09-09-summarize-stream-future.md §1）",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "COMPLETED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "SUCCESS",
+      "frequency": "每 message 一次",
+      "contract": false,
+      "description": "成功收尾",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "CONNECTION_ESTABLISHED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "每 message 一次",
+      "contract": true,
+      "description": "msg_stdout 檔出現（原樣輸出）",
+      "renamed_from": "CONNECTED",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "CONNECT_TIMEOUT",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "WARN",
+      "frequency": "每 message 最多一次",
+      "contract": false,
+      "description": "連線逾時（ready → 首個回應前未連通）",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "FAILED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "ERROR",
+      "frequency": "每 message 最多一次（三情境：早亡/連線失敗/零輸出）",
+      "contract": false,
+      "description": "失敗收尾",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "MEMORY_GUARD_ABORT",
+      "domain": "lifecycle",
+      "writer": "py:daemon/child_memory_guard.py",
+      "level": "ERROR",
+      "frequency": "每 message 最多一次",
+      "contract": false,
+      "description": "worker 監護人：子程序記憶體超限（3GB）→ 殺子樹中止",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "QUERY_ACCEPTED",
+      "domain": "lifecycle",
+      "writer": "php:plugins/sc_ai_chats/cls/sc_ai_chats_polling_log.php",
+      "level": "INFO",
+      "frequency": "每 message 一次（第一行）",
+      "contract": true,
+      "description": "訊息發送瞬間（PHP 端寫入）",
+      "renamed_from": "QUERY_STARTED",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "QUERY_DISPATCHED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "",
+      "contract": true,
+      "description": "",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "SUBPROCESS_INITIALIZING",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "spawn 後 1 次＋等待期間每秒",
+      "contract": true,
+      "description": "子程序初始化中（尚未就緒）",
+      "event_class": "INFO"
+    },
+    {
+      "name": "SUBPROCESS_READY",
+      "domain": "lifecycle",
+      "writer": "py:engine/aider_entry.py",
+      "level": "INFO",
+      "frequency": "每 message 一次",
+      "contract": true,
+      "description": "子程序初始化完成、就緒（Coder＋輸出已備妥，尚未查詢）",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "SUBPROCESS_SPAWNED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "每 message 一次",
+      "contract": true,
+      "description": "子程序已 spawn",
+      "renamed_from": "REQUEST_SENT",
+      "event_class": "INFO"
+    },
+    {
+      "name": "SUBPROCESS_SPAWN_REQUESTED",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "每 message 一次",
+      "contract": true,
+      "description": "即將建立子程序（spawn 前——純本地，尚未連線）",
+      "renamed_from": "SUBPROCESS_SPAWNING",
+      "event_class": "INFO"
+    },
+    {
+      "name": "SUBPROCESS_STARTUP_TIMEOUT",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "ERROR",
+      "frequency": "啟動逾時時一次",
+      "contract": false,
+      "description": "子程序啟動逾時（startup_timeout 未就緒）→ 強制終止",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "WAITING_FOR_RESPONSE",
+      "domain": "lifecycle",
+      "writer": "py:msg/msg_processor.py",
+      "level": "INFO",
+      "frequency": "首字節前每秒（未來 Q3 政策：串流期間停 tick）",
+      "contract": true,
+      "description": "等待任何首字節",
+      "event_class": "INFO"
+    },
+    {
+      "name": "FAILURE_RECORDED",
+      "domain": "llm",
+      "writer": "py:engine/aider_entry.py / py:msg/msg_processor.py",
+      "level": "ERROR",
+      "frequency": "每次失敗一次",
+      "contract": true,
+      "description": "執行失敗（串流中斷／回應為空等——帶 retryable 標記）",
+      "renamed_from": "ERROR",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "INPUT_RECEIVED",
+      "domain": "llm",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每 completion 一次",
+      "contract": false,
+      "description": "請求送達 litellm（含 message_count/total_chars）",
+      "event_class": "INFO"
+    },
+    {
+      "name": "REPLY_STREAM_CLOSED",
+      "domain": "llm",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每 completion 一次",
+      "contract": true,
+      "description": "串流收尾（含 finish_reason）",
+      "renamed_from": "FINISHED",
+      "event_class": "INFO"
+    },
+    {
+      "name": "REPLY_STREAM_FAILED",
+      "domain": "llm",
+      "writer": "（現行未寫入）",
+      "level": "ERROR",
+      "frequency": "",
+      "contract": false,
+      "description": "",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "REPLY_STREAM_OPENED",
+      "domain": "llm",
+      "writer": "py:engine/aider_entry.py",
+      "level": "INFO",
+      "frequency": "",
+      "contract": true,
+      "description": "",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "REPLY_STREAM_STARTED",
+      "domain": "llm",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每 completion 一次（首 chunk）",
+      "contract": true,
+      "description": "串流首 chunk 到達（per response_id 去重）",
+      "renamed_from": "STREAM_STARTED",
+      "event_class": "INFO"
+    },
+    {
+      "name": "RESPONSE_COMPLETED",
+      "domain": "llm",
+      "writer": "py:engine/aider_entry.py",
+      "level": "SUCCESS",
+      "frequency": "每 completion 一次",
+      "contract": true,
+      "description": "串流收尾（含 finish_reason）",
+      "renamed_from": "FINISHED",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "SYS_NONSTREAM_CHECK",
+      "domain": "system",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每非串流 completion 一次",
+      "contract": false,
+      "description": "非串流請求偵測結果（is_summarize）",
+      "message_zh": "非串流請求偵測（摘要：是/否）",
+      "renamed_from": "NONSTREAM_CHECK",
+      "event_class": "SYSTEM"
+    },
+    {
+      "name": "SYS_PATCH_SETUP",
+      "domain": "system",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每子程序 1~3 次",
+      "contract": false,
+      "description": "摘要升級 patch 設定狀態（呼叫旗標／攔截器）",
+      "message_zh": "patch 設定完成",
+      "renamed_from": "SYS_INTERCEPTOR_READY",
+      "event_class": "SYSTEM"
+    },
+    {
+      "name": "SYS_STREAM_UPGRADE",
+      "domain": "system",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每升級串流一次",
+      "contract": false,
+      "description": "非串流請求升級為串流",
+      "message_zh": "請求升級為串流",
+      "renamed_from": "SYS_SUMMARIZE_UPGRADE",
+      "event_class": "SYSTEM"
+    },
+    {
+      "name": "SUMMARY_RETRY_SCHEDULED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "偵測到重複樣本時",
+      "contract": false,
+      "description": "推理重複偵測：樣本在緩衝中的出現次數",
+      "renamed_from": "SUMMARIZE_REPEAT",
+      "event_class": "INFO"
+    },
+    {
+      "name": "SUMMARY_RETRY_TRIGGERED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "ERROR",
+      "frequency": "推理重複觸發時",
+      "contract": false,
+      "description": "推理重複觸發 → 摘要中止（os._exit）",
+      "renamed_from": "SYS_SUMMARIZE_REPEAT",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "SUMMARY_STREAM_CLOSED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每摘要串流一次",
+      "contract": true,
+      "description": "摘要串流完整收完（含字數）",
+      "message_zh": "摘要串流收完（N 字）",
+      "renamed_from": "SYS_SUMMARIZE_STREAM_CLOSED",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "SUMMARY_STREAM_FAILED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "ERROR",
+      "frequency": "每次累積異常一次",
+      "contract": false,
+      "description": "摘要串流累積中途異常",
+      "message_zh": "摘要串流累積異常",
+      "renamed_from": "SYS_SUMMARIZE_STREAM_ERROR",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "SUMMARY_STREAM_OPENED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每摘要串流一次",
+      "contract": true,
+      "description": "摘要串流已建立",
+      "message_zh": "摘要串流已建立",
+      "renamed_from": "SYS_SUMMARIZE_STREAM_OPEN",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "SUMMARY_STREAM_STARTED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每 completion 一次（首 chunk）",
+      "contract": false,
+      "description": "串流首 chunk 到達（per response_id 去重）",
+      "renamed_from": "STREAM_STARTED",
+      "event_class": "INFO"
+    },
+    {
+      "name": "SUMMARY_TOKEN_LIMIT_REACHED",
+      "domain": "summarize",
+      "writer": "（現行未寫入）",
+      "level": "ERROR",
+      "frequency": "摘要輸出 token 估算超限時",
+      "contract": false,
+      "description": "摘要輸出 token 估算超限 → 中止（os._exit）",
+      "renamed_from": "SYS_SUMMARIZE_TOKEN_LIMIT",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "TOOL_FAILED",
+      "domain": "tool",
+      "writer": "（現行未寫入）",
+      "level": "ERROR",
+      "frequency": "每次 tool_error 一次",
+      "contract": false,
+      "description": "aider 工具錯誤",
+      "renamed_from": "TOOL_ERROR",
+      "event_class": "ERROR"
+    },
+    {
+      "name": "TOOL_INVOKED",
+      "domain": "tool",
+      "writer": "py:engine/aider_entry.py",
+      "level": "INFO",
+      "frequency": "每次 aider tool_output（非空、非統計）",
+      "contract": false,
+      "description": "aider 工具提示（如 dumb terminal 偵測）",
+      "renamed_from": "TOOL_ANNOUNCE",
+      "event_class": "INFO"
+    },
+    {
+      "name": "TOOL_STATS_RECORDED",
+      "domain": "tool",
+      "writer": "（現行未寫入）",
+      "level": "INFO",
+      "frequency": "每次回答收尾統計",
+      "contract": false,
+      "description": "aider tokens/cost 統計行（content 以 Tokens: 開頭）",
+      "renamed_from": "TOOL_STATS",
+      "event_class": "INFO"
+    },
+    {
+      "name": "TOOL_WARNING_RECORDED",
+      "domain": "tool",
+      "writer": "（現行未寫入）",
+      "level": "WARN",
+      "frequency": "每次 tool_warning 一次",
+      "contract": false,
+      "description": "aider 工具警告",
+      "renamed_from": "TOOL_WARN",
+      "event_class": "INFO"
+    }
+  ],
+  "event_map": {
+    "queued": [
+      "QUERY_ACCEPTED",
+      "QUERY_DISPATCHED"
+    ],
+    "connecting": [
+      "SUBPROCESS_SPAWN_REQUESTED",
+      "SUBPROCESS_SPAWNED",
+      "SUBPROCESS_INITIALIZING",
+      "WAITING_FOR_RESPONSE",
+      "SYS_PATCH_SETUP",
+      "SYS_NONSTREAM_CHECK",
+      "SYS_STREAM_UPGRADE",
+      "SUBPROCESS_READY",
+      "CONNECTION_ESTABLISHED",
+      "SUMMARY_STREAM_OPENED",
+      "REPLY_STREAM_OPENED",
+      "SUBPROCESS_STARTUP_TIMEOUT",
+      "CONNECT_TIMEOUT",
+      "FAILURE_RECORDED",
+      "MEMORY_GUARD_ABORT",
+      "CANCELLATION_REQUESTED"
+    ],
+    "summarizing": [
+      "SUMMARY_STREAM_STARTED",
+      "SUMMARY_RETRY_SCHEDULED",
+      "SUMMARY_RETRY_TRIGGERED",
+      "INPUT_RECEIVED",
+      "SUMMARY_STREAM_CLOSED",
+      "SUMMARY_TOKEN_LIMIT_REACHED",
+      "SUMMARY_STREAM_FAILED",
+      "FAILURE_RECORDED",
+      "MEMORY_GUARD_ABORT",
+      "CANCELLATION_REQUESTED"
+    ],
+    "replying": [
+      "REPLY_STREAM_STARTED",
+      "TOOL_INVOKED",
+      "TOOL_STATS_RECORDED",
+      "TOOL_WARNING_RECORDED",
+      "TOOL_FAILED",
+      "RESPONSE_COMPLETED",
+      "REPLY_STREAM_CLOSED",
+      "REPLY_STREAM_FAILED",
+      "FAILURE_RECORDED",
+      "MEMORY_GUARD_ABORT",
+      "CANCELLATION_REQUESTED"
+    ],
+    "completed": [
+      "COMPLETED"
+    ],
+    "failed": [
+      "FAILED"
+    ],
+    "cancelled": [
+      "CANCELLED"
+    ]
+  },
+  "stream_log": {
+    "note": "msg_stream_log_{chat}_{msg}.jsonl——每回呼一行（非 event 結構）。鍵序（依重要性）：datetime／kind／chunk_index／[finish_reason]／[delta]／[usage]／[每個新 response_id 各一次：response_id／model／request_id（完整 headers）／kwargs（剔除 messages）]／choices。kind 值：stream_response（我的回答）／stream_summarize（摘要串流）／finished（收尾記錄）／cache_warming（預熱）／other（安全底線——如 commit message）。旁支（cache_warming／other）只寫 {kind, usage}，不佔 chunk_index"
+  }
+}
