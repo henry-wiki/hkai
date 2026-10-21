@@ -100,7 +100,7 @@ class session_sync_class:
             sc_logger.log("session_sync: chat not found (chat_id=" + chat_id + ")")
             return
 
-        checkpoint_file = checkpoints_base_dir / Path(project_path).name / (chat_sid + ".json")
+        checkpoint_file = checkpoints_base_dir / self._resolve_project_key(project_path) / (chat_sid + ".json")
 
         # 現場統計（唔含今次問題＝對比用；含今次問題＝寫快照用）
         live_stats_before = self._query_live_stats(chat_id, message_id, False)
@@ -555,10 +555,20 @@ class session_sync_class:
         """checkpoints 根（功能開關：存在＝開、刪走＝關——原路徑直去；專案子資料夾由寫檔自動建立）。"""
         return Path(self._resolve_storage_dir()) / "localdb" / "checkpoints"
 
+    def _resolve_project_key(self, project_path: str) -> str:
+        """專案目錄鍵：project_slug 優先（唯一）；缺 slug 才退資料夾名。"""
+        project_slug = msg_main().get_project_slug()
+
+        # 判定：無 slug → 退資料夾名（舊資料／未帶 slug）
+        if project_slug == "":
+            project_slug = Path(project_path).name
+
+        return project_slug
+
     def _resolve_goose_root(self, project_path: str) -> Path:
-        """goose 資料根（鏡像 goose_entry　每專案一資料夾）。"""
-        project_slug = Path(project_path).name
-        return Path(self._resolve_storage_dir()) / "localdb" / "goose" / project_slug
+        """goose 資料根（鏡像 goose_entry　每專案一資料夾——project_slug）。"""
+        project_key = self._resolve_project_key(project_path)
+        return Path(self._resolve_storage_dir()) / "localdb" / "goose" / project_key
 
     def _resolve_sessions_db_file(self, project_path: str) -> Path:
         """該專案 goose session DB（官方佈局：data/sessions/sessions.db）。"""

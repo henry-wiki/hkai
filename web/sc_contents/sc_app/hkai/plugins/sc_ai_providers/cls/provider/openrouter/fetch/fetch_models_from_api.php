@@ -13,6 +13,12 @@ trait fetch_models_from_api
         // curl 請求（RETURNTRANSFER 收 body；連線/整體逾時分開設）
         $curl_handle = curl_init(provider()->get_provider_models_api_url());
         curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
+        $cacert_path = sc_bundled_cacert_path();
+        if ($cacert_path !== "") {
+            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        }
+
         curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($curl_handle, CURLOPT_TIMEOUT, 30);
         $response_body = curl_exec($curl_handle);

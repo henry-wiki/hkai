@@ -41,6 +41,8 @@ from ..context import *
 from ..msg.msg_events import *
 from ..runtime import sc_logger
 
+from .auth_setup import api_key_loader_class
+
 
 # 權限請求等待上限（秒——無人決定即自動拒；本側代碼常數——暫唔 expose 喺 hkai_config.json）
 PERMISSION_WAIT_TIMEOUT_SEC = 60
@@ -58,7 +60,14 @@ CUSTOM_PROVIDER_TABLE = {
         "api_key_env":  "KILO_API_KEY",
         "base_url":     "https://api.kilo.ai/api/gateway/chat/completions",
     },
+    "deepseek": {
+        "display_name": "DeepSeek",
+        "description":  "DeepSeek API",
+        "api_key_env":  "DEEPSEEK_API_KEY",
+        "base_url":     "https://api.deepseek.com/chat/completions",
+    },
 }
+
 
 
 class goose_entry_class:
@@ -115,6 +124,14 @@ class goose_entry_class:
         """
         # 讀 msg_conf.json（每張工單重新載入——語境切換）
         msg_main().load_msg_conf_data(Path(msg_conf_path))
+
+        # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
+        daemon_conf_data = daemon().get_daemon_conf_data()
+        oauth_keys_path  = str(daemon_conf_data.get("daemon_oauth_keys_path", "") or "")
+
+        # 判定：有路徑 → 重讀
+        if oauth_keys_path != "":
+            api_key_loader_class.get_instance().reload(Path(oauth_keys_path))
 
         # 取得語境（從載入後的 msg_main 狀態）
         chat_id    = msg_main().get_chat_id()
@@ -313,7 +330,11 @@ class goose_entry_class:
     def _resolve_goose_path_root(self, project_path: str) -> str:
         """goose 資料根（GOOSE_PATH_ROOT——每專案一個資料夾；session／config／state 全歸該專案）。"""
         storage_dir  = str(daemon().get_daemon_conf_data().get("storage_dir", ""))
-        project_slug = Path(project_path).name
+        project_slug = msg_main().get_project_slug()
+
+        # 判定：無 slug → 退資料夾名（舊資料／未帶 slug）
+        if project_slug == "":
+            project_slug = Path(project_path).name
 
         return str(Path(storage_dir) / "localdb" / "goose" / project_slug)
 

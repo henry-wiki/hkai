@@ -25,11 +25,19 @@ sc_ai_providers()->main()->initial([
             "provider_name"  => "Openrouter",
             "provider_file"  => $provider_model_store_dir . "/provider_openrouter.php",
             "models_api_url" => "https://openrouter.ai/api/v1/models?sort=coding-high-to-low",
+            "dirty_filter"   => 1,
         ],
         "kilo"       => [
             "provider_name"  => "Kilo",
             "provider_file"  => $provider_model_store_dir . "/provider_kilo.php",
             "models_api_url" => "https://api.kilo.ai/api/gateway/models",
+            "dirty_filter"   => 1,
+        ],
+        "deepseek"   => [
+            "provider_name"  => "DeepSeek",
+            "provider_file"  => $provider_model_store_dir . "/provider_deepseek.php",
+            "models_api_url" => "https://api.deepseek.com/models",
+            "dirty_filter"   => 0,
         ],
     ],
 ]);

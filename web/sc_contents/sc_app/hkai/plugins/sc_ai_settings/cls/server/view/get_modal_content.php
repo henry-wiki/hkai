@@ -97,12 +97,13 @@ trait get_modal_content
                         $input_attr[] = "data-name='settings[server][port]'";
                         $input_attr[] = "value='{$server_port_encoded}'";
                         $input_attr[] = "maxlength='5'";
+                        // 連接埠一律唯讀（後端自動分配）
+                        $input_attr[] = "readonly";
 
                         $input_attr = implode(" ", $input_attr) . $server_readonly_attr;
                         $modal_body[] = "<input {$input_attr}/>";
 
                         $modal_body[] = "</div>";
-                        $modal_body[] = "<button type='button' class='button modal-form__port_assign' data-request_btn='auto_assign_port'>" . hkai__i18n()->get("settings.server.btn_auto_assign_port") . "</button>";
 
                     $modal_body[] = "</div>";
                 $modal_body[] = "</div>";

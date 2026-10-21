@@ -35,9 +35,12 @@ trait message_list_fetch
             $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
         }
 
-        // 判定：冇有效專案 → 空狀態「請選擇專案」（窗口界照出＝count 0、無起訖）
-        if ($project_row === null) {
-            $empty_state_html = sc_empty_state(hkai__i18n()->get("empty.select_project"), false);
+        // home 語境（空 slug／home 段）→ 放行（對話按 chat_sid 查——project_id 0）
+        $is_home_context = ($project_slug === "" || $project_slug === "home");
+
+        // 判定：冇有效專案且唔係 home → 空狀態（窗口界照出＝count 0、無起訖）
+        if ($project_row === null && $is_home_context === false) {
+            $empty_state_html = "";
 
             return sc_response()->json([
                 "ok"              => true,

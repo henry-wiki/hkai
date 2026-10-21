@@ -53,6 +53,12 @@ trait fetch_rows
         $curl_handle = curl_init($navigation_item["fetch_url"]);
         curl_setopt($curl_handle, CURLOPT_CUSTOMREQUEST, strtoupper($navigation_item["fetch_method"]));
         curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
+        $cacert_path = sc_bundled_cacert_path();
+        if ($cacert_path !== "") {
+            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        }
+
         curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($curl_handle, CURLOPT_TIMEOUT, 90);
         $response_body = curl_exec($curl_handle);

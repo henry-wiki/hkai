@@ -5,6 +5,18 @@
 class _prompt {
     constructor() {
         this.inited = false;
+        // home 輸入用：後端回嘅 playground 專案 slug（URL 冇專案時 prompt_send 用）
+        this.composer_project_slug = "";
+    }
+
+    // 讀 composer 專案 slug（home 輸入——URL 冇 slug 時嘅後備）
+    get_composer_project_slug() {
+        return this.composer_project_slug;
+    }
+
+    // 寫 composer 專案 slug（prompt_fetch 成功後由後端回填）
+    set_composer_project_slug(project_slug) {
+        this.composer_project_slug = project_slug || "";
     }
 
     // 啟動域（sc_ai_chats.init 召集——事件綁定；重複呼叫只行一次）

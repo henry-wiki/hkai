@@ -1,4 +1,4 @@
-// config.rs — 讀取設定（config.toml 優先·再 runtime\shell.json·最後內建預設）
+// config.rs — 讀取設定（config.toml 優先·再 assets\shell.json·最後內建預設）
 // 一個動作·一個檔：只負責「把設定變成 struct」
 
 use std::collections::HashMap;
@@ -63,7 +63,7 @@ impl Default for ShellConfig {
                     env: HashMap::new(),
                 },
             ],
-            on_close_script: "runtime/on_close.ps1".to_string(),
+            on_close_script: "".to_string(),
             web_dir: "../web".to_string(),
         }
     }
@@ -104,8 +104,8 @@ pub fn load() -> (ShellConfig, Option<String>) {
         }
     }
 
-    // 2. runtime\shell.json（舊格式）
-    let json_path = root_dir().join("runtime").join("shell.json");
+    // 2. assets\shell.json（舊格式 fallback）
+    let json_path = root_dir().join("assets").join("shell.json");
     if let Ok(text) = std::fs::read_to_string(&json_path) {
         if let Ok(parsed) = serde_json::from_str::<ShellConfig>(&text) {
             return if parsed.mode == "live" { (parsed, None) } else { (defaults, None) };

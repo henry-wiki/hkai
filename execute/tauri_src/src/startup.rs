@@ -124,9 +124,9 @@ fn current_rect(window: &tauri::WebviewWindow) -> Option<WindowRect> {
     Some(rect)
 }
 
-/// 由 runtime\splash.html 讀 HTML，直接寫入現有頁面（唔使重建 exe）
+/// 由 assets\splash.html 讀 HTML，直接寫入現有頁面（唔使重建 exe）
 fn load_splash_html(window: &tauri::WebviewWindow) {
-    let path = crate::root_dir().join("runtime").join("splash.html");
+    let path = crate::root_dir().join("assets").join("splash.html");
     let html = match std::fs::read_to_string(&path) {
         Ok(value) => value,
         Err(_) => return,

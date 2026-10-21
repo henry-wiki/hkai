@@ -273,8 +273,23 @@ class _message_poll {
             return this;
         }
 
-        // 判定：冇未完成訊息（polling_count ≤ 0）→ 唔使起
+        // 判定：冇未完成訊息（polling_count ≤ 0）→ 睇有冇排隊；有＝即刻按正常派工流程放行
         if (response_data.polling_count <= 0) {
+            // 判定：等待列有項目（空閒＋有排隊）→ 立即派工（同用戶撳掣同一 request）
+            if (jQuery(".sc_composer__queue_list .queue_item").length > 0) {
+                const thisObject = this;
+
+                (async function () {
+                    const queue_instance = await registry().sc_ai_chats().queue();
+                    const queue_dispatch_instance = await queue_instance.act().queue_dispatch();
+
+                    await queue_dispatch_instance.queue_dispatch(response_data.chat_sid);
+
+                    // 派工後即刻起 poll（正常輪詢接手——同平時送出一樣）
+                    thisObject.message_poll(response_data.chat_sid);
+                })();
+            }
+
             return this;
         }
 
@@ -429,10 +444,6 @@ class _message_poll {
             return false;
         }
 
-        // 判定：已完結（後端旗標 working="0"）→ 收走活動日誌（完成後唔應該留住）
-        if (task.working === "0") {
-            j_message_panel.find(".log_message").remove();
-        }
         // 判定：後端帶原始 FSM 狀態 → 同步（等待列 chips／停止目標判定用——render 時只係初始值）
         if (task.status) {
             j_message_panel.attr("data-status", task.status);
@@ -499,7 +510,7 @@ class _message_poll {
         }
     }
 
-    // log 子函數：活動日誌——activity_monitor 單行 log（新行 prepend 淡入、舊行淡出刪除）；完整歷史 prepend 進 Log Viewer lightbox
+    // log 子函數：活動日誌——全部行保留（新行 prepend 落頂；容器 column＋overflow hidden 由 CSS 負責）
     update_response_log(task, j_message_panel) {
         const log_entries = task.logs || [];
 
@@ -526,62 +537,41 @@ class _message_poll {
         // 判定：已完結 → 熄 loading；完成（success="1"）再多一步淡出 log 行
         } else {
             j_activity_monitor.removeClass("loading");
-            if (task.success === "1") {
-                setTimeout(function () { j_activity_lines.fadeOut(500); }, 1000);
-            }
         }
 
-        // activity_lines：單行 log——不清空；新行 prepend 淡入、舊行淡出刪除（最後只剩一句）
+        // activity_lines：全部保留——只追加未顯示嘅行（容器 column-reverse：追加＝顯示喺最頂）
         if (log_entries.length > 0) {
+            const old_log_index = ~~j_activity_monitor.attr("data-log_index");
 
-            let new_log_index = log_entries.length;
-
-            let old_log_index = j_activity_monitor.attr("data-log_index");
-
-            new_log_index = ~~new_log_index;
-            old_log_index = ~~old_log_index;
-
-            if (old_log_index >= new_log_index)
+            // 判定：冇新行 → 停
+            if (old_log_index >= log_entries.length)
                 return;
 
-            j_activity_monitor.attr("data-log_index", new_log_index);
+            // 只顯示最新一條（uid＝log 索引；同 uid 已存在 → 唔動）
+            const log_entry = log_entries[log_entries.length - 1];
+            const log_uid = log_entry.activity_uid || "";
 
-            // 顯示行＝最新一條（log 原文直接出——無白名單、無模板）
-            const display_entry = log_entries[new_log_index - 1];
-
-            // 未知 state（get_state_from_log_level 未命中）→ 往前找最近一條非空 state 沿用
-            let last_state = display_entry.state || "";
-            if (last_state === "") {
-                for (let log_index = new_log_index - 2; log_index >= 0; log_index--) {
-                    if (log_entries[log_index].state) {
-                        last_state = log_entries[log_index].state;
-                        break;
-                    }
-                }
+            // 判定：同 uid 已存在 → 唔需要替換
+            if (j_activity_lines.find("[data-activity_uid='" + log_uid + "']").length) {
+                return;
             }
 
-            // 儲存現有 children（舊行——將淡出刪除）
-            const j_children = j_activity_lines.children(".activity_line");
+            const j_new_line = jQuery("<div class='activity_line'></div>");
+            j_new_line.addClass("activity_level_" + log_entry.level);
+            j_new_line.attr("data-activity_uid", log_uid);
+            j_new_line.attr("data-log_event", log_entry.event || "");
+            j_new_line.attr("data-log_status", (log_entry.level || "").toLowerCase());
+            j_new_line.text(log_entry.message);
 
-            // 新行（display:none 起始——淡入；level 色＋state 前綴色 css_class）
-            const j_new_line = jQuery("<div class='activity_line ' style='display:none;'></div>");
-            j_new_line.addClass("activity_level_" + display_entry.level + "");
-
-            if (display_entry.css_class) {
-                j_new_line.addClass(display_entry.css_class);
+            // 判定：已有行 → 直接取代；未有 → 插入
+            const j_existing_line = j_activity_lines.find(".activity_line");
+            if (j_existing_line.length) {
+                j_existing_line.first().replaceWith(j_new_line);
+            } else {
+                j_activity_lines.append(j_new_line);
             }
-            j_new_line.text("[" + last_state + "] " + display_entry.message + "");
 
-            // 新行 prepend（插入頂部——column-reverse 下呈現於視覺底部＝最新位置）
-            j_activity_lines.prepend(j_new_line);
-
-            // 舊行淡出刪除（最後只剩新的一句）
-            j_children.fadeOut(60, function () {
-                jQuery(this).remove();
-            });
-
-            // 新行淡入（慢慢有效果）
-            j_new_line.fadeIn(60);
+            j_activity_monitor.attr("data-log_index", log_entries.length);
         }
     }
 

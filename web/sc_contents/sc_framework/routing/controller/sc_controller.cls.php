@@ -270,6 +270,14 @@ class sc_controller_Class
     // 路徑：sc_storage>{app 名}（sc_app>hkai → sc_storage>hkai——與 app 同名）
     public function get_storage_dir()
     {
+        // 設定有指定 app storage → 直接用（例：data——放 web root 外）
+        $app_dir = sc_get_config("storage.app_dir");
+
+        // 判定：有指定 → 回設定值
+        if ($app_dir !== "") {
+            return $app_dir;
+        }
+
         // 先正規化斜線：Windows 反斜線與正斜線統一後 basename 才能正確取 app 名
         $route_path = str_replace("\\", "/", $this->route["route_path"]);
         $app_name   = basename($route_path);

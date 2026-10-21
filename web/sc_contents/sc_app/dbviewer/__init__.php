@@ -5,5 +5,5 @@
 
 // 注入設定（檢視目標＝寫死的 hkai 本地庫絕對路徑——唯一讀取來源）
 dbviewer__core()->initial_configs([
-    "sqlite_file" => SC_DIR_STORAGE . "/hkai/localdb/hkai_chat_data.sqlite",
+    "sqlite_file" => sc_get_config("storage.database_file"),
 ]);

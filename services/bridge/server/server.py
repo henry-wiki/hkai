@@ -32,6 +32,7 @@ from fastapi import FastAPI
 
 from ..runtime import process_list
 from ..runtime import process_status
+import lifecycle_guard
 from ..runtime import sc_logger
 
 
@@ -58,6 +59,7 @@ class server_class:
             return
         self._initialized = True
         self.config = None
+        self._last_activity_at = time.monotonic()
 
     def initialize(self, config: dict) -> None:
         """注入設定（由 main.py 呼叫）。"""
@@ -102,6 +104,13 @@ class server_class:
 
         app = FastAPI(lifespan=self._lifespan)
         app.state.config = self.config
+
+        # 活動追蹤（每個 HTTP 請求＝仲有人用；閒置過久＋無串流 → 自我退出）
+        @app.middleware("http")
+        async def track_activity(request, call_next):
+            self._last_activity_at = time.monotonic()
+            return await call_next(request)
+
         self._register_routes(app)
 
         # 判定：uvicorn 途中先失敗（罕見——預檢已過）→ 寫失敗結果檔再拋
@@ -130,7 +139,32 @@ class server_class:
 
     async def _heartbeat_loop(self) -> None:
         """背景心跳任務（每秒寫一次程序狀態——統一心跳 process_status/*.json）。"""
+        runtime_config_path = str((self.config or {}).get("runtime_config_path", ""))
+        build_watch = lifecycle_guard.build_watch_class(lifecycle_guard.find_site_root(runtime_config_path))
+
         while True:
+            # 判定：runtime.json 已被刪（建置／清理）→ 自我退出，不留孤兒心跳檔
+            if runtime_config_path != "" and Path(runtime_config_path).is_file() is False:
+                sc_logger.log("runtime config removed, bridge exiting")
+                process_status.unregister("bridge", os.getpid())
+                os._exit(0)
+
+            # 判定：閒置過久＋冇開住嘅 SSE 串流 → 記錄後自我退出（關 UI 後自動收工）
+            idle_exit_sec = int((self.config or {}).get("bridge_idle_exit_sec", 120))
+            from . import server_stream
+            idle_sec = time.monotonic() - self._last_activity_at
+            if idle_sec > idle_exit_sec and server_stream.get_active_stream_count() == 0:
+                sc_logger.log("idle " + str(int(idle_sec)) + "s with no active stream, bridge exiting")
+                process_status.unregister("bridge", os.getpid())
+                os._exit(0)
+
+            # 判定：BUILD 已變（站台已重新發佈）→ 記錄後自我退出，等新版本再拉起
+            build_watch_result = build_watch.check()
+            if build_watch_result["changed"] is True:
+                sc_logger.log("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"] + ", bridge exiting")
+                process_status.unregister("bridge", os.getpid())
+                os._exit(0)
+
             # 程序狀態（自我心跳——每輪寫一次：本程序存在＝在跑）
             process_status.beat_all()
 

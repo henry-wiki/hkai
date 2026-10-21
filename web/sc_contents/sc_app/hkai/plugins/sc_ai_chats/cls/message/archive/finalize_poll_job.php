@@ -22,6 +22,7 @@ trait finalize_poll_job
         sc_ai_chats()->message()->backfill_response_timing($chat_id, $message_id);
 
         // ② 段狀態終態收尾（卡存在＝串流新制：一次過 flush 入 DB；冇卡＝舊制：檔案 upsert）
+        $chat_row = sc_ai_chats()->chat()->get_chat_row($chat_id);
         $message_card = sc_ai_chats()->message()->card()->read_message_card($message_id);
 
         // 判定：卡存在（串流新制）→ 卡 flush 入 DB（帶 response_id——檔案同 DB id 一致）
@@ -29,7 +30,6 @@ trait finalize_poll_job
             sc_ai_chats()->message()->card()->flush_message_card($message_card, $status);
         } else {
             // 舊制（冇卡）——chat_row 由 chat 域帶入（upsert 讀檔補正＋段收邊）
-            $chat_row          = sc_ai_chats()->chat()->get_chat_row($chat_id);
             $_polling_job_item = ["message_id" => $message_id, "status" => $status];
             sc_ai_chats()->message()->repo_update()->upsert_db_message_response($chat_row, $_polling_job_item);
 
@@ -48,6 +48,9 @@ trait finalize_poll_job
 
         // ⑥ 卡檔刪除（flush 完成——DB 已係真相）
         sc_ai_chats()->message()->card()->delete_message_card($message_id);
+
+        // 專案統計（最後一步——唔影響收尾流程）
+        sc_ai_projects()->project()->refresh_project_stats((int)$chat_row["project_id"]);
     }
 
 }

@@ -26,7 +26,13 @@ trait fetch_project_form
         // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值——歸檔專案照查到）
         $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
 
-        $project_row  = repo_select()->get_project_row($project_slug);
+        // 新增語境（空 slug）→ 一律當新專案（唔可以查表——空 slug 會解析成 Home，變成預填 Home 資料）
+        $project_row = null;
+
+        // 判定：有 slug（編輯語境）→ 才查表
+        if ($project_slug !== "") {
+            $project_row = repo_select()->get_project_row($project_slug);
+        }
 
         // 判定：帶咗 slug（編輯語境）但查無此專案 → 失敗（唔可以靜靜當新增——錯就係錯）
         if ($project_slug !== "") {

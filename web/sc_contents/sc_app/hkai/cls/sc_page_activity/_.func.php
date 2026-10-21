@@ -13,19 +13,3 @@ function hkai__sc_page_activity()
 {
     return cls\sc_page_activity\sc_page_activity_Class::getInstance();
 }
-
-/**
- * @return \sc\app\hkai\cls\sc_page_activity\repo_update\repo_update_Class
- */
-function hkai__sc_page_activity_repo_update()
-{
-    return cls\sc_page_activity\repo_update\repo_update_Class::getInstance();
-}
-
-/**
- * @return \sc\app\hkai\cls\sc_page_activity\repo_select\repo_select_Class
- */
-function hkai__sc_page_activity_repo_select()
-{
-    return cls\sc_page_activity\repo_select\repo_select_Class::getInstance();
-}

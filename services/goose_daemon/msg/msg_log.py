@@ -230,7 +230,7 @@ class msg_log_class:
     #---------------------------------------------------------
     # poll 對照表（msg_poll_list.jsonl——Python 獨家寫；PHP 純讀）
     # 1. 路徑：msg_poll_list.jsonl（與 PHP 同一檔名規則）
-    # 2. 逐 append 更新：本檔轉 poll（update 時間＋byte 長）；其餘 poll 舊檔轉 completed
+    # 2. 逐 append 更新：本檔 update 時間＋byte 長（狀態交 msg_status 單一來源）
     # 3. 收尾轉態：全數仍 poll → completed／aborted
     #---------------------------------------------------------
 
@@ -264,7 +264,7 @@ class msg_log_class:
         with self._write_lock, self._get_poll_list_path().open("w", encoding="utf-8", newline="") as output_file:
             output_file.write("\n".join(poll_list_lines) + "\n")
 
-    # 對照更新（一檔 append 完）：本檔起 poll（已收者唔回退）；其他仍 poll 嘅舊檔轉 completed（同一刻只有一檔寫緊）
+    # 對照更新（一檔 append 完）：只更新本檔時間／長度（狀態交 msg_status 單一來源）
     def _update_poll_list(self, poll_file_path: Path) -> None:
         with self._write_lock:
             self._update_poll_list_locked(poll_file_path)
@@ -277,16 +277,12 @@ class msg_log_class:
 
         current_entry = None
 
-        # 逐 entry：本檔取返；其餘 poll 舊檔收 completed
+        # 逐 entry：只取返本檔（狀態由 msg_status 決定——poll_list 唔准代判完成）
         for poll_list_entry in poll_list:
             # 判定：本檔 → 記低（下面更新）
             if poll_list_entry["poll_file"] == poll_file_path.name:
                 current_entry = poll_list_entry
                 continue
-            # 判定：其他仍在寫（poll）→ 上一隻已收——轉 completed
-            if poll_list_entry["poll_status"] == "poll":
-                poll_list_entry["poll_status"] = "completed"
-                poll_list_entry["poll_update_at"] = current_time
 
         # 判定：本檔首次出現 → 起 entry（起始時間＝當下）
         if current_entry is None:

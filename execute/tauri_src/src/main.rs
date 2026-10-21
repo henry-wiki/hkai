@@ -40,7 +40,7 @@ fn main() {
         return;
     }
 
-    // 1. 設定：config.toml → runtime\shell.json → 內建預設
+    // 1. 設定：config.toml → assets\shell.json → 內建預設
     let (shell, warning) = config::load();
     if let Some(message) = warning {
         log::warn!("{}", message);

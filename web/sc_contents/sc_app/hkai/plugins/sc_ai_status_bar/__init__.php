@@ -27,6 +27,12 @@ $plugin->add_request_action("workspace_status_bar_fetch", __DIR__ . "/request/wo
 // 自身貢獻 status item（sb_project——專案名；Closure 於 render 時求值＝頁面情境或 fetch 情境（三端點 render_region_for_page 換入頁面 URL）皆準）
 sc_ai_status_bar()->status_bar()->add_status_item("project", function () {
     $project_slug = sc_ai_projects()->project()->get_selected_project_slug();
+
+    // Home 語境（根 URL＝未指定專案段）→ 用固定 home 查（反映現實：空 slug 本身查唔到嘢）
+    if ($project_slug === null || $project_slug === "") {
+        $project_slug = "home";
+    }
+
     $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
 
     // 判定：查唔到專案 → 維持預設「—」
@@ -85,6 +91,11 @@ sc_ai_health()->health()->add_health_report("git", function ($request_data) {
 
     // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
     $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+
+    // Home 語境（空 slug）→ 用固定 home 查（呼叫端自己 fallback）
+    if ($project_slug === "") {
+        $project_slug = "home";
+    }
 
     $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
 

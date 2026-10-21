@@ -12,7 +12,16 @@ trait parse_activity_events
     public function parse_activity_events($chat_id, $message_id)
     {
         // 讀 msg_log 全文（@ 抑制＋false → 空——檔案未建立＝冇事件）
-        $log_raw = @file_get_contents(sc_ai_chats()->poll()->get_msg_log_file($chat_id, $message_id));
+        $log_file = sc_ai_chats()->poll()->get_msg_log_file($chat_id, $message_id);
+
+        // 判定：polling 位置冇（訊息已歸檔）→ 改用歸檔目錄同一個檔名
+        if (!is_file($log_file)) {
+            $archived_message_dir = sc_ai_chats()->poll()->get_archived_poll_dir($chat_id, $message_id);
+
+            $log_file = $archived_message_dir . "/" . basename($log_file);
+        }
+
+        $log_raw = @file_get_contents($log_file);
         if ($log_raw === false) {
             $log_raw = "";
         }
@@ -60,11 +69,22 @@ trait parse_activity_events
             $log_level = isset($json_event["level"]) ? $json_event["level"] : "INFO";
             $log_state = sc_ai_chats()->fsm()->get_display_state($json_event["event"]);
 
+            $log_datetime   = (string)($json_event["datetime"] ?? "");
+            $log_event      = (string)$json_event["event"];
+            $log_level_text = strtolower($log_level);
+            $log_message    = (string)$json_event["message"];
+
+            // 活動 uid＝time＋event＋status＋msg 嘅 md5（同一條記錄穩定識別）
+            $log_activity_uid = md5($log_datetime . "|" . $log_event . "|" . $log_level_text . "|" . $log_message);
+
             $logs[] = [
-                "level"     => strtolower($log_level),
-                "state"     => $log_state,
-                "message"   => $json_event["message"],
-                "css_class" => $log_state === "" ? "" : "activity_state_" . $log_state,
+                "activity_uid" => $log_activity_uid,
+                "datetime"     => $log_datetime,
+                "event"        => $log_event,
+                "level"        => $log_level_text,
+                "state"        => $log_state,
+                "message"      => $log_message,
+                "css_class"    => $log_state === "" ? "" : "activity_state_" . $log_state,
             ];
         }
         

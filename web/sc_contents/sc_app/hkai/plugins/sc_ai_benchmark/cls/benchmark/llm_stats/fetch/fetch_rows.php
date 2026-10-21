@@ -232,6 +232,12 @@ trait fetch_rows
         $curl_handle = curl_init($request_url);
         curl_setopt($curl_handle, CURLOPT_CUSTOMREQUEST, strtoupper($fetch_spec["fetch_method"]));
         curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
+        $cacert_path = sc_bundled_cacert_path();
+        if ($cacert_path !== "") {
+            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        }
+
         curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
         curl_setopt($curl_handle, CURLOPT_TIMEOUT, 90);
         curl_setopt($curl_handle, CURLOPT_USERAGENT, "hkai/1.0");

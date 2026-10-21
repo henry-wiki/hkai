@@ -52,6 +52,10 @@ class git_status_class:
         """在指定路徑執行 git 命令（唯讀 flags）——回傳 (是否成功, stdout, stderr)。"""
         command = ["git", "-C", project_path, "--no-optional-locks", *git_arguments]
 
+        # 環境：GIT_CEILING_DIRECTORIES＝上一層——封死向上搜尋 .git
+        command_env = dict(os.environ)
+        command_env["GIT_CEILING_DIRECTORIES"] = os.path.dirname(os.path.normpath(project_path))
+
         try:
             completed = subprocess.run(
                 command,
@@ -61,6 +65,7 @@ class git_status_class:
                 errors="replace",
                 timeout=GIT_TIMEOUT_SECONDS,
                 check=False,
+                env=command_env,
             )
         except (OSError, subprocess.SubprocessError) as run_error:
             return False, "", str(run_error)
@@ -93,11 +98,35 @@ class git_status_class:
         return completed.stdout.strip()
 
     def check_is_git_work_tree(self, project_path):
-        """偵測路徑是否 git 工作樹（rev-parse --is-inside-work-tree）。"""
+        """偵測路徑是否 git 工作樹（先確認自己目錄有 .git——唔准向上搵父層）。"""
+        # 判定：專案目錄唔存在 → 非工作樹
+        if not os.path.isdir(project_path):
+            return False
+
+        git_marker_path = os.path.join(project_path, ".git")
+
+        # 判定：自己目錄冇 .git（檔案或目錄）→ 非工作樹（唔借上層 repo）
+        if not os.path.exists(git_marker_path):
+            return False
+
         is_ok, stdout_text, _ = self.run_git_command(project_path, ["rev-parse", "--is-inside-work-tree"])
 
         # 命令失敗（路徑唔存在／非 repo）→ 非工作樹
         if is_ok is False:
+            return False
+
+        # repo 根（--show-toplevel）——必須等於專案目錄（防上層 repo 冒充：空資料夾會搵到父層 .git）
+        is_root_ok, root_stdout_text, _ = self.run_git_command(project_path, ["rev-parse", "--show-toplevel"])
+
+        # 命令失敗 → 非工作樹
+        if is_root_ok is False:
+            return False
+
+        normalized_project_path = os.path.normcase(os.path.normpath(project_path))
+        normalized_repo_root    = os.path.normcase(os.path.normpath(root_stdout_text.strip()))
+
+        # 判定：repo 根唔等於專案目錄 → 當唔係 repo（唔借父層）
+        if normalized_project_path != normalized_repo_root:
             return False
 
         return stdout_text.strip() == "true"

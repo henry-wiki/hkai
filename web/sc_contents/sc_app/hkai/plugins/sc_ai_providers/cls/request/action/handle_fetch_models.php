@@ -26,6 +26,8 @@ trait handle_fetch_models
             $model_list_page = sc_ai_providers()->instance__kilo()->view()->get_model_list_page($provider_id);
         } elseif ($provider_id === "openrouter") {
             $model_list_page = sc_ai_providers()->instance__openrouter()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "deepseek") {
+            $model_list_page = sc_ai_providers()->instance__deepseek()->view()->get_model_list_page($provider_id);
         } else {
             // 無對應 provider（唔係 kilo／openrouter）→ 400（前端顯示失敗）
             return sc_response()->json(["ok" => false, "error" => "unknown provider: " . $provider_id], 400);

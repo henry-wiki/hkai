@@ -19,8 +19,12 @@ $plugin = $controller->register_plugin(__DIR__, [
 $plugin->setEnabled(true);
 
 // 註冊保留 slug（不可作為專案 slug——路由／框架路徑；集中於 plugin 初始化設定，可再增）
+// Home 專案列（slug＝""——不可更新／刪除；每個請求確保存在）
+sc_ai_projects()->project()->ensure_home_project();
+
 sc_ai_projects()->project()->add_reserved_slugs([
     "archive",
+    "home",
     "hkai",
     "docs",
     "index",

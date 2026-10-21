@@ -17,7 +17,7 @@ from typing import Optional
 from ..utils.io import read_json
 
 # 有效引擎（值＝同名設定組／同名 python 套件——services/{name}/）
-KNOWN_DAEMON_ENGINES = ("aider_daemon", "goose_daemon")
+KNOWN_DAEMON_ENGINES = ("aider_daemon", "goose_daemon", "openhands_api_daemon")
 
 
 def load_config(config_path: Optional[Path]) -> dict:

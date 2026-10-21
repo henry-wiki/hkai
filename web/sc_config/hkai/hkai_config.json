@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "doc": "hkai 靜態設定 SSOT（PHP/Python 共用）。名稱不含路徑——由 storage_dir 拼接。daemon_engine＝現行引擎（值＝同名設定組——aider_daemon／goose_daemon）。chat_mode＝各引擎組內（UI 模條目 {mode／description}——key 在＝UI 出嗰粒掣、順序＝寫嘅順序；一個模多個候選嗰陣：mode＝默認、description 列明候選）——引擎各讀自己嗰組；UI 讀現行引擎（daemon_engine）。server_settings＝server 定址（host／port——runtime.json 為動態覆蓋層：儲存／測試／啟動時寫入；PHP 與 Python 兩端同讀此節）。instructions＝默認文本 item（system_prompt／system_env——storage 工作檔相對名、manifest 為出廠默認）。 外部／私隱路徑唔住此檔（見 sc_config/assets/app.php env_file＋.env）。",
+  "doc": "hkai 靜態設定 SSOT（PHP/Python 共用）。名稱不含路徑——由 storage_dir 拼接。daemon_engine＝現行引擎（值＝同名設定組——aider_daemon／goose_daemon）。chat_mode＝各引擎組內（UI 模條目 {mode／description}——key 在＝UI 出嗰粒掣、順序＝寫嘅順序；一個模多個候選嗰陣：mode＝默認、description 列明候選）——引擎各讀自己嗰組；UI 讀現行引擎（daemon_engine）。instructions＝默認文本 item（system_prompt／system_env——storage 工作檔相對名、manifest 為出廠默認）。 外部／私隱路徑唔住此檔（見 sc_config/assets/app.php env_file＋.env）。",
   "filenames": {
     "heartbeat": "aider_daemon.heartbeat",
     "conf": "runtime.json",
@@ -25,7 +25,7 @@
       "editable": 0
     }
   },
-  "chat_engine": [
+  "agents": [
     "goose_daemon",
     "aider_daemon"
   ],
@@ -78,17 +78,6 @@
         "description": "工具全自動"
       }
     }
-  },
-  "server_settings": {
-    "host": "127.0.0.1",
-    "port": 8000
-  },
-  "stream": {
-    "enabled": true,
-    "base_url": "http://127.0.0.1:8000",
-    "allowed_origins": [
-      "http://sc-hkai.lab:8426",
-      "http://127.0.0.1:*"
-    ]
   }
 }
+

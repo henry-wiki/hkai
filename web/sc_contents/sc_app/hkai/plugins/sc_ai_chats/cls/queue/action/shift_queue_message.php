@@ -66,6 +66,9 @@ trait shift_queue_message
         
         // 放出去（notify bridge——喚醒與否由 bridge 決定；daemon 最舊優先＝就係呢條）
         hkai__python_bridge_daemon()->notify_daemon_add_message($chat_id, $message_id);
+
+        // 專案統計（最後一步——唔影響派工）
+        sc_ai_projects()->project()->refresh_project_stats($project_id);
         
         $shift_result = [];
         $shift_result["message_row"] = $message_row;

@@ -15,6 +15,12 @@ trait get_host_port_test_result
         // curl 請求（本機探測——1s 連線逾時、2s 整體逾時）
         $curl_handle = curl_init($health_url);
         curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
+        $cacert_path = sc_bundled_cacert_path();
+        if ($cacert_path !== "") {
+            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        }
+
         curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 1);
         curl_setopt($curl_handle, CURLOPT_TIMEOUT, 2);
         $response_body = curl_exec($curl_handle);

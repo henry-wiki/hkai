@@ -19,7 +19,7 @@ trait project_add
         $form_data = isset($input_data["formdata"]) ? $input_data["formdata"] : [];
 
         // 解析欄位（project_path 先落——驗證與寫入共用）
-        $project_path = trim($form_data["project_path"] ?? "");
+        $project_path = sc_ai_projects()->project()->normalize_project_path($form_data["project_path"] ?? "");
 
         // 驗證（project_path 必填＋目錄存在）
         $validate_result = validator()->validate_project_input($project_path);

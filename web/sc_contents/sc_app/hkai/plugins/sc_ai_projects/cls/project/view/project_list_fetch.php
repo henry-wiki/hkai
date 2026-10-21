@@ -14,22 +14,22 @@ trait project_list_fetch
         // 目前選取的專案 slug（由前端帶入 select_project_slug——空＝未選（home——冇 active））
         $selected_project_slug = trim($input_data["select_project_slug"] ?? "");
         
-        // 備註：未指定專案＝冇 active（home——唔自動揀；自動選取（最近活動／首個）待未來需求——get_latest_activity_project／get_default_project 保留唔叫）
+        // 備註：未指定專案＝冇 active（home——唔自動揀；自動選取（首個）待未來需求——get_default_project 保留唔叫）
         
         // 清單語境旗標（歸檔語境＝archive／archive@<project_slug>——URL 第一段原值由前端帶；旗標由後台出，前端據此上歸檔視覺）
-        $is_archive = $this->is_archive_project_key($selected_project_slug);
+        $is_archive = sc_ai_projects()->project()->is_archive_project_key($selected_project_slug);
 
         // 瀏覽高亮：語境形（archive@<project_slug>）→ 取純 slug 作 active（路徑共用）；純關鍵字（archive——列面）→ 原值對唔中任何 slug＝冇高亮
         if (strpos($selected_project_slug, "@") !== false) {
-            $selected_project_slug = $this->get_bare_project_slug($selected_project_slug);
+            $selected_project_slug = sc_ai_projects()->project()->get_bare_project_slug($selected_project_slug);
         }
 
         // 判定：歸檔語境 → 已歸檔清單；普通語境 → 正常清單
         $project_list_html = "";
         if ($is_archive === true) {
-            $project_list_html = $this->render_archived_project_list($selected_project_slug);
+            $project_list_html = sc_ai_projects()->project()->render_archived_project_list($selected_project_slug);
         } else {
-            $project_list_html = $this->render_project_list($selected_project_slug);
+            $project_list_html = sc_ai_projects()->project()->render_project_list($selected_project_slug);
         }
         
         // 選取專案嘅路徑（topnav 路徑列用——前端 .text() 注入；未選 → 空）
@@ -40,13 +40,25 @@ trait project_list_fetch
             $project_path = (string)$selected_project_row["project_path"];
         }
         
+        // 自動回 home（URL 帶咗唔存在嘅專案 slug → 交前端轉向 "/"）
+        $auto_home = false;
+
+        // 判定：有指定 slug、非歸檔語境、非 home 段、查唔到專案 → 回 home
+        if ($selected_project_slug !== "" && $selected_project_slug !== "home" && $is_archive === false) {
+            if ($selected_project_row === null) {
+                $auto_home = true;
+            }
+        }
+
         // 輸出（清單 HTML＋選取專案路徑＋歸檔語境旗標；URL 一律唔郁——本動作唔回 link）
         $output = [];
         $output["ok"]   = true;
         $output["html"] = $project_list_html;
         $output["project_path"] = $project_path;
         $output["is_archive"]   = $is_archive;
-        
+        $output["auto_home"]    = $auto_home;
+
+
         return sc_response()->json($output);
     }
 }

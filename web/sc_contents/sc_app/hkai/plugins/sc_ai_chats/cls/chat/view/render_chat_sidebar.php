@@ -52,7 +52,7 @@ trait render_chat_sidebar
                 $outputLines[] = "</div>";
             $outputLines[] = "</div>";
             $outputLines[] = "<div class='sc_chat_list' data-loaded='0'>";
-                $outputLines[] = sc_empty_state(hkai__i18n()->get("empty.select_project"), $empty_state_hidden);
+                $outputLines[] = "";
             $outputLines[] = "</div>";
             // 拖拉調寬把手（貼右邊界——sc_sidebar.js 綁定拖曳；200–300px；中段 grip＝拖曳舒適位）
             $outputLines[] = "<div class='sc_sidebar__resize_line' data-resize='chats' title='拖拉調整對話欄寬度'>";

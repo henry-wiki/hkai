@@ -35,6 +35,9 @@ class main_Class
         
         $this->provider_bundle["kilo"] = [];
         $this->provider_bundle["kilo"]["reset_instance"] = sc_ai_providers()->instance__kilo();
+
+        $this->provider_bundle["deepseek"] = [];
+        $this->provider_bundle["deepseek"]["reset_instance"] = sc_ai_providers()->instance__deepseek();
     }
 
     public function setup($config = [])
@@ -60,6 +63,12 @@ class main_Class
         foreach ($available_providers as $provider_id => $provider_item) {
             // provider 例項（解析入口——accessor 唔存在時守衛喺 get_provider_instance 內）
             $provider_instance = $this->get_provider_instance($provider_id);
+
+            // 判定：未有實例（尚未實作嘅 provider）→ 跳過（只保留宣告）
+            if ($provider_instance === null) {
+                continue;
+            }
+
             $provider_instance->initial($provider_item);
         }
     }

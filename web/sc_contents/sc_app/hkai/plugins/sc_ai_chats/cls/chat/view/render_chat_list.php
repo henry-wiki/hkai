@@ -17,6 +17,17 @@ trait render_chat_list
 
         // 資料來源經 repo：先依 slug 取專案列 → 再依 project_id 搜尋該專案下的對話列
         $project_row = sc_ai_projects()->project()->get_project_row($selected_project_slug);
+
+        // home 語境（空 slug／home 段）→ 虛擬專案列（project_id 0）
+        if ($project_row === null && ($selected_project_slug === "" || $selected_project_slug === "home")) {
+            $project_row = [
+                "project_id"     => 0,
+                "project_slug"   => "home",
+                "project_status" => "normal",
+                "project_name"   => "",
+            ];
+        }
+
         $chat_rows = [];
         if ($project_row !== null) {
             $chat_rows = sc_ai_chats()->chat()->get_chat_rows($project_row["project_id"]);

@@ -45,13 +45,18 @@ class _modal_action {
                     return;
                 }
 
-                // reset 失敗 → alert ＋ 失敗回報
-                alert("cannot refresh models: " + provider_id);
+                // reset 失敗 → 顯示後端錯誤原文 ＋ 失敗回報
+                const provider_result = (result.results && result.results[provider_id]) ? result.results[provider_id] : {};
+                const error_message = provider_result.error_message || ("cannot refresh models: " + provider_id);
+
+                registry().shared().sc_alert().error(error_message);
                 callbacks.on_fail();
             },
-            error: function () {
-                // 網路／拒絕失敗 → alert ＋ 失敗回報
-                alert("cannot refresh models: " + provider_id);
+            error: function (response_result) {
+                // 網路／拒絕失敗 → 顯示錯誤原文 ＋ 失敗回報
+                const error_message = (response_result && response_result.error) ? response_result.error : ("cannot refresh models: " + provider_id);
+
+                registry().shared().sc_alert().error(error_message);
                 callbacks.on_fail();
             },
         });

@@ -5,7 +5,7 @@ namespace sc\app\hkai\cls\sc_python_bridge;
 // == sc_python_bridge_Class：python server 生命週期管理（singleton——經 bridging hkai__python_bridge() 取得） ==
 // == 職責：start_server（拉起＋等 bridge 自報就緒）／stop_server（全清進程）／check_server_alive（HTTP 存活檢查） ==
 // == 啟動結果（2026-10-02 定案）：bridge 開機自己寫 server_status.json（running／failed＋原因）——PHP 拉起後輪詢讀 ==
-// == 拉起前置（順序）：完整檢查（已起即回）→ 環境檢查 → 全清掃（停用同路——worker／aider_daemon／goose_daemon／bridge＋孤兒＋死檔）→ port 佔用檢查（netstat） ==
+// == 拉起前置（順序）：完整檢查（已起即回）→ 環境檢查 → 全清掃（停用同路——worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）→ port 佔用檢查（netstat） ==
 // == server 狀態四態（前端）：stopped（未啟用）／starting（啟用中）／running（已啟用）／stopping（停止中） ==
 
 class sc_python_bridge_Class
@@ -38,7 +38,7 @@ class sc_python_bridge_Class
     }
     
     // 啟動 python server（拉起＋等 bridge 自報——回傳 ["ok" => bool, "message" => string]）
-    // 流程：①完整檢查（已起即回）②全清掃（啟動＝前 session 已關——殘骸一律殺清：worker／aider_daemon／goose_daemon／bridge＋孤兒＋死檔）
+    // 流程：①完整檢查（已起即回）②全清掃（啟動＝前 session 已關——殘骸一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）
     //       ③port 佔用檢查（netstat listener——其他程序霸住即拒）④清舊結果檔 → 拉起 ⑤輪詢 server_status.json
     public function start_server($server_host = "", $server_port = 0)
     {
@@ -46,16 +46,26 @@ class sc_python_bridge_Class
         $runtime_config_file = hkai__sc_runtime()->get_runtime_config_file();
 
         // 目標 host／port（本次要佔嘅位——呼叫端帶入）
-        // 判定：未帶 port → 回讀存檔值（向後相容）
+        // 判定：未帶 port → 自動揀一個可用埠
         if ($server_port <= 0) {
-            $server_port = $this->get_server_port();
+            $server_port = $this->find_available_server_port();
+
+            // 判定：全段被佔用 → 失敗
+            if ($server_port === 0) {
+                return ["ok" => false, "message" => "找不到可用連接埠（6001–6999 全被佔用）"];
+            }
         }
 
-        // 判定：未帶 host → 回讀存檔值（向後相容）
+        // 判定：未帶 host → 回讀存檔值；存檔亦缺 → 本機
         if ($server_host === "") {
             $runtime_configs = hkai__core()->get_runtime_configs();
             $server_settings = $runtime_configs["server_settings"] ?? [];
-            $server_host     = (string)$server_settings["host"];
+            $server_host     = (string)($server_settings["host"] ?? "");
+
+            // 判定：存檔無 host → 127.0.0.1
+            if ($server_host === "") {
+                $server_host = "127.0.0.1";
+            }
         }
 
         $bridge_check = hkai__python_bridge_check()->check_is_python_bridge_running_full();
@@ -77,14 +87,14 @@ class sc_python_bridge_Class
             return ["ok" => true, "message" => "server already running"];
         }
 
-        // 前置大清掃（啟動＝前一個 session 已關——殘留一律殺清：worker／aider_daemon／goose_daemon／bridge；同停用同路）
+        // 前置大清掃（啟動＝前一個 session 已關——殘留一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge；同停用同路）
         $this->stop_server();
 
-        // 孤兒清掃（心跳檔冇／已死都仲在跑嘅殘骸——程式名命中即殺：aider_daemon／goose_daemon 先、bridge 殿後）
+        // 孤兒清掃（心跳檔冇／已死都仲在跑嘅殘骸——程式名命中即殺：aider_daemon／goose_daemon／openhands_api_daemon 先、bridge 殿後）
         $orphan_pids = [];
 
         // 逐個程式名掃（aider_daemon.main／goose_daemon.main／bridge.main——同一把刀）
-        foreach (["aider_daemon.main", "goose_daemon.main", "bridge.main"] as $orphan_program_name) {
+        foreach (["aider_daemon.main", "goose_daemon.main", "openhands_api_daemon.main", "bridge.main"] as $orphan_program_name) {
             // 擁有權過濾（只掃本實例 runtime 拉起嘅孤兒——唔准殺別個站）
             $program_pids = hkai__python_bridge_process()->find_python_pids_by_program_name_and_runtime($orphan_program_name, $runtime_config_file);
 
@@ -110,6 +120,9 @@ class sc_python_bridge_Class
         if ($listener_pid > 0) {
             return ["ok" => false, "message" => "連接埠 " . $server_port . " 已被其他程序佔用（PID " . $listener_pid . "）。請按「自動分配連接埠」改用可用埠。"];
         }
+
+        // 記錄本次來源 origin（白名單——SSE CORS；去重附加）
+        $this->append_origin_whitelist();
 
         // 寫入本次要起嘅 host／port（python 唯一設定來源——拉起前先寫，bridge 開機即讀）
         $server_settings_update = [];
@@ -216,7 +229,7 @@ class sc_python_bridge_Class
         }
     }
 
-    // 停止 python server（全清本系統程序：worker → aider_daemon／goose_daemon → bridge，由深至淺）
+    // 停止 python server（全清本系統程序：worker → aider_daemon／goose_daemon／openhands_api_daemon → bridge，由深至淺）
     // 說明（2026-10-02 定案）：停用＝殺晒——舊版只殺 bridge，daemon／worker 會殘留
     public function stop_server()
     {
@@ -241,10 +254,10 @@ class sc_python_bridge_Class
     {
         $this->stop_server();
 
-        // 目標 port（未帶 → 回讀存檔值——同 start_server 一致）
-        // 判定：未帶 port → 回讀存檔值
+        // 目標 port（未帶 → 停止後自動揀一個可用埠——同 start_server 一致）
+        // 判定：未帶 port → 自動分配
         if ($server_port <= 0) {
-            $server_port = $this->get_server_port();
+            $server_port = $this->find_available_server_port();
         }
 
         // 等 port 放返出嚟（同一請求內背靠背拉起——被殺嘅 listener 退場需時）
@@ -612,14 +625,6 @@ class sc_python_bridge_Class
     }
     
     // 目前設定的 server port（runtime 動態層——未存時為靜態預設）
-    private function get_server_port()
-    {
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $server_settings = $runtime_configs["server_settings"] ?? [];
-        
-        return (int)$server_settings["port"];
-    }
-    
     // 讀 bridge 自報身份（/health——storage_dir 用嚟判別邊個實例；讀唔到＝空陣列）
     private function read_bridge_health($server_host, $server_port)
     {
@@ -648,6 +653,114 @@ class sc_python_bridge_Class
         }
 
         return $health_data;
+    }
+
+    // 附加本次請求來源去 origin 白名單（storage/bridge/origin.whitelist；去重·LOCK_EX）
+    private function append_origin_whitelist()
+    {
+        $origin = trim((string)($_SERVER["HTTP_ORIGIN"] ?? ""));
+
+        // 判定：冇 Origin 標頭 → 由請求 host 組（本機 AJAX 可能無 Origin）
+        if ($origin === "") {
+            $request_host = trim((string)($_SERVER["HTTP_HOST"] ?? ""));
+
+            // 判定：連 host 都冇（CLI）→ 唔寫
+            if ($request_host === "") {
+                return;
+            }
+
+            $request_scheme = "http";
+
+            // 判定：HTTPS → https
+            if (!empty($_SERVER["HTTPS"]) && $_SERVER["HTTPS"] !== "off") {
+                $request_scheme = "https";
+            }
+
+            $origin = $request_scheme . "://" . $request_host;
+        }
+
+        $origin = rtrim($origin, "/");
+
+        $whitelist_file = hkai__core()->get_storage_dir() . "/bridge/origin.whitelist";
+
+        // 判定：目錄唔存在 → 先建立
+        if (!is_dir(dirname($whitelist_file))) {
+            @mkdir(dirname($whitelist_file), 0777, true);
+        }
+
+        $existing_origins = [];
+
+        // 判定：檔已存在 → 讀現有行
+        if (is_file($whitelist_file)) {
+            $existing_lines = file($whitelist_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+            // 逐行收集（去空白）
+            foreach ($existing_lines as $existing_line) {
+                $existing_origins[] = trim($existing_line);
+            }
+        }
+
+        // 判定：已存在 → 唔重複寫
+        if (in_array($origin, $existing_origins, true)) {
+            return;
+        }
+
+        file_put_contents($whitelist_file, $origin . chr(10), FILE_APPEND | LOCK_EX);
+    }
+
+    // 揀一個可用埠（6001–6999 第一個未監聽；0＝全段被佔）
+    public function find_available_server_port($port_range_start = 6001, $port_range_end = 6999)
+    {
+        $listening_ports = $this->collect_listening_ports();
+
+        // 逐個候選埠（範圍內第一個未被監聽）
+        for ($port_candidate = $port_range_start; $port_candidate <= $port_range_end; $port_candidate++) {
+            // 判定：已被監聽 → 下一個
+            if (isset($listening_ports[$port_candidate])) {
+                continue;
+            }
+
+            return $port_candidate;
+        }
+
+        return 0;
+    }
+
+    // 讀監聽中嘅 TCP 埠（netstat -ano -p tcp；回 [port => pid]）
+    private function collect_listening_ports()
+    {
+        $listening_ports = [];
+
+        $netstat_lines = [];
+        @exec("netstat -ano -p tcp", $netstat_lines);
+
+        // 逐行解析（LISTENING 行——本地位址尾段＝port）
+        foreach ($netstat_lines as $netstat_line) {
+            $netstat_columns = preg_split('/\s+/', trim($netstat_line));
+
+            // 判定：欄位不足（表頭等）→ 跳
+            if (count($netstat_columns) < 5) {
+                continue;
+            }
+
+            // 判定：非 LISTENING → 跳
+            if ($netstat_columns[3] !== "LISTENING") {
+                continue;
+            }
+
+            $local_address = $netstat_columns[1];
+            $address_parts = explode(":", $local_address);
+            $port_text     = end($address_parts);
+
+            // 判定：尾段非數字（IPv6 變體等）→ 跳
+            if (!ctype_digit($port_text)) {
+                continue;
+            }
+
+            $listening_ports[(int)$port_text] = (int)$netstat_columns[4];
+        }
+
+        return $listening_ports;
     }
 
     // 找該 port 的 listener PID（netstat -ano -p tcp——LISTENING 且本地位址以 :port 結尾；找不到回 0）

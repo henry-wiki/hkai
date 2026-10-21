@@ -24,6 +24,8 @@ trait handle_redownload_provider_models
             $result = sc_ai_providers()->instance__kilo()->redownload_provider_models();
         } elseif ($provider_id === "openrouter") {
             $result = sc_ai_providers()->instance__openrouter()->redownload_provider_models();
+        } elseif ($provider_id === "deepseek") {
+            $result = sc_ai_providers()->instance__deepseek()->redownload_provider_models();
         } else {
             // 無對應 provider（唔係 kilo／openrouter）→ 400（前端顯示失敗）
             return sc_response()->json(["ok" => false, "error" => "unknown provider: " . $provider_id], 400);

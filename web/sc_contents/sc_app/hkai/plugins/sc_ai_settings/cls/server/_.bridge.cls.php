@@ -16,7 +16,6 @@ class server_Class
     use action\handle_settings_start_server;
     use action\handle_settings_restart_server;
     use action\handle_settings_stop_server;
-    use action\handle_settings_auto_assign_port;
 
     private static $instance = null;
 

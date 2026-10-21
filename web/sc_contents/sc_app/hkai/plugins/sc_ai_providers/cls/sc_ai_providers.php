@@ -65,6 +65,16 @@ class sc_ai_providers_Class
     }
 
     /**
+     * provider 實例（deepseek——具名分派；IDE 直接跳）
+     *
+     * @return \scpp\hkai\plugins\sc_ai_providers\provider\deepseek\provider_deepseek_Class
+     */
+    public function instance__deepseek()
+    {
+        return provider\deepseek\provider_deepseek_Class::getInstance();
+    }
+
+    /**
      * provider 實例（openrouter——具名分派；IDE 直接跳）
      *
      * @return \sc\app\hkai\plugins\sc_ai_providers\provider\openrouter\provider_openrouter_Class

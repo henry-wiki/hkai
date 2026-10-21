@@ -9,6 +9,14 @@ trait delete_project
 {
     public function delete_project($project_id)
     {
+        // 判定：Home 專案（slug＝home）→ 拒絕（用戶不可改）
+        $target_project_row = sc_db()->selectOne("SELECT project_slug FROM projects WHERE project_id = ?", [(int)$project_id]);
+
+        // 判定：Home → 唔准改
+        if ($target_project_row !== null && $target_project_row["project_slug"] === "home") {
+            return false;
+        }
+
         $db = sc_db()->connection("sqlite");
 
         $db->affectingStatement("DELETE FROM message_response WHERE project_id = ?", [$project_id]);

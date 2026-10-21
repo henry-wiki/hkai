@@ -49,6 +49,40 @@ trait get_chat_message_slot
         $template[] = "<div class='user_message' data-slot='user_message'></div>";
         $template[] = "<div class='agent_message' data-slot='agent_message'></div>";
         
+        // 活動日誌區（只限即時訊息——預設載入畫面唔顯示；完成後仍保留）
+        if ($is_live_message === true) {
+            $message_chat_id     = (int)($message_row["chat_id"] ?? 0);
+            $message_log_entries = sc_ai_chats()->poll()->log()->parse_activity_events($message_chat_id, (int)($message_row["message_id"] ?? 0));
+
+            $template[] = "<div class='log_message'>";
+                $template[] = "<div class='activity_monitor' data-log_index='" . count($message_log_entries) . "'>";
+                    $template[] = "<div class='activity_state_icon'><span class='loading-dots'></span></div>";
+                    $template[] = "<div class='activity_lines'>";
+                        // 最新一條活動記錄（uid＝md5(time+event+status+message)——前端據此判「已存在」）
+                        $log_entry_item = [];
+
+                        // 判定：有記錄 → 取最後一條
+                        if (count($message_log_entries) > 0) {
+                            $log_entry_item = $message_log_entries[count($message_log_entries) - 1];
+                        }
+
+                        $log_entry_level   = strtolower((string)($log_entry_item["level"] ?? "info"));
+                        $log_entry_message = (string)($log_entry_item["message"] ?? "");
+                        $log_entry_uid     = (string)($log_entry_item["activity_uid"] ?? "");
+                        $log_entry_event   = (string)($log_entry_item["event"] ?? "");
+
+                        $log_line_attrs  = "data-activity_uid='" . $log_entry_uid . "'";
+                        $log_line_attrs .= " data-log_event='" . sc_html_encode($log_entry_event) . "'";
+                        $log_line_attrs .= " data-log_status='" . sc_html_encode($log_entry_level) . "'";
+
+                        $template[] = "<div class='activity_line activity_level_" . $log_entry_level . "' " . $log_line_attrs . ">";
+                            $template[] = sc_html_encode($log_entry_message);
+                        $template[] = "</div>";
+                    $template[] = "</div>";
+                $template[] = "</div>";
+            $template[] = "</div>";
+        }
+
         // 總用時列（回答底——左右分隔線＋中央用時；caption 靜態、時間動態——tick 只更新 .total_elapsed_time；常駐跟隨訊息）
         $total_elapsed_caption = sc_html_encode(hkai__i18n()->get("message.total_elapsed"));
         // 判定：即時訊息 → 以現時起算（poll 每輪更新、前端每秒遞增）
@@ -75,18 +109,6 @@ trait get_chat_message_slot
             }
         }
 
-        // 活動日誌區（即時訊息——歷史訊息一律唔需要；固定骨架入 template）
-        if ($is_live_message === true) {
-            $template[] = "<div class='log_message'>";
-                $template[] = "<div class='activity_monitor loading'>";
-                    $template[] = "<div class='activity_state_icon'><span class='loading-dots'></span></div>";
-                    $template[] = "<div class='activity_lines'>";
-                        $template[] = "<div class='activity_line'>[Generating]...</div>";
-                    $template[] = "</div>";
-                $template[] = "</div>";
-            $template[] = "</div>";
-        }
-        
         $template[] = "</div>";
         
         // 判定：即時訊息 → agent_message 出齊段骨架（後端砌——前端只寫入）

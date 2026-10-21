@@ -26,6 +26,15 @@ gateway_map = {
     "kilo": {
         "base_url": "https://api.kilo.ai/api/gateway",
         "api_key_env": "KILO_API_KEY",
+        # litellm 內嘅 provider 名（統一 <provider>_openai 命名——清楚表示走 OpenAI 兼容格式）
+        "litellm_provider": "kilo_openai",
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com",
+        "api_key_env": "DEEPSEEK_API_KEY",
+        # litellm 1.82+ 已原生有 deepseek（串流撞 bug：'ModelResponseStream' has no attribute 'text'）
+        # → 用唔撞名嘅 litellm_provider（deepseek_openai），照走本檔 OpenAI-compatible 轉發
+        "litellm_provider": "deepseek_openai",
     },
 }
 
@@ -64,9 +73,9 @@ def _register() -> None:
 
     litellm.custom_provider_map = [
         {
-            "provider": provider,
+            "provider": gateway_row["litellm_provider"],
             "custom_handler": gateway_handler_class(
-                provider,
+                gateway_row["litellm_provider"],
                 gateway_row["base_url"],
                 gateway_row["api_key_env"],
             ),

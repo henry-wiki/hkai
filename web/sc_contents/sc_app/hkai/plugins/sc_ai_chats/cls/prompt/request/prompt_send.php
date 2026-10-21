@@ -24,78 +24,65 @@ trait prompt_send
         $project_slug       = isset($input_data["project_slug"]) ? $input_data["project_slug"] : "";
         $chat_sid           = isset($input_data["chat_sid"]) ? $input_data["chat_sid"] : "";
         
-        // ===== 專案列（建立新對話需要 project_id——先取；無效即回嚴重錯）=====
+        // ===== 專案列（建立新對話需要 project_id——先取；查唔到一律 fallback Home）=====
         $existing_project_row = sc_ai_projects()->project()->get_project_row($project_slug);
-        $project_id           = null;
-        $project_path         = "";
-        
-        // 判定：專案列存在 → 取 id／path（後續直接用）
-        if ($existing_project_row !== null) {
-            $project_id   = (int)$existing_project_row["project_id"];
-            $project_path = (string)$existing_project_row["project_path"];
-        }
-        
-        // 判定：冇指定專案（project_slug 空）→ 嚴重錯
-        if ($project_slug === "") {
-            return sc_response()->json([
-                "ok"     => false,
-                "code"   => "E_VALIDATION_FATAL",
-                "title"  => hkai__i18n()->get("error.E_VALIDATION_FATAL.title"),
-                "message" => "缺少專案標識（project_slug）",
-                "hint"   => hkai__i18n()->get("error.E_VALIDATION_FATAL.hint"),
-                "errors" => [
-                    "project_slug" => ["message" => "缺少專案標識（project_slug）", "code" => "E_VALIDATION_FATAL"],
-                ],
-            ]);
-        }
-        
-        // 判定：專案唔存在 → 嚴重錯
+
+        // 判定：查唔到（空 slug／無效 slug）→ fallback 查固定 Home 專案
         if ($existing_project_row === null) {
-            return sc_response()->json([
-                "ok"     => false,
-                "code"   => "E_VALIDATION_FATAL",
-                "title"  => hkai__i18n()->get("error.E_VALIDATION_FATAL.title"),
-                "message" => "專案不存在：" . $project_slug,
-                "hint"   => hkai__i18n()->get("error.E_VALIDATION_FATAL.hint"),
-                "errors" => [
-                    "project_slug" => ["message" => "專案不存在：" . $project_slug, "code" => "E_VALIDATION_FATAL"],
-                ],
-            ]);
+            $existing_project_row = sc_ai_projects()->project()->get_project_row("home");
         }
-        
+
+        // 判定：連 Home 都查唔到（資料壞）→ 嚴重錯（唔靜默）
+        if ($existing_project_row === null) {
+            return sc_response()->json(["ok" => false, "error" => "home project not found"], 500);
+        }
+
+        // 專案欄位（一律由已解析嘅 row 取——下游唔會再見 null）
+        $project_slug = (string)$existing_project_row["project_slug"];
+        $project_id   = (int)$existing_project_row["project_id"];
+        $project_path = (string)$existing_project_row["project_path"];
+
         // ===== 發問前預檢：清 repo 幽靈（git 名單有、磁碟冇——唔清會令 aider repo-map 白行＋逐個警告）=====
         // 非致命：bridge 未行＝request 回失敗結構（300ms connect timeout）——衛生動作，唔阻發送
-        sc_ai_diagnostics()->git()->run_clean_repo_ghosts($project_path);
-        
-        // ===== 對話列（chat_sid==='' 100% 確定係新對話 → 立即建立；既有 → 取回）=====
-        $existing_chat_row = null;
-        $chat_created_this_request = false;
-        
-        // 判定：有 chat_sid → 取回既有對話列
-        if ($chat_sid !== "") {
-            $existing_chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
-        } else {
-            // 新對話（chat_sid==='' 100% 確定）→ 直接建立（datapairs → insert_db_chat）
-            $chat_data                     = [];
-            $chat_data["chat_sid"]         = sc_generate_uuid();
-            $chat_data["chat_title"]       = sc_ai_chats()->chat()->build_chat_title($content);
-            $chat_data["provider_id"]      = $provider_id;
-            $chat_data["model_id"]         = $model_id;
-            $chat_data["reasoning_effort"] = $reasoning_effort !== null ? $reasoning_effort : "";
-            $chat_data["chat_mode"]        = $chat_mode;
-            
-            $existing_chat_row = sc_ai_chats()->chat()->insert_db_chat($project_id, $chat_data);
-            $chat_created_this_request = true;
+        // 判定：有專案路徑 → 清 repo 幽靈
+        if ($project_path !== "") {
+            sc_ai_diagnostics()->git()->run_clean_repo_ghosts($project_path);
         }
         
-        // ===== 排隊允許檢查（第一關之前——queue 檔最多 3 條；滿即拒收，唔記錄）=====
+        // ===== 對話列（既有先取；新對話要等三關驗證通過才建立）=====
+        $existing_chat_row = null;
+
+        // 判定：有 chat_sid → 取回既有對話列（下面 queue 檢查要用）
+        if ($chat_sid !== "") {
+            $existing_chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
+        }
+
+        // ===== 第一關：前置條件（FATAL——不通過就停，唔建對話、不記錄）=====
+        $prereq_result = sc_ai_chats()->message()->validate_message_prerequisites($input_data);
+        if ($prereq_result["ok"] === false) {
+            return sc_response()->json($prereq_result);
+        }
+
+        // ===== 第二關：伺服器就緒（FATAL——不通過就停，唔建對話、不記錄）=====
+        $server_result = hkai__python_bridge_check()->validate_server_running();
+        if ($server_result["ok"] === false) {
+            return sc_response()->json($server_result);
+        }
+
+        // ===== 第三關：可處理性（不通過就停——唔建對話、不記錄）=====
+        $proc_result = sc_ai_chats()->message()->validate_message_processable($input_data);
+        if ($proc_result["ok"] === false) {
+            return sc_response()->json($proc_result);
+        }
+
+        // ===== 排隊允許檢查（queue 檔最多 3 條；滿即拒收，唔記錄）=====
         $queue_lines = [];
-        
-        // 判定：對話已解析 → 讀該對話 queue 檔（等待列）
+
+        // 判定：既有對話 → 讀該對話 queue 檔（等待列）
         if ($existing_chat_row !== null) {
             $queue_lines = sc_ai_chats()->queue()->get_queue_lines($existing_chat_row["chat_id"]);
         }
-        
+
         // 判定：等待列（queue 檔）已滿（≥3）→ 拒收
         if (count($queue_lines) >= 3) {
             return sc_response()->json([
@@ -105,37 +92,24 @@ trait prompt_send
                 "message" => hkai__i18n()->get("queue.limit_message"),
             ]);
         }
-        
-        // ===== 第一關：前置條件（FATAL——不通過就停，不記錄）=====
-        $prereq_result = sc_ai_chats()->message()->validate_message_prerequisites($input_data);
-        if ($prereq_result["ok"] === false) {
-            sc_ai_chats()->prompt()->rollback_created_chat($existing_chat_row, $chat_created_this_request);
-            return sc_response()->json($prereq_result);
+
+        // ===== 新對話（chat_sid==='' 100% 確定）——驗證全過才建立 =====
+        $chat_created_this_request = false;
+
+        // 判定：未指定對話 → 建立新對話列
+        if ($chat_sid === "") {
+            $chat_data                     = [];
+            $chat_data["chat_sid"]         = sc_generate_uuid();
+            $chat_data["chat_title"]       = sc_ai_chats()->chat()->build_chat_title($content);
+            $chat_data["provider_id"]      = $provider_id;
+            $chat_data["model_id"]         = $model_id;
+            $chat_data["reasoning_effort"] = $reasoning_effort !== null ? $reasoning_effort : "";
+            $chat_data["chat_mode"]        = $chat_mode;
+
+            $existing_chat_row = sc_ai_chats()->chat()->insert_db_chat($project_id, $chat_data);
+            $chat_created_this_request = true;
         }
-        
-        
-        
-        // ===== 第二關：伺服器就緒（FATAL——不通過就停，不記錄）=====
-        $server_result = hkai__python_bridge_check()->validate_server_running();
-        if ($server_result["ok"] === false) {
-            sc_ai_chats()->prompt()->rollback_created_chat($existing_chat_row, $chat_created_this_request);
-            return sc_response()->json($server_result);
-        }
-        
-        // ===== 第三關：可處理性（RECOVERABLE——不通過就記錄，不發給 AI）=====
-        $proc_result = sc_ai_chats()->message()->validate_message_processable($input_data);
-        if ($proc_result["ok"] === false) {
-            // 記錄失敗訊息（使用者確實問了問題——歷史保留這次嘗試）
-            $failed_record = sc_ai_chats()->prompt()->record_failed_message($input_data, $proc_result, $existing_chat_row);
-            
-            // 記錄成功 → 回應附加該則訊息 HTML（資料已入 DB = 已送出——前端與成功路徑同一條路插入畫面）
-            if ($failed_record !== null) {
-                $proc_result = sc_ai_chats()->prompt()->append_failed_message_html($proc_result, $input_data, $failed_record, $chat_created_this_request);
-            }
-            
-            return sc_response()->json($proc_result);
-        }
-        
+
         // 對話列（前方已解析——新對話已建立／既有已取回）
         if ($existing_chat_row === null) {
             return sc_response()->json(["ok" => false, "error" => "failed to create chat"], 500);

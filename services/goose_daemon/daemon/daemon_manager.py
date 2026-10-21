@@ -24,6 +24,7 @@ from ..engine.auth_setup import api_key_loader_class
 from ..context import *
 from ..runtime import process_list
 from ..runtime import process_status
+import lifecycle_guard
 from ..runtime import sc_logger
 
 
@@ -230,14 +231,28 @@ class daemon_manager_class:
         if self._daemon_conf_data.get("daemon_warm_workers", False):
             self._prewarm_warm_workers()
 
+        # BUILD 監看（開機基準值——變咗即自我退出，等新版本再拉起）
+        self._build_watch = lifecycle_guard.build_watch_class(lifecycle_guard.find_site_root(self._daemon_conf_data_path))
+
         # 主迴圈：單一實例驗證 → 重讀配置 → 收訊號／回收／監督 → 調度 pending → 休眠
         while True:
             try:
                 # 單一實例驗證（防多 daemon 並存——詳見 _verify_single_instance）
                 self._verify_single_instance()
 
-                # 自殺檢查已停用（daemon 長駐；殺／留集中由本 daemon 管理——方法保留供日後啟用）
-                # self._kill_self_if_stale()
+                # 判定：daemon 設定檔已被刪（建置／清理）→ 連子程序退出，不留孤兒
+                if self._daemon_conf_data_path.is_file() is False:
+                    sc_logger.log("daemon conf removed, exit with children")
+                    process_status.unregister("goose_daemon", os.getpid())
+                    exit_with_children(0)
+
+                # 判定：BUILD 已變（站台已重新發佈）→ 記錄後連子程序退出，等新版本再拉起
+                build_watch_result = self._build_watch.check()
+                if build_watch_result["changed"] is True:
+                    sc_logger.log("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"] + ", exit with children")
+                    process_status.unregister("goose_daemon", os.getpid())
+                    exit_with_children(0)
+
 
                 # 每輪重讀配置（PHP 動態控制——改檔即生效）
                 self._reload_daemon_conf()

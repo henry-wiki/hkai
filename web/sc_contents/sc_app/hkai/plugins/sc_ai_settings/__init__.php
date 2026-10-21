@@ -46,7 +46,6 @@ $plugin->add_request_action("settings_refresh_system_env", __DIR__ . "/request/i
 $plugin->add_request_action("settings_start_server", __DIR__ . "/request/server/settings_start_server.php");
 $plugin->add_request_action("settings_restart_server", __DIR__ . "/request/server/settings_restart_server.php");
 $plugin->add_request_action("settings_stop_server", __DIR__ . "/request/server/settings_stop_server.php");
-$plugin->add_request_action("settings_auto_assign_port", __DIR__ . "/request/server/settings_auto_assign_port.php");
 
 // 註冊 request action（load settings——side menu 動態載入）
 $plugin->add_request_action("fetch_settings", __DIR__ . "/request/settings/fetch_settings.php");

@@ -26,6 +26,12 @@ class _project_list_fetch {
                 // 載入標記（data-loaded 0→1——元素「已載入」語義；用家待未來）
                 jQuery(".sc_project_list").attr("data-loaded", "1");
 
+                // 無效專案（後端查唔到）→ 自動回 home
+                if (response_data.auto_home === true) {
+                    sc_url.silent_redirect_url("/");
+                    return;
+                }
+
                 // 清單歸檔語境 class（後台出旗標——歸檔視覺由 CSS 發揮；URL 變時重取跟隨更新）
                 if (response_data.is_archive === true) {
                     jQuery(".sc_project_list").addClass("archive");

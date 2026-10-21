@@ -7,6 +7,7 @@ namespace sc\app\hkai\plugins\sc_ai_projects\project;
 
 class project_Class
 {
+    use action\ensure_home_project;
     use init\get_initial_data;
     use init\get_selected_project_slug;
     use init\has_project;
@@ -17,11 +18,12 @@ class project_Class
     use repo_update\archive_project;
     use repo_update\delete_project;
     use repo_update\insert_project;
+    use repo_update\refresh_project_stats;
     use repo_update\restore_project;
     use repo_update\update_project;
     use request\handle_project_restore;
     use resolver\get_default_project;
-    use resolver\get_latest_activity_project;
+    use resolver\normalize_project_path;
     use resolver\get_bare_project_slug;
     use resolver\is_archive_project_key;
     use slug\add_reserved_slugs;

@@ -210,8 +210,10 @@ class _server {
         this.begin_button_loading(j_button);
         this.set_server_status(j_modal, "starting");
 
+        // 只交 host；port 由後端自動分配
         const form_values = this.get_form_values(j_modal);
-        const result = await shared.sc_request().post_json("/request/hkai/settings_start_server/", form_values);
+        const start_payload = { host: form_values["host"] };
+        const result = await shared.sc_request().post_json("/request/hkai/settings_start_server/", start_payload);
 
 
         this.end_button_loading(j_button);
@@ -222,43 +224,41 @@ class _server {
             return;
         }
 
-        // 判定：後端拒絕（埠被佔／啟動失敗）→ 錯誤彈窗（提示改用自動分配）＋狀態回落
+        // 判定：後端拒絕（啟動失敗）→ 錯誤彈窗＋狀態回落
         if (result.ok !== true) {
             shared.sc_alert().error(result.error);
             this.set_server_status(j_modal, "stopped");
             return;
         }
 
+        // 成功：用實際埠更新頁面 stream 設定
+        this.update_stream_base_url(result.host, result.port);
+
         // 完成（成功）→ 重載分頁（狀態／按鈕／日誌由後端重畫）
         await this.reload_server_section();
     }
 
-    // 自動分配連接埠（6001–6999 掃描——成功填入 port 格；失敗彈錯）
-    async settings_auto_assign_port(j_button, j_modal) {
-        // registry 取值（靜態——直回單例）
-        const shared = registry().shared();
-        const loading = registry().sc_loading();
-        const i18n = registry().sc_i18n();
-
-        loading.start_basic_loading(j_button);
-
-        const result = await shared.sc_request().post_json("/request/hkai/settings_auto_assign_port/", {});
-
-        loading.stop_loading(j_button);
-
-        // 判定：請求失敗（無回應）→ 錯誤彈窗後停
-        if (result === null) {
-            shared.sc_alert().error(i18n.get("settings.server.auto_assign_request_failed"));
+    // 更新頁面 stream 設定（server 實際 host／port——message_stream 下次開連線即用）
+    update_stream_base_url(server_host, server_port) {
+        // 判定：後端未回實際位址 → 唔做
+        if (!server_host || !server_port) {
             return;
         }
 
-        // 判定：後端拒絕（全段被佔用）→ 錯誤彈窗後停
-        if (result.ok !== true) {
-            shared.sc_alert().error(result.error);
+        const meta_element = document.querySelector("meta[name='stream-config']");
+
+        // 判定：頁面冇設定 meta → 唔做
+        if (!meta_element) {
             return;
         }
 
-        j_modal.find("[data-name='settings[server][port]']").val(result.port);
+        try {
+            const stream_config = JSON.parse(meta_element.getAttribute("content") || "{}");
+            stream_config.base_url = "http://" + server_host + ":" + server_port;
+            meta_element.setAttribute("content", JSON.stringify(stream_config));
+        } catch (parse_error) {
+            console.error("update stream base_url failed: " + parse_error.message);
+        }
     }
 
     // 重新啟動 server（表單現值交後端：停清 → 等 port 放 → 拉起；完成後整頁重載）
@@ -268,14 +268,21 @@ class _server {
 
         this.begin_button_loading(j_button);
 
+        // 只交 host；port 由後端自動分配
         const form_values = this.get_form_values(j_modal);
-        const result = await shared.sc_request().post_json("/request/hkai/settings_restart_server/", form_values);
+        const restart_payload = { host: form_values["host"] };
+        const result = await shared.sc_request().post_json("/request/hkai/settings_restart_server/", restart_payload);
 
         this.end_button_loading(j_button);
 
         // 判定：請求失敗（無回應）→ 停
         if (result === null) {
             return;
+        }
+
+        // 判定：成功 → 用實際埠更新頁面 stream 設定
+        if (result.ok === true) {
+            this.update_stream_base_url(result.host, result.port);
         }
 
         // 完成（成功／後端拒絕）→ 重載分頁（狀態／按鈕／日誌由後端重畫）

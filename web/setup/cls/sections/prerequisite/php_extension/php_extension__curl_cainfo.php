@@ -27,15 +27,16 @@ class php_extension__curl_cainfo_Class
     // 測試（唯一真實檢查動作——curl.cainfo 已設定且憑證檔在？回原果）
     public function setup_test()
     {
+        // 憑證檔：php.ini curl.cainfo 優先；未設定 → 用同 PHP 執行檔一齊出貨嘅內建 cacert.pem
         $cainfo_path = ini_get("curl.cainfo");
         $cainfo_path = trim(strval($cainfo_path));
 
-        // 判定：未設定（空白）→ 原果 fail
+        // 判定：php.ini 未設定 → 內建路徑（程式 HTTPS 時自行設定 CURLOPT_CAINFO）
         if ($cainfo_path === "") {
-            return ["ok" => false, "status" => "fail", "hint" => setup()->i18n()->get("check.php_extension.curl_cainfo.hint_fail"), "detail" => "", "reading" => ""];
+            $cainfo_path = dirname(PHP_BINARY) . "/extras/ssl/cacert.pem";
         }
 
-        // 判定：設定值指向的檔案不存在 → 原果 fail
+        // 判定：憑證檔不存在 → 原果 fail
         if (!is_file($cainfo_path)) {
             $cainfo_missing_hint = setup()->i18n()->get("check.php_extension.curl_cainfo.hint_missing") . $cainfo_path;
 

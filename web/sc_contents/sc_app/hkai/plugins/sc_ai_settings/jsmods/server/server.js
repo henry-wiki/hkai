@@ -52,12 +52,10 @@ class _server_evt_bridge {
         (await this.server_start()).init();
         (await this.server_restart()).init();
         (await this.server_stop()).init();
-        (await this.auto_assign_port()).init();
     }
     async server_start()   { return (await import("./evt/server_start.js")).server_start(); }
     async server_restart() { return (await import("./evt/server_restart.js")).server_restart(); }
     async server_stop()    { return (await import("./evt/server_stop.js")).server_stop(); }
-    async auto_assign_port() { return (await import("./evt/auto_assign_port.js")).auto_assign_port(); }
 }
 
 // act（動作——開單叫工作）

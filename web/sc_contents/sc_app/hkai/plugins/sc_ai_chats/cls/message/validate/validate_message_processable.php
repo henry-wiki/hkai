@@ -78,12 +78,20 @@ trait validate_message_processable
 
         // 有錯誤 → 回傳
         if (count($errors) > 0) {
+            // 逐條錯誤 → 收 message（合成一句——前端 modal 直接顯示真正原因）
+            $error_messages = [];
+            foreach ($errors as $error_item) {
+                $error_messages[] = $error_item["message"];
+            }
+
             return [
-                "ok"     => false,
-                "code"   => "E_VALIDATION_RECOVERABLE",
-                "title"  => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.title"),
-                "hint"   => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.hint"),
-                "errors" => $errors,
+                "ok"      => false,
+                "code"    => "E_VALIDATION_RECOVERABLE",
+                "title"   => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.title"),
+                "message" => implode("
+", $error_messages),
+                "hint"    => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.hint"),
+                "errors"  => $errors,
             ];
         }
 

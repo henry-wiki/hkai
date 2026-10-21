@@ -142,22 +142,12 @@ class database_db_ready_Class
             // 錯誤模式＝例外（PHP 7.3 預設靜默——SQL 失敗唔會 throw，交易／回滾形同虛設）
             $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
 
-            // 表結構（單一來源＝setup/assets/database_schema.php——純值檔：tables／indexes）
-            $schema = require dirname(__DIR__, 3) . "/assets/database_schema.php";
+            // 表結構（單一來源＝setup/assets/database_schema.sql.php——回傳全份 SQL）
+            $database_schema_sql = require dirname(__DIR__, 3) . "/assets/database_schema.sql.php";
 
-            // 全部 schema SQL 包一個交易（逐條執行；任何一條失敗＝回滾——唔會留半建結構）
+            // 全份 schema SQL 包一個交易（一次過執行；失敗＝回滾——唔會留半建結構）
             $pdo->beginTransaction();
-
-            // 逐條建立資料表
-            foreach ($schema["tables"] as $createTableSql) {
-                $pdo->exec($createTableSql);
-            }
-
-            // 逐條建立索引
-            foreach ($schema["indexes"] as $createIndexSql) {
-                $pdo->exec($createIndexSql);
-            }
-
+            $pdo->exec($database_schema_sql);
             $pdo->commit();
 
         } catch (\Throwable $exception) {

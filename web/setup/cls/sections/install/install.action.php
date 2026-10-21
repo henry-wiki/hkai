@@ -3,7 +3,7 @@
 namespace sc\setup\sections;
 
 // == HKAI setup sections install action：執行／結果寫入兩步（trait install_action——掛入 install_Class；檔＝本格核心動作）
-// == 職責：run_unit_install()＝格＋項名搵單元跑 setup_install（標記＝專屬動作）；set_unit_install_result()＝標準結果寫回（過程檔＋清單）；清單讀寫＝install.log.php
+// == 職責：run_unit_install()＝格＋項名搵單元跑 setup_install（標記＝專屬動作）；set_unit_install_result()＝標準結果寫回（過程檔＋清單）；清單讀寫＝install.logger.php
 // == 載入：install/install.php require 鏈（本程式無 autoloader——顯式載入、零註冊）
 
 trait install_action

@@ -10,7 +10,7 @@ trait render_project_item
 
     // 渲染單一專案清單項 HTML（清單逐項同用；結構：sc_project_card > primary ＋ path ＋ meta；meta 固定三行）
     // 傳入列已 sc_html_encode（呼叫端負責——轉義一次過）
-    public function render_project_item($project_item, $selected_project_slug)
+    public function render_project_item($project_item, $selected_project_slug, $is_home_card = false)
     {
         $project_id   = (isset($project_item["project_id"]) ? $project_item["project_id"] : null);
         $project_slug = (isset($project_item["project_slug"]) ? $project_item["project_slug"] : null);
@@ -31,6 +31,11 @@ trait render_project_item
 
         // 專案連結（含歸檔語境形——URL 知識住 build_project_url；歸檔＝/archive@<project_slug>/）
         $project_link = $this->build_project_url($project_slug, $project_status);
+
+        // 判定：Home 卡 → 連結固定 "/"
+        if ($is_home_card === true) {
+            $project_link = "/";
+        }
 
         // 卡片身份段（同 URL 段同一語言：歸檔＝archive@{project_slug}；各刷新程序比對用——對照 chat 側 data-chat_sid）
         $project_segment = $this->build_project_segment($project_slug, $project_status);
@@ -71,8 +76,18 @@ trait render_project_item
             }
         }
 
+        // Home 卡樣式（房子 icon／專屬 class）
+        $home_class = "";
+        $project_name_html = $project_name;
+
+        // 判定：Home 卡 → 加 class＋房子 icon
+        if ($is_home_card === true) {
+            $home_class = " sc_project_card--home";
+            $project_name_html = "<i class='fa-solid fa-house'></i> " . $project_name;
+        }
+
         $item_attr = [];
-        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}'";
+        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}'";
         $item_attr[] = "href='{$project_link}'";
         $item_attr[] = "data-project_slug='{$project_segment}'";
         $item_attr[] = "data-project_id='{$project_id}'";
@@ -88,10 +103,12 @@ trait render_project_item
         $content = [];
         $content[] = "<a {$item_attr}>";
         $content[] = "<div class='sc_project_card__primary'>";
-        $content[] = "<span class='sc_project_card__name' title='" . $project_name . "'>" . $project_name . "</span>";
+        $content[] = "<span class='sc_project_card__name' title='" . $project_name . "'>" . $project_name_html . "</span>";
         $content[] = "<span class='sc_project_card__updated'>" . $project_updated_time . "</span>";
-        // 編輯掣（齒輪——卡上單一入口；歸檔同未歸檔一致——還原唔喺卡面）
-        $content[] = "<button {$edit_btn_attr}><i class='fa-solid fa-gear'></i></button>";
+        // 判定：非 Home 卡 → 出編輯掣（齒輪——卡上單一入口；歸檔同未歸檔一致——還原唔喺卡面）
+        if ($is_home_card === false) {
+            $content[] = "<button {$edit_btn_attr}><i class='fa-solid fa-gear'></i></button>";
+        }
         $content[] = "</div>";
         $content[] = "<div class='sc_project_card__meta'>";
         // 固定三行——冇模型都出行（空行保高度，行高穩定）

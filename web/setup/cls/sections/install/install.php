@@ -11,17 +11,17 @@ require_once __DIR__ . "/install.view.php";
 // 載入本格核心動作 trait（install_action——清單／執行／結果；include once）
 require_once __DIR__ . "/install.action.php";
 
-// 載入本格清單記錄 trait（install_log——讀清單／寫快照／收尾；include once）
-require_once __DIR__ . "/install.log.php";
+// 載入本格清單記錄 trait（install_logger——讀清單／寫快照／收尾；include once）
+require_once __DIR__ . "/install.logger.php";
 
-// == HKAI setup sections/install install.php：install 格本體（class＋view／動作 trait——側檔＝install.view.php／install.action.php／install.log.php；檢查項對映＝sections 域 get_section_unit_instance.php；呼叫形 setup()->sections()->install()）
+// == HKAI setup sections/install install.php：install 格本體（class＋view／動作 trait——側檔＝install.view.php／install.action.php／install.logger.php；檢查項對映＝sections 域 get_section_unit_instance.php；呼叫形 setup()->sections()->install()）
 // == 職責：本格整件——view trait＝head＋body＋footer（＋行渲染）；安裝流程＝清單／狀態／單步執行／結果記錄／收尾（由 setup.cls.php 搬入）
 // == 主掣：安裝（動作指令——一撳逐項一項一項執行〔每項即跑即回〕）→ 完成（完成標記寫咗之後——去⑥完成頁）；底列＝左＝上一步／右＝主掣（完成後冇上一步）
 class install_Class
 {
     use install_view;
     use install_action;
-    use install_log;
+    use install_logger;
 
     private static $instance = null;
 

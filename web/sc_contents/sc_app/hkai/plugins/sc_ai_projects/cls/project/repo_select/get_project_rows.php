@@ -15,9 +15,14 @@ trait get_project_rows
         $needle = $needle ?? "";
         $needle = trim($needle);
 
-        // 判定：無值 → 回 null
-        if (!$needle) {
+        // 空 slug → 反映現實：冇指定就係 null（Home 屬呼叫端自己決定 fallback）
+        if ($needle === "") {
             return null;
+        }
+
+        // home 段 → 查 Home 專案列（slug 固定 "home"；唔經快取）
+        if ($needle === "home") {
+            return sc_db()->selectOne("SELECT * FROM projects WHERE project_slug = 'home'");
         }
 
         // 判定：純數字 → 按 id 查
@@ -32,17 +37,21 @@ trait get_project_rows
         return $project_rows_by_slug[$needle] ?? null;
     }
 
-    // 讀取專案列（全部——依最近活動排序）
+    // 讀取專案列（Home 第一＋其餘 active 專案——依最近活動排序）
     public function get_project_rows()
     {
-        // 依最近活動排序（最新對話更新時間優先——同卡顯示／health report 同一來源；冇對話退專案自身更新）
-        // 歸檔排除（project_status＝archived——已歸檔專案唔出清單）
-        return sc_db()->select(
-            "SELECT p.*, COALESCE(MAX(c.chat_updated_at), p.project_updated_at) AS project_last_activity_at "
-            . "FROM projects p LEFT JOIN chats c ON c.project_id = p.project_id "
-            . "WHERE p.project_status != 'archived' "
-            . "GROUP BY p.project_id "
-            . "ORDER BY project_last_activity_at DESC"
+        // 第一支：Home（project_slug＝home）
+        $home_project_rows = sc_db()->select("SELECT * FROM projects WHERE project_slug = 'home'");
+
+        // 第二支：其餘專案（project_status＝active；home 排除；最近對話更新優先）
+        $active_project_rows = sc_db()->select(
+            "SELECT * FROM projects "
+            . "WHERE project_status = 'active' "
+            . "AND project_slug != 'home' "
+            . "ORDER BY chat_updated_at DESC, project_updated_at DESC"
         );
+
+        // Home 第一，其餘接住
+        return array_merge($home_project_rows, $active_project_rows);
     }
 }

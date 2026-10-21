@@ -18,6 +18,11 @@ trait get_git_status_item
         if ($project_row === null) {
             return null;
         }
+
+        // 判定：Home 專案（slug＝home）→ 唔顯示 git 狀態（Home 冇 repo 概念）
+        if ($project_row["project_slug"] === "home") {
+            return null;
+        }
         
         $status_item_html   = [];
         $status_item_html[] = "<div class='sc_statusbar__item sc_statusbar__item--clickable sc_statusbar__item--git' data-click='project_git'>";

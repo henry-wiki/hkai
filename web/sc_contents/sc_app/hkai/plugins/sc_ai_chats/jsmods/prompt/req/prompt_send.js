@@ -37,7 +37,8 @@ class _prompt_send {
             Object.assign(payload, request_data);
             // model 資訊（SSOT＝prompt——容器全欄位）
             Object.assign(payload, prompt_instance.get_model_info_data());
-        payload.project_slug = project_slug;
+        // URL 有專案 → 用 URL；home（冇）→ 用 composer 專案（playground）
+        payload.project_slug = project_slug !== "" ? project_slug : prompt_instance.get_composer_project_slug();
         const chat_instance = await chats.chat();
 
         payload.chat_sid     = chat_instance.get_chat_sid();

@@ -602,32 +602,30 @@
 
 }
 
-/* 完成後活動日誌收走（純 CSS 閘——後端旗標 data-working='0'；唔加 JS toggle） */
-.message_wrapper[data-working='0'] .log_message {
-    display: none;
-}
+/* 完成後活動日誌保留（唔再收走——任何記錄都要睇得到） */
 
 .log_message .activity_monitor {
-    max-width: 80%;
     background: #11141d;
     font-size: 11px;
     align-self: flex-end;
     color: #9fa8bd;
     font-family: monospace;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 6px;
     width: 100%;
     overflow: hidden;
-    height: 24px;
+    height: auto;
+    max-height: 220px;
+    overflow-y: auto;
+    padding: 4px 0;
 }
-/* 活動日誌行容器——column-reverse 在這裡，新行 prepend 於視覺底部 */
+/* 活動日誌行容器——正常 column（頂＝最新）；新行由 JS prepend 落頂 */
 .log_message .activity_monitor > .activity_lines {
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
     width: 100%;
     overflow: hidden;
-    flex: 1;
 }
 /* 總用時列（回答底、日誌前——左右分隔線＋中央用時（caption＋m:ss）；工作緊每秒遞增、完成後凍結） */
 .total_elapsed {
@@ -646,22 +644,39 @@
     border-top: 1px solid #272e40;
 }
 
-/* 活動日誌行（stage 前綴；5 級 level 顏色：info 淺灰 / success 綠 / warn 黃＋微亮背景 / error 紅＋背景＋左紅線 / debug 暗灰；block 單行＋超長省略） */
-.activity_line {
+
+
+/* 單行——每次取代都淡入 */
+.log_message .activity_monitor > .activity_lines > .activity_line {
+    opacity: 0;
+    animation: activity_fade_in 0.25s ease forwards;
     padding: 3px 6px;
     font-size: 12px;
-
-
-
-    word-break: break-all;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     width: 100%;
     box-sizing: border-box;
+    font-family: monospace;
+    border-left: 2px solid transparent;
+    word-break: break-word;
+    white-space: normal;
 }
+.activity_level_error { border-left-color: #f85149; background: #241516; color: #ff8a8a; }
+.activity_level_success { color: #3fb950; }
+.activity_level_warn { color: #d29922; }
+.activity_level_debug { color: #64748b; }
 .activity_level_info {
     color: #eaecf4;
+}
+/* 完成後（data-working='0'）→ 整個活動監視器保留 3 秒再淡出 */
+.message_wrapper[data-working='0'] .log_message .activity_monitor {
+    animation: activity_hide 0.3s ease 3s forwards;
+}
+@keyframes activity_hide {
+    to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes activity_fade_in {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* 活動日誌 loading 動畫——3 點波浪式（純 CSS3——跟隨文字顏色）
@@ -692,25 +707,8 @@
 }
 /* 活動日誌 icon 區——loading dots 容器（預設隱藏；streaming 時 .loading 顯示） */
 .log_message .activity_monitor > .activity_state_icon {
-    display: none;
-}
-.log_message .activity_monitor.loading > .activity_state_icon {
     display: inline-block;
-}
-.activity_level_success {
-    color: #10b981;
-}
-.activity_level_warn {
-    color: #f59e0b;
-    background-color: rgba(245, 158, 11, 0.1);
-}
-.activity_level_error {
-    color: #ef4444;
-    background-color: rgba(239, 68, 68, 0.1);
-    border-left: 3px solid #ef4444;
-}
-.activity_level_debug {
-    color: #64748b;
+    align-self: flex-start;
 }
 /* 活動日誌行：state 前綴色（css_class 由 parser 依 state 附加——與 state 100% 同名：activity_state_{state}——覆蓋 level 色） */
 .activity_state_initiating {

@@ -21,17 +21,17 @@ trait validate_message_prerequisites
             $errors["content"] = ["message" => "請填寫訊息內容", "code" => "E_VALIDATION_FATAL"];
         }
 
-        // 專案標識必填（沒選專案 → 沒有上下文）
+        // 專案必須存在（空 slug／home 段 → 查 Home 專案；查唔到＝錯）
+        // Home 語境（空 slug）→ 呼叫端 fallback：用固定 home 查（空 slug 本身查唔到嘢）
         if ($project_slug === "") {
-            $errors["project_slug"] = ["message" => "缺少專案標識（project_slug）", "code" => "E_VALIDATION_FATAL"];
+            $project_slug = "home";
         }
 
-        // 專案標識非空 → 專案必須存在於資料庫
-        if ($project_slug !== "") {
-            $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
-            if ($project_row === null) {
-                $errors["project_slug"] = ["message" => "專案不存在：" . $project_slug, "code" => "E_VALIDATION_FATAL"];
-            }
+        $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
+
+        // 判定：專案查唔到 → 記錄錯誤
+        if ($project_row === null) {
+            $errors["project_slug"] = ["message" => "專案不存在：" . $project_slug, "code" => "E_VALIDATION_FATAL"];
         }
 
         // chat_sid 非空 → 對話必須存在

@@ -1,0 +1,44 @@
+{
+  "mode": "live",
+  "splash": {
+    "width": 360,
+    "height": 240,
+    "min_ms": 1000
+  },
+  "ports": [
+    [
+      7000,
+      7999
+    ],
+    [
+      3000,
+      3999
+    ],
+    [
+      13000,
+      13999
+    ]
+  ],
+  "children": [
+    {
+      "exe": "bin/php/php.exe",
+      "args": [
+        "-S",
+        "127.0.0.1:{port}",
+        "-t",
+        "."
+      ],
+      "env": {
+        "PHP_CLI_SERVER_WORKERS": "4"
+      }
+    },
+    {
+      "exe": "bin/apache/bin/httpd.exe",
+      "args": [
+        "-f",
+        "bin/apache/conf/httpd.conf"
+      ],
+      "env": {}
+    }
+  ]
+}

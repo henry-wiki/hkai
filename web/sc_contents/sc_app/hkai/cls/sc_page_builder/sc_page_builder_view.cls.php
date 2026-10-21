@@ -57,8 +57,13 @@ class sc_page_builder_view_Class
         $outputLines[] = "<meta name='viewport' content='width=1430'/>";
         $outputLines[] = "<meta name='csrf-token' content='" . CSRF_get_token() . "'/>";
 
-        // SSE 串流設定（message_stream 讀 enabled／base_url——值由 hkai_config.json stream 段帶）
-        $stream_config      = hkai__core()->get_hkai_configs("stream");
+        // SSE 串流設定（一律啟用；base_url 由 runtime server_settings 即時組——唔寫死）
+        $stream_config  = ["enabled" => true];
+        $runtime_configs = hkai__core()->get_runtime_configs();
+        $server_settings = $runtime_configs["server_settings"] ?? [];
+        $server_host     = (string)($server_settings["host"] ?? "127.0.0.1");
+        $server_port     = (int)($server_settings["port"] ?? 0);
+        $stream_config["base_url"] = "http://" . $server_host . ":" . $server_port;
         $stream_config_json = json_encode($stream_config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $outputLines[]      = "<meta name='stream-config' content='" . sc_html_encode($stream_config_json) . "'/>";
         $outputLines[] = "<title>hkai agent console</title>";

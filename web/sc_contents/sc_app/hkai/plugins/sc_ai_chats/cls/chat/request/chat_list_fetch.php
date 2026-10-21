@@ -28,19 +28,14 @@ trait chat_list_fetch
         // 專案段查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
         $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
 
-        // 判定：未指定專案（home）→ 預設內容（請選擇專案空狀態——唔出清單；HTTP 仍 200）
+        // Home 語境（未指定專案段）→ 呼叫端 fallback：用固定 home 繼續查（空 slug 本身查唔到嘢）
         if ($project_slug === "") {
-            $chat_list_html = sc_empty_state(hkai__i18n()->get("empty.select_project"), false, "");
-            return sc_response()->json([
-                "ok"         => true,
-                "html"       => ["chat_list" => $chat_list_html, "chat_header_kicker" => ""],
-                "is_archive" => "0",
-            ]);
+            $project_slug = "home";
         }
         
         // 判定：歸檔關鍵字（archive——歸檔列面，唔係專案 slug）→ 當未選專案（同 home 共用空狀態——URL 一入歸檔，清單即刻收返）
         if (sc_ai_projects()->project()->is_archive_project_key($project_slug)) {
-            $chat_list_html = sc_empty_state(hkai__i18n()->get("empty.select_project"), false, "");
+            $chat_list_html = "";
             return sc_response()->json([
                 "ok"         => true,
                 "html"       => ["chat_list" => $chat_list_html, "chat_header_kicker" => ""],
@@ -50,7 +45,17 @@ trait chat_list_fetch
 
         // 判定：專案要真係存在（唔止有冇傳——slug 查得到先算）
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
-        
+
+        // home 語境（空 slug／home 段）→ 合成虛擬專案列（project_id 0——home 對話）
+        if ($project_row === null && ($project_slug === "" || $project_slug === "home")) {
+            $project_row = [
+                "project_id"     => 0,
+                "project_slug"   => "home",
+                "project_status" => "normal",
+                "project_name"   => "",
+            ];
+        }
+
         if ($project_row === null) {
             return sc_response()->json(["ok" => false, "error" => "project not found"]);
         }

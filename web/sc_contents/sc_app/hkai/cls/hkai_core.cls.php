@@ -184,24 +184,22 @@ class hkai_core_Class
         return null;
     }
 
-    // 引擎清單（manifest 頂層「*_daemon」設定組——資料驅動；加新引擎零改碼）
+    // 引擎清單（agents 清單——次序＝UI 次序；只列已啟用且有設定組嘅引擎）
     public function get_daemon_engines()
     {
         $daemon_engines = [];
-        $hkai_configs   = $this->hkai_configs;
+        $agents         = $this->get_hkai_configs("agents");
 
-        foreach ($hkai_configs as $hkai_config_key => $hkai_config_item) {
-            // 判定：key 唔以 _daemon 結尾 → 唔係引擎設定組
-            if (substr((string)$hkai_config_key, -7) !== "_daemon") {
-                continue;
+        // 判定：agents 清單存在 → 按清單次序
+        if (is_array($agents)) {
+            foreach ($agents as $agent_item) {
+                // 判定：冇對應設定組 → 唔算（防止清單寫錯）
+                if (!isset($this->hkai_configs[$agent_item])) {
+                    continue;
+                }
+
+                $daemon_engines[] = $agent_item;
             }
-
-            // 判定：值唔係陣列（設定組）→ 唔算
-            if (!is_array($hkai_config_item)) {
-                continue;
-            }
-
-            $daemon_engines[] = $hkai_config_key;
         }
 
         return $daemon_engines;
@@ -304,6 +302,12 @@ class hkai_core_Class
     public function get_python_script_dir()
     {
         return $this->python_script_dir;
+    }
+
+    // hkai storage 根目錄（sc_storage/hkai——app 檔案式資料放此）
+    public function get_storage_dir()
+    {
+        return $this->storage_dir;
     }
 
     // env 檔（=.env）完整路徑（機器層——入口 sc_get_config(app.env_file) 注入；對外沿用 oauth_keys_file 名；daemon 讀檔同源）

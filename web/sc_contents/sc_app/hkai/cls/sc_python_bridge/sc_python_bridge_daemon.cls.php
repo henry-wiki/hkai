@@ -29,8 +29,8 @@ class sc_python_bridge_daemon_Class
         $runtime_configs = hkai__core()->get_runtime_configs();
         $server_settings = $runtime_configs["server_settings"] ?? [];
         
-        $server_host = $server_settings["host"];
-        $server_port = $server_settings["port"];
+        $server_host = (string)($server_settings["host"] ?? "127.0.0.1");
+        $server_port = (int)($server_settings["port"] ?? 0);
         $add_message_url = "http://" . $server_host . ":" . $server_port . "/daemon/add_message/";
         
         $payload = [];

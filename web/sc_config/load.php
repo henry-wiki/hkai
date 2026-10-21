@@ -37,8 +37,8 @@ sc_set_configs([
 
     "storage"         => [
         "root_dir"      => SC_WEB_ROOT . "/sc_storage",
-        "app_dir"       => SC_WEB_ROOT . "/sc_storage/hkai",
-        "database_file" => SC_WEB_ROOT . "/sc_storage/hkai/localdb/hkai_chat_data.sqlite",
+        "app_dir"       => dirname(SC_WEB_ROOT) . "/data",
+        "database_file" => dirname(SC_WEB_ROOT) . "/data/localdb/hkai_chat_data.sqlite",
     ],
     "app"             => [
         "sc_contents_dir" => SC_WEB_ROOT . "/sc_contents",

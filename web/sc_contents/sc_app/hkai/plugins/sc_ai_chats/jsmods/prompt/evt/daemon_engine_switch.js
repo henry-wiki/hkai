@@ -8,7 +8,7 @@ class _daemon_engine_switch {
 
     // 綁定註冊（由 entry init 呼叫——一次；selector 委派）
     init() {
-        // agent 選擇（aider／goose——切換現行引擎）
+        // agent 選擇（aider／goose／openhands——切換現行引擎）
         jQuery(document)
             .off("click.sc_ai_chats_daemon_engine_switch")
             .on("click.sc_ai_chats_daemon_engine_switch", "[data-btn='daemon_engine']", this.daemon_engine_switch.bind(this));

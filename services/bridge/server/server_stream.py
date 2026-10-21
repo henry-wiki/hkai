@@ -48,6 +48,26 @@ def build_router() -> APIRouter:
     return router
 
 
+_active_stream_count = 0
+
+
+def get_active_stream_count() -> int:
+    """回傳現時開住嘅 SSE 串流數（bridge 閒置退出用）。"""
+    return _active_stream_count
+
+
+async def _counted_event_generator(request, message_dirs, response_index, message_id):
+    """包一層：串流開／關時加減計數（閒置退出唔可以殺死進行中嘅串流）。"""
+    global _active_stream_count
+    _active_stream_count += 1
+
+    try:
+        async for event_chunk in _event_generator(request, message_dirs, response_index, message_id):
+            yield event_chunk
+    finally:
+        _active_stream_count -= 1
+
+
 async def stream_output(request: Request, project_slug: str, message_id: int, response_index: int = 0):
     """GET /stream：tail 指定訊息目錄，逐段 push 內容（SSE）。"""
     # 判定：slug 唔合法 → 400（防路徑穿越）
@@ -68,7 +88,7 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     if message_dirs["polling"].is_dir() is False and message_dirs["archive"].is_dir() is False:
         return StreamingResponse(_error_stream("message dir not found"), media_type="text/event-stream")
 
-    generator = _event_generator(request, message_dirs, response_index, int(message_id))
+    generator = _counted_event_generator(request, message_dirs, response_index, int(message_id))
 
     response_headers = {
         "Cache-Control": "no-cache",
@@ -103,7 +123,30 @@ def _resolve_message_dirs(config: dict, project_slug: str, message_id: int) -> d
 
 
 def _read_origin_allowlist(config: dict) -> list:
-    """讀 CORS 允許清單（hkai_config.json stream.allowed_origins——改檔即生效，免重啟）。"""
+    """讀 CORS 允許清單（storage/bridge/origin.whitelist 優先；缺檔／空檔 → 回設定檔清單）。"""
+    storage_dir = Path(str(config.get("storage_dir", "")))
+    folders = config.get("folders", {})
+    whitelist_path = storage_dir / folders.get("bridge", "bridge") / "origin.whitelist"
+
+    whitelist = []
+
+    # 判定：白名單檔存在 → 逐行讀（# 開頭＝註釋；空白行跳）
+    if whitelist_path.is_file():
+        try:
+            for whitelist_line in whitelist_path.read_text(encoding="utf-8").splitlines():
+                whitelist_line = whitelist_line.strip()
+
+                if whitelist_line == "" or whitelist_line.startswith("#"):
+                    continue
+
+                whitelist.append(whitelist_line)
+        except OSError:
+            whitelist = []
+
+    # 判定：白名單有內容 → 直接用
+    if len(whitelist) > 0:
+        return whitelist
+
     config_path = Path(str(config.get("static_config_path", "")))
 
     # 判定：設定檔唔存在 → 空清單
@@ -121,7 +164,11 @@ def _read_origin_allowlist(config: dict) -> list:
 
 
 def _origin_is_allowed(origin: str, allowed_origins: list) -> bool:
-    """判斷 origin 是否獲准（支援萬用埠：http://127.0.0.1:*）。"""
+    """判斷 origin 是否獲准（支援 "*"＝全開；萬用埠：http://127.0.0.1:*）。"""
+    # 判定：清單有 "*" → 全部放行
+    if "*" in allowed_origins:
+        return True
+
     for allowed_origin in allowed_origins:
         # 判定：完全相符 → 准
         if allowed_origin == origin:

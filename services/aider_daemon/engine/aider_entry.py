@@ -26,6 +26,7 @@ import time
 from pathlib import Path
 
 from ..acp.litellm_providers import gateway_map
+from ..adapter.auth_setup import api_key_loader_class
 from ..context import *
 from ..msg.msg_events import *
 from ..runtime import sc_logger
@@ -98,6 +99,14 @@ class aider_entry_class:
         # 讀 msg_conf.json（每張工單重新載入——語境切換）
         msg_main().load_msg_conf_data(Path(msg_conf_path))
 
+        # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
+        daemon_conf_data = daemon().get_daemon_conf_data()
+        oauth_keys_path  = str(daemon_conf_data.get("daemon_oauth_keys_path", "") or "")
+
+        # 判定：有路徑 → 重讀
+        if oauth_keys_path != "":
+            api_key_loader_class.get_instance().reload(Path(oauth_keys_path))
+
         # 取得語境（從載入後的 msg_main 狀態）
         chat_id    = msg_main().get_chat_id()
         message_id = msg_main().get_message_id()
@@ -159,7 +168,15 @@ class aider_entry_class:
             return None
 
         agent_env = dict(os.environ)
-        agent_env["AIDER_ACP_MODEL"]    = model_name
+
+        # litellm 端嘅 provider 名（自訂 gateway 用表內 litellm_provider——避開 litellm 原生同名 provider）
+        acp_model_prefix = provider_prefix
+
+        # 判定：自訂 gateway → 用 litellm_provider（example：deepseek → deepseek_openai）
+        if provider_prefix in gateway_map:
+            acp_model_prefix = gateway_map[provider_prefix]["litellm_provider"]
+
+        agent_env["AIDER_ACP_MODEL"]    = acp_model_prefix + "/" + model_part
         agent_env["AIDER_ACP_ENV_FILE"] = str(daemon().get_daemon_conf_data().get("daemon_oauth_keys_path", "") or "")
 
         return agent_env

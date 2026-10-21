@@ -96,8 +96,6 @@ trait render_message_body
                 $outputLines[] = "<div class='sc_thread__scroll_rail'></div>";
                 // 浮問題條（常駐；顯示條件／填內容／撳跳由 jsmods/message/obs/message_prompt_observer.js 主導；顯隱＝data-visible 純 CSS 閘）
                 $outputLines[] = "<div class='sc_float_user_prompt' data-visible='0' data-message_id=''></div>";
-                // 未選專案空狀態（初始背景字眼——長駐；之後由前端條鏈接手（載到就移走））
-                $outputLines[] = sc_empty_state(hkai__i18n()->get("empty.select_project"), false, "sc_thread__empty_state sc_thread__empty_state--overlay");
                 // 發送列 + chat mode + model information（prompt 區塊——浮層：絕對定位釘喺 .sc_thread 底；捲動層 padding-bottom 留位、訊息捲到佢後面）；外層長駐、內裏由前端動態載入（prompt_fetch 整包換入），入嗰刻空白
                 $outputLines[] = "<div class='sc_composer' data-loaded='0'></div>";
             $outputLines[] = "</div>";

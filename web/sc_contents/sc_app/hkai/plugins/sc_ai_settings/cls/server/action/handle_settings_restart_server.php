@@ -15,6 +15,23 @@ trait handle_settings_restart_server
         $server_host = trim($request_data["host"] ?? "");
         $server_port = trim((string)($request_data["port"] ?? ""));
 
+        // 自動模式：未指定 host → 本機
+        if ($server_host === "") {
+            $server_host = "127.0.0.1";
+        }
+
+        // 自動模式：未指定 port → 自動分配一個可用埠
+        if ($server_port === "") {
+            $available_port = hkai__python_bridge()->find_available_server_port();
+
+            // 判定：全段被佔用 → 409
+            if ($available_port === 0) {
+                return sc_response()->json(["ok" => false, "error" => hkai__i18n()->get("settings.server.error_no_available_port")], 409);
+            }
+
+            $server_port = (string)$available_port;
+        }
+
         // 驗證（host／port 共用驗證——同存檔一致）
         $errors = $this->validate_host_port($server_host, $server_port);
 
@@ -34,6 +51,12 @@ trait handle_settings_restart_server
         // 系統級環境檔：啟動成功即確保存在（缺檔→向 bridge 索要後寫入；存在→跳過零成本）
         sc_ai_diagnostics()->system_env()->write_system_env_file(false);
 
-        return sc_response()->json(["ok" => true]);
+        // 回傳實際連接埠（前端更新 stream base_url 用）
+        $runtime_configs = hkai__core()->get_runtime_configs();
+        $server_settings = $runtime_configs["server_settings"] ?? [];
+        $actual_host     = (string)($server_settings["host"] ?? "");
+        $actual_port     = (int)($server_settings["port"] ?? 0);
+
+        return sc_response()->json(["ok" => true, "host" => $actual_host, "port" => $actual_port]);
     }
 }

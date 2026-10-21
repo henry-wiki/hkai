@@ -39,8 +39,16 @@ public function prompt_fetch()
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
     }
 
-    // 判定：冇有效專案 → composer 空白（唔渲染輸入區、唔顯示錯誤）
-    if ($project_row === null) {
+    // home 語境（URL 冇專案／home 段）——虛擬 playground：無 project row、project_id＝0
+    $is_home_context = false;
+
+    // 判定：空 slug 或 home 段 → home 語境
+    if ($project_slug === "" || $project_slug === "home") {
+        $is_home_context = true;
+    }
+
+    // 判定：冇有效專案且唔係 home → composer 空白（唔渲染輸入區、唔顯示錯誤）
+    if ($project_row === null && $is_home_context === false) {
         return sc_response()->json([
             "ok"   => true,
             "html" => [
@@ -105,6 +113,7 @@ public function prompt_fetch()
         "html" => [
             "composer" => $composer_html,
         ],
+        "project_slug" => $project_slug,
     ]);
 }
 }

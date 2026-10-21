@@ -4,7 +4,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\prompt\view;
 
 // == sc_ai_chats prompt get_prompt_toolbar_html：prompt 域動作（trait——掛入 prompt_Class；檔＝動作：上工具列（盒上一行——五粒＋右側 agent 選擇）） ==
 // == 2026-09-30 建（跟 reference3 prompt-toolbar：附件／加入內容／最頂／最底／靈感問題） ==
-// == 2026-10-09 加：右側 agent 選擇（aider／goose——切現行引擎 daemon_engine） ==
+// == 2026-10-09 加：右側 agent 選擇（aider／goose／openhands——切現行引擎 daemon_engine） ==
 
 trait get_prompt_toolbar_html
 {
@@ -38,9 +38,9 @@ trait get_prompt_toolbar_html
             // agent 選擇（右側——現行引擎；click 即切 daemon_engine）
             $output_lines[] = "<div class='sc_composer__toolbar_right'>";
                 $output_lines[] = "<div class='sc_btn_group sc_btn_group--segmented sc_composer__agent_tabs'>";
-                // 逐個引擎設定組（aider_daemon／goose_daemon——顯示名去 _daemon 後綴）
+                // 逐個引擎設定組（aider_daemon／goose_daemon／openhands_api_daemon——顯示名去 _daemon 後綴）
                 foreach ($daemon_engines as $daemon_engine_item) {
-                    // 顯示名（aider／goose——產品名；唔出 _daemon 後綴）
+                    // 顯示名（aider／goose／openhands_api——去 _daemon 後綴）
                     $agent_label = substr($daemon_engine_item, 0, -7);
 
                     // active 判定（現行引擎對中嗰粒）

@@ -91,6 +91,14 @@ trait get_agent_response
                 }
             }
 
+            // 判定：有失敗記錄 → 顯示錯誤段（即時訊息同樣要見）
+            if ($error_message !== "") {
+                $content[] = "<div class='seg seg--error'>";
+                    $content[] = "<div class='seg__icon'>⚠️</div>";
+                    $content[] = "<div class='seg__text' data-text='error'>" . sc_html_encode($error_message) . "</div>";
+                $content[] = "</div>";
+            }
+
             return implode("", $content);
         }
 

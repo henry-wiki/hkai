@@ -51,6 +51,56 @@ pub fn kill(shell: &ShellConfig) {
         }
         log::info!("children killed");
     }
+
+    // 再殺屬於本站嘅 Python 進程（bridge／daemon／worker——launcher 退出後佢哋變孤兒）
+    kill_site_processes();
+}
+
+/// 殺 command line 含站根嘅進程（只限本站·排除自己）——PowerShell 逐個 PID taskkill /T /F
+fn kill_site_processes() {
+    let site_root = match crate::root_dir().parent() {
+        Some(value) => value.to_path_buf(),
+        None => return,
+    };
+
+    // PowerShell wildcard：站根後面加 *（同時避開同名前綴）
+    let site_pattern = format!("{}{}*", site_root.to_string_lossy(), std::path::MAIN_SEPARATOR);
+    let powershell_script = format!(
+        "Get-CimInstance Win32_Process | Where-Object {{ $_.CommandLine -like '{}' -and $_.ProcessId -ne {} }} | Select-Object -ExpandProperty ProcessId",
+        site_pattern.replace("'", "''"),
+        std::process::id()
+    );
+
+    let output = match Command::new("powershell.exe")
+        .args(["-NoProfile", "-Command", &powershell_script])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+    {
+        Ok(value) => value,
+        Err(_) => return,
+    };
+
+    let pid_text = String::from_utf8_lossy(&output.stdout);
+    let mut killed_count = 0;
+
+    // 逐行 PID（可能有多個）——逐個殺
+    for pid_line in pid_text.lines() {
+        let pid_text_trimmed = pid_line.trim();
+        let pid_value = match pid_text_trimmed.parse::<u32>() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+
+        let _ = Command::new("taskkill.exe")
+            .args(["/PID", &pid_value.to_string(), "/T", "/F"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        killed_count += 1;
+    }
+
+    log::info!("site processes killed count={}", killed_count);
 }
 
 /// 喺 config.ports 嘅範圍內揀一個未佔用埠

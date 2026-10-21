@@ -84,6 +84,11 @@ class chat_Class
     {
         $project_segment = sc_ai_projects()->project()->build_project_segment($project_slug, $project_status);
 
+        // 判定：無專案（home／project_id 0）→ URL 用 home 段
+        if ($project_segment === "" || $project_segment === null) {
+            $project_segment = "home";
+        }
+
         return "/" . $project_segment . "/" . $this->build_chat_segment($chat_sid, $chat_status) . "/";
     }
 

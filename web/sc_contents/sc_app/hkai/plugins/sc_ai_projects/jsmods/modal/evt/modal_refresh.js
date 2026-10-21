@@ -14,14 +14,23 @@ class _modal_refresh {
             .on("click.sc_ai_projects_refresh", "[data-btn='project_refresh']", this.modal_refresh.bind(this));
     }
 
-    // 重新整理（footer 共用鈕——觸發一次當前 tab 嘅切換＝load self again）
-    modal_refresh(event) {
+    // 重新整理（footer 共用鈕——直接重載當前 tab＝load self again）
+    async modal_refresh(event) {
         const j_refresh_button = jQuery(event.currentTarget);
         const j_modal = j_refresh_button.closest(".modal__overlay");
+        const tab_id = j_modal.find(".modal_tab.on").attr("data-tab_id") || "general_form";
 
+        // 直接重載當前 tab（唔靠合成 click——合成事件喺 modal_open 內未必接到）
+        const modal_instance = await registry().sc_ai_projects().modal();
+        const modal_open_instance = await modal_instance.act().modal_open();
 
-        // 當前 tab 再觸發一次 click（重行走同一條切 tab 載入路——自己載返自己）
-        j_modal.find(".modal_tab.on").trigger("click");
+        await modal_open_instance.modal_open(j_modal.attr("data-project_slug") || "", tab_id, {
+            success: function () {
+            },
+            error: function (ui_context, result) {
+                toastr.error(result.error || "cannot load tab");
+            }
+        });
     }
 }
 

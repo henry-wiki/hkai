@@ -1,114 +1,75 @@
+<!-- AUTO-GENERATED：改 .github/docs/README/0.1.0/ 內段檔，勿直接改本檔 -->
+
 # HKAI
 
 > 沒有做不到，只有想不到
 
-HKAI 是一個跑在本機的 **AI 開發控制台**：以 PHP 網頁介面，遙控背景的 AI 開發代理常駐程式（daemon），
-讓你在瀏覽器內完成「選模型 → 開專案 → 對話 → 改檔」的完整流程，不必離開本機、不必把源碼交給第三方服務。
+本機 AI 開發控制台：PHP 網頁介面 ＋ Python 引擎 daemon ＋ SQLite；源碼與對話唔離開你部機。
 
-- 版本：v0.1.0
-- 技術棧：PHP（Apache + mod_php）· Python 3.13 · SQLite
-- 狀態：早期開發（0.x）
+<!-- screenshot: 01-projects（專案清單） -->
 
----
+## Screenshots
 
-## 特點
+![HKAI chat interface](docs/screenshots/01-chat.png)
 
-- **一個介面，所有模型**：多個模型供應商與模型即時切換，金鑰集中管理。
-- **專案為中心的對話**：每個專案獨立對話歷史、獨立工作目錄；對話與檔案改動一目了然。
-- **串流分段顯示**：思考（thinking）與回覆（response）分段呈現，逐段計時，長回覆可回溯。
-- **引擎可切換**：背景代理引擎可換（如 goose／aider），前端體驗一致。
-- **改檔前先問**：代理要改動檔案前會出權限卡，由你批准。
-- **診斷與狀態**：程序檢視、健康狀態、執行紀錄，方便排查。
+![Model picker](docs/screenshots/02-models.png)
 
----
+![Arena benchmark leaderboard](docs/screenshots/03-arena.png)
 
-## 系統需求
+## Features
 
-| 項目 | 需求 |
-|---|---|
-| 網頁伺服器 | Apache + mod_php（亦可用其他支援 PHP 的伺服器） |
-| PHP | 7.3 以上（含 SQLite 擴充） |
-| Python | 3.13（背景代理與工具鏈） |
-| 資料庫 | SQLite（隨專案附帶，無需另裝） |
-| 選用 | 背景代理引擎的執行檔（未安裝亦可先跑介面） |
+- **本機執行**：源碼與對話只留喺你部機，無雲端依賴。
+- **改檔前必批**：AI 每次改檔都出權限卡，你批准先動手。
+- **引擎可切換**：goose／aider 同一介面，唔綁死單一 agent。
+- **每專案獨立**：對話、歷史、工作目錄互相隔離。
+- **排行榜內建**：SWE-bench／LMArena／AA／LLM Stats 揀模型有依據。
+- **長任務可觀察**：程序檢視＋activity log，隨時中止。
 
----
+<!-- screenshot: 02-chat-permission（對話＋權限卡） -->
 
-## 快速開始
+## Requirements
 
-1. **取得程式**：把 `web/` 目錄作為網站根目錄（docroot）。
-2. **安裝 PHP 依賴**：
+Windows 10/11（x64）· Python 3.13 · 約 3 GB 磁碟空間
 
-   ```bash
-   cd web
-   composer install
-   ```
+<!-- screenshot: 03-settings（設定頁） -->
 
-3. **建立設定檔**：複製 `.env.example` 為 `.env`，填入你的金鑰與路徑。
+## Quick start
 
-   ```bash
-   cp .env.example .env
-   ```
+二選一：
 
-4. **設定網站**：把 docroot 指向 `web/`，確認可寫入 `web/sc_contents/sc_storage/`。
-5. **開啟瀏覽器**：進入站台首頁即可開始。
+1. **可攜版**：保持整個資料夾結構不變 → 雙擊 `execute/HKAI.exe`
+2. **手動**：在站台根執行 `php -S 127.0.0.1:8000 -t . url_rewrite.php`（PHP 8.4.26）
 
-> 首次啟動時，介面會依 `.env` 的設定檢查執行環境；缺少的項目會提示。
+## Scope
 
----
+單一工作站、單一操作者；以本機專案為單位嘅 AI 協作。
 
-## 使用流程
+## 引擎（Agent）
 
-1. 開啟站台首頁，進入對話介面。
-2. 新增專案：填入專案在本機的完整路徑（例：`/path/to/your/project`）。
-3. 設定模型：在設定內填入供應商金鑰，再於對話中選擇模型。
-4. 開始對話：輸入需求，回應以串流分段顯示（思考／回覆，逐段計時）。
-5. 需要改動檔案時，介面會出權限卡，由你批准後才會動檔。
-
----
-
-## 設定（`.env`）
-
-`.env` 只放本機私密值與機器相關路徑，**永不入版控**。
-
-| 名稱 | 用途 | 必填 |
+| 引擎 | 說明 | 額外需要 |
 |---|---|---|
-| `APP_SECRET` | 應用密鑰（session 鍵前綴用；可留空，上線前建議填隨機值） | 否 |
-| `OPENROUTER_API_KEY` | 模型供應商金鑰（依你使用的供應商填對應項） | 視供應商 |
-| `OPENAI_API_KEY` | 同上 | 視供應商 |
-| `DEEPSEEK_API_KEY` | 同上 | 視供應商 |
-| `python_executable` | Python 執行檔完整路徑 | 是 |
-| `goose_executable` | goose 執行檔完整路徑（用 goose 引擎時） | 否 |
-| `aider_pylibs_dir` | 自帶 aider 套件目錄（用 aider 引擎時；留空 = 用系統已安裝） | 否 |
+| `goose` | Goose CLI 引擎 | 已附 `externals/goose` |
+| `aider` | Aider 引擎 | 已附 `externals/aider`（或用 `.env` 指向自裝位置） |
 
----
+## 支援的供應商
 
-## 目錄概覽
+| 供應商 | 取得 API Key | 備註 |
+|---|---|---|
+| OpenRouter | <https://openrouter.ai/keys> | 可用免費模型 |
+| Kilo | <https://kilo.ai> | 註冊後取得 API Key |
+| DeepSeek | <https://platform.deepseek.com/api_keys> | 按用量收費 |
 
-| 路徑 | 內容 |
-|---|---|
-| `web/` | 網站根目錄（進入點、路由、前端資源） |
-| `web/sc_contents/sc_app/` | 應用程式碼（介面、外掛、設定） |
-| `web/sc_contents/sc_storage/` | 執行期資料（訊息、紀錄、本機資料庫） |
-| `services/` | 背景服務（代理 daemon、橋接、診斷） |
+以上三個為已測試；其他供應商未經測試，可自行配置。
 
----
+## 評分來源（Benchmark）
 
-## 作者與聯絡
+| 來源 | API Key | 網站 |
+|---|---|---|
+| SWE-bench | 不需要 | <https://www.swebench.com/> |
+| LMArena | 不需要 | <https://lmarena.ai/> |
+| Artificial Analysis | 需要 | <https://artificialanalysis.ai/> |
+| LLM Stats | 需要 | <https://llm-stats.com/> |
 
-- 作者：Henry Yau
-- 支援：Seacorner
-- 聯絡：`<待填：電郵或 GitHub 帳號>`
-- 專案網址：`<上線後填>`
+## License
 
----
-
-## 授權
-
-見 [LICENSE](./LICENSE)。
-
----
-
-## 貢獻
-
-見 [CONTRIBUTING.md](./CONTRIBUTING.md)｜變更紀錄見 [CHANGELOG.md](./CHANGELOG.md)。
+MIT License · Copyright (c) 2026 Henry Yau

@@ -29,9 +29,28 @@ class sc_session_Class
     // 啟動 session（安全啟動：未啟動才 start——防重複啟動警告）
     public function start()
     {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
+        // 判定：session 已啟動 → 完成
+        if (session_status() != PHP_SESSION_NONE) {
+            return;
         }
+
+        // 暫時接管 error handler：吞掉 session_start 嘅警告（損壞 session 檔唔應該顯示畀用戶）
+        set_error_handler(function () {
+            return true;
+        });
+
+        $session_started = session_start();
+
+        // 判定：啟動成功 → 還原 handler 後完成
+        if ($session_started) {
+            restore_error_handler();
+            return;
+        }
+
+        // 啟動失敗（session 檔損壞）：換新 session id 再試一次
+        session_id(bin2hex(random_bytes(16)));
+        session_start();
+        restore_error_handler();
     }
 
     // 分派 session driver（對齊 Laravel config/session.php 的 driver 選擇）

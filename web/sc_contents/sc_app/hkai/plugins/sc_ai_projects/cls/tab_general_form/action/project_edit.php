@@ -20,6 +20,11 @@ trait project_edit
 
         // 編輯識別（頂層 project_slug——modal 狀態；直接攞 row）
         $project_slug = trim($input_data["project_slug"] ?? "");
+
+        // 判定：Home 專案（slug 空／home）→ 唔准改
+        if ($project_slug === "" || $project_slug === "home") {
+            return sc_response()->json(["ok" => false, "error" => "home project cannot be modified"], 403);
+        }
         $project_row  = repo_select()->get_project_row($project_slug);
 
         // 專案不存在 → 失敗
@@ -31,7 +36,7 @@ trait project_edit
         $project_id = $project_row["project_id"];
 
         // 解析欄位（project_path 先落——驗證與寫入共用）
-        $project_path = trim($form_data["project_path"] ?? "");
+        $project_path = sc_ai_projects()->project()->normalize_project_path($form_data["project_path"] ?? "");
 
         // 驗證（project_path 必填＋目錄存在）
         $validate_result = validator()->validate_project_input($project_path);

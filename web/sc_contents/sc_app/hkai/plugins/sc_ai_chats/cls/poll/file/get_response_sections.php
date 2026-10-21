@@ -40,6 +40,15 @@ trait get_response_sections
 
             $poll_list_entry_item["response_content"] = $response_content;
 
+            // 段狀態＝訊息狀態（唯一來源＝msg_status；poll_list 只記時間／長度，唔代判完成）
+            if ($message_poll_status === "completed") {
+                $poll_list_entry_item["poll_status"] = "completed";
+            } elseif (in_array($message_poll_status, ["failed", "cancelled"])) {
+                $poll_list_entry_item["poll_status"] = "aborted";
+            } else {
+                $poll_list_entry_item["poll_status"] = "poll";
+            }
+
             $response_section_list[] = $poll_list_entry_item;
         }
 
@@ -48,37 +57,44 @@ trait get_response_sections
             return $response_section_list;
         }
 
-        // 失敗記錄（error_log jsonl——最後一條有 message 嘅行＝失敗原因）
-        $error_log_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "error_log");
+        // 失敗記錄（msg_log 最後一條 FAILURE_RECORDED＝失敗原因——活動記錄為單一來源）
+        $log_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "log");
 
-        $error_log_raw = "";
-        if (file_exists($error_log_file)) {
-            $error_log_raw = (string)@file_get_contents($error_log_file);
+        // 判定：polling 位置冇（訊息已歸檔）→ 改用歸檔目錄同一個檔名
+        if (!file_exists($log_file)) {
+            $archived_message_dir = sc_ai_chats()->poll()->get_archived_poll_dir($chat_id, $message_id);
+
+            $log_file = $archived_message_dir . "/" . basename($log_file);
         }
 
-        $error_log_lines = explode("\n", str_replace(["\r\n", "\r"], "\n", $error_log_raw));
+        $log_raw = "";
+        if (file_exists($log_file)) {
+            $log_raw = (string)@file_get_contents($log_file);
+        }
 
         $error_message = "";
 
-        // 逐行解析（最後一條 message 為準——壞行跳過唔阻流程）
-        foreach ($error_log_lines as $error_log_line_item) {
-            $trimmed_error_log_line = trim($error_log_line_item);
+        // 逐行解析（最後一條 FAILURE_RECORDED 為準——壞行跳過唔阻流程）
+        $log_normalized = str_replace(chr(13), "", $log_raw);
+
+        foreach (explode(chr(10), $log_normalized) as $log_line_item) {
+            $trimmed_log_line = trim($log_line_item);
 
             // 判定：空行 → 跳過
-            if ($trimmed_error_log_line === "") {
+            if ($trimmed_log_line === "") {
                 continue;
             }
 
-            $error_log_event = json_decode($trimmed_error_log_line, true);
+            $log_event = json_decode($trimmed_log_line, true);
 
             // 判定：唔係 JSON 物件 → 跳過
-            if (!is_array($error_log_event)) {
+            if (!is_array($log_event)) {
                 continue;
             }
 
-            // 判定：有 message → 記低（續掃——最後一條為準）
-            if (isset($error_log_event["message"])) {
-                $error_message = (string)$error_log_event["message"];
+            // 判定：失敗事件且有 message → 記低（續掃——最後一條為準）
+            if (isset($log_event["level"]) && strtoupper((string)$log_event["level"]) === "ERROR" && isset($log_event["message"])) {
+                $error_message = (string)$log_event["message"];
             }
         }
 

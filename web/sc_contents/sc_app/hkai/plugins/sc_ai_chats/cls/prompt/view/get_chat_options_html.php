@@ -48,15 +48,15 @@ trait get_chat_options_html
             $model_selector_class .= " sc_composer__model_picker--has_model";
         }
         
-        // 引擎清單（chat_engine——次序＝UI 次序；第一條＝預設）
-        $chat_engine = hkai__core()->get_hkai_configs("chat_engine");
+        // agents 清單（次序＝UI 次序；第一條＝預設）
+        $agents = hkai__core()->get_hkai_configs("agents");
 
         // 現行引擎（runtime 已選值優先）
         $daemon_engine = hkai__core()->get_daemon_engine();
 
         // 判定：唔喺引擎清單 → 用清單第一條（預設）
-        if (!in_array($daemon_engine, $chat_engine)) {
-            $daemon_engine = $chat_engine[0];
+        if (!in_array($daemon_engine, $agents)) {
+            $daemon_engine = $agents[0];
         }
 
         // chat mode 掣清單（現行引擎組 chat_mode——key 在＝出嗰粒掣；順序＝寫嘅順序；掣面＝mode 值、hover＝description）

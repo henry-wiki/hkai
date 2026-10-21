@@ -26,20 +26,24 @@ class _detect_chat_sid_change {
             return;
         }
 
-        // 橋接（兩邊 instance 先攞齊——先攞後發，兩邊同刻出發）
+        // 橋接（三邊 instance 先攞齊——先攞後發，同刻出發）
         const message_instance = await registry().sc_ai_chats().message();
         const message_list_fetch_instance = await message_instance.act().message_list_fetch();
 
         const prompt_instance = await registry().sc_ai_chats().prompt();
         const prompt_fetch_instance = await prompt_instance.act().prompt_fetch();
 
-        // 兩邊同時出發（load_message_list before 同 load_prompt before 同刻派——兩個 panel 嘅 loading 同步 show）
+        const chat_list_fetch_instance = await chat_instance.act().chat_list_fetch();
+
+        // 三邊同時出發（訊息窗／prompt／對話清單——清單高亮同狀態列跟新 chat_sid 重繪）
         const message_load_promise = message_list_fetch_instance.message_list_fetch();
         const prompt_load_promise  = prompt_fetch_instance.prompt_fetch();
+        const chat_list_promise    = chat_list_fetch_instance.chat_list_fetch();
 
         // 等齊（各自完成各自收遮罩）
         await message_load_promise;
         await prompt_load_promise;
+        await chat_list_promise;
     }
 }
 

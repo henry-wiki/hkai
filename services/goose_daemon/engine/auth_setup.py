@@ -68,6 +68,37 @@ class api_key_loader_class:
             os.environ.setdefault(key, value)
             self._loaded_keys.append(key)
 
+    def reload(self, path) -> None:
+        """
+        重新載入 API keys（每條新問題前呼叫——檔案為唯一真相）。
+
+        規則：
+        1. 檔案內有值 → 覆寫環境變數（唔用 setdefault，改動即時生效）
+        2. 檔案內清空（""）或消失 → 由環境變數移除（唔留記憶體舊值）
+        """
+        values = dotenv_values(path, interpolate=False)
+
+        # 先移走上一次載入、而今次已清空／消失嘅 key
+        for loaded_key in getattr(self, "_loaded_keys", []):
+            if values.get(loaded_key) in (None, ""):
+                os.environ.pop(loaded_key, None)
+
+        self._loaded_keys = []
+
+        # 逐條寫入（覆寫）
+        for key, value in values.items():
+            # 只載 <NAME>_API_KEY 格式
+            if not key.endswith("_API_KEY"):
+                continue
+
+            # 清空／裸 KEY → 由環境變數移除
+            if value is None or value == "":
+                os.environ.pop(key, None)
+                continue
+
+            os.environ[key] = value
+            self._loaded_keys.append(key)
+
     def get_loaded_key_names(self) -> list:
         """回傳本次 load() 成功載入的 key 名列表（不含 value）。"""
         return list(self._loaded_keys)

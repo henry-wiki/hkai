@@ -1,8 +1,10 @@
 <?php
 
 // == sc-hkai URL rewrite（php -S 專用——代替 .htaccess）
-// == 位置：sites\sc-hkai\url_rewrite.php
-// == 用法：php.exe -S 127.0.0.1:{port} -t G:\server\lab\sites\sc-hkai G:\server\lab\sites\sc-hkai\url_rewrite.php
+// == 位置：站台根（同 index.php 同層；web root 之上）
+// == 啟動者：execute/HKAI.exe（讀 execute/config.toml 的 children.args）——
+// ==         php -S 127.0.0.1:{port} -t {web} {web}/url_rewrite.php
+// == 注意：HKAI.exe 開機一定要用本檔做 router；改名／移動＝必須同步 execute/config.toml，否則 app 起唔到
 // == 單站：只服務 sc-hkai（唔靠 Host 分流）
 // == 規則：靜態檔直出、PHP 檔執行、內部路徑阻擋、其餘交 web\index.php 分派
 

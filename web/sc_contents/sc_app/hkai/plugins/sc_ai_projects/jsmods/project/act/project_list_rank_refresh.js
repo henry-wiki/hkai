@@ -9,7 +9,8 @@ class _project_list_rank_refresh {
     project_list_rank_refresh() {
         const j_list = jQuery(".sc_project_list");
 
-        const j_project_items = j_list.children(".sc_project_card");
+        // Home 項唔參與排序（固定第一）
+        const j_project_items = j_list.children(".sc_project_card").not(".sc_project_card--home");
 
         // 判定：不足兩項 → 唔動
         if (j_project_items.length < 2) {

@@ -11,6 +11,7 @@ class _sc_ai_chats {
         this.ctx = null;
         this.inited = false;
         this.health_hook_registered = false;
+        this.auto_start_checked = false;
         this.hooks = {};
     }
     // 啟動 plugin（bootstrap 取例項後呼叫——子模組初始化；重複呼叫只行一次）
@@ -63,11 +64,65 @@ class _sc_ai_chats {
         // 觀察器綁定（obs 家族——頁面旗標觀察器起一次＋obs 信號嘅反應註冊）
         await this.obs_hook_register();
 
-
-
+        // 頁面載入一次性：bridge 停咗 → 自動啟動（唔等結果——唔阻塞頁面）
+        this.auto_start_server_once();
 
 
         return this;
+    }
+
+    // 頁面載入一次性：檢查 bridge；停咗即自動啟動（後端自動分配埠；每頁載入最多一次）
+    async auto_start_server_once() {
+        // 判定：本次載入已檢查過 → 唔再做
+        if (this.auto_start_checked) {
+            return;
+        }
+
+        this.auto_start_checked = true;
+
+        const shared = registry().shared();
+
+        try {
+            const bridge_check = await shared.sc_request().post_json("/request/hkai/fetch_bridge_check/", {});
+
+            // 判定：讀唔到狀態 → 唔做
+            if (!bridge_check) {
+                return;
+            }
+
+            // 判定：server 已運行／啟動中 → 唔做
+            if (bridge_check.server_status !== "stopped") {
+                return;
+            }
+
+            // 自動啟動（host／port 交後端決定——port 自動分配）
+            const start_result = await shared.sc_request().post_json("/request/hkai/settings_start_server/", {});
+
+            // 判定：啟動成功 → 用實際埠更新 stream base_url（頁面 meta 係載入時快照）
+            if (start_result && start_result.ok === true && start_result.port > 0) {
+                this.update_stream_base_url(start_result.host, start_result.port);
+            }
+        } catch (request_error) {
+            console.error("auto start server failed: " + request_error.message);
+        }
+    }
+
+    // 更新頁面 stream 設定（server 實際 host／port——message_stream 下次開連線即用）
+    update_stream_base_url(server_host, server_port) {
+        const meta_element = document.querySelector("meta[name='stream-config']");
+
+        // 判定：頁面冇設定 meta → 唔做
+        if (!meta_element) {
+            return;
+        }
+
+        try {
+            const stream_config = JSON.parse(meta_element.getAttribute("content") || "{}");
+            stream_config.base_url = "http://" + server_host + ":" + server_port;
+            meta_element.setAttribute("content", JSON.stringify(stream_config));
+        } catch (parse_error) {
+            console.error("update stream base_url failed: " + parse_error.message);
+        }
     }
 
     // 觀察器綁定（obs 家族——頁面旗標／URL 變化觀察器起一次＋obs 信號嘅反應註冊；對話項觀察器係動態，掛點喺 load_chat_list——見 chat_hook_register）
@@ -158,7 +213,6 @@ class _sc_ai_chats {
         this.register_hook("obs:url_changed", {
             after: async function (goto_url, prev_url) {
 
-                console.log(goto_url, prev_url);
 
                 const chat_instance = await registry().sc_ai_chats().chat();
                 const detect_project_slug_change_instance    = await chat_instance.act().detect_project_slug_change();

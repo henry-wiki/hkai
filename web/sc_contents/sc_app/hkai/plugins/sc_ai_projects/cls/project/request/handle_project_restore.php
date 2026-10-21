@@ -16,6 +16,11 @@ trait handle_project_restore
         // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
         $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
 
+        // 判定：Home 專案（slug 空／home）→ 唔准還原／改
+        if ($project_slug === "" || $project_slug === "home") {
+            return sc_response()->json(["ok" => false, "error" => "home project cannot be modified"], 403);
+        }
+
         // 專案列（還原需要 project_id）
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
 

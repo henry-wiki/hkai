@@ -65,8 +65,10 @@ class _switch_provider_item {
                 }
             },
             error: function (response_data) {
-                // 失敗 → 收 loading（維持舊頁——等下一撳）
+                // 失敗 → 收 loading＋清空右邊（唔留上一個 provider 內容）
                 loading.stop_loading(j_table_wrap);
+
+                thisObject.clear_provider_page();
 
                 // 判定：有 callbacks.error → 回報失敗
                 if (typeof callbacks.error === "function") {
@@ -74,6 +76,16 @@ class _switch_provider_item {
                 }
             }
         });
+    }
+
+    // 清空 provider 頁（失敗時用——標題／內容／footer 一齊清）
+    clear_provider_page() {
+        const j_modal = model_selector_instance.get_j_modal();
+
+        j_modal.find(".modal__header-content").empty();
+        j_modal.find("#model_selector_table_wrap").empty();
+        j_modal.find(".modal__content-model_selector_efforts").remove();
+        j_modal.find(".modal__content-footer").remove();
     }
 
     // 渲染 provider 頁（後端 HTML——前端只 insert：header 掛標題列；body 掛右欄內容位；footer＝內容底兩條）

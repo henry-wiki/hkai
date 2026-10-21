@@ -16,27 +16,6 @@ class _prompt_fetch {
         // 派發 load_prompt hook（before 相位——prompt 載入前；跨模組用家各自嘅反應）
         chats.execute_hook_before("load_prompt", []);
 
-        // 專案判定（快路——未選專案：直接清空 composer（唔發請求）；清空＝內容清走、元素長駐——唔 remove）
-        const projects = registry().sc_ai_projects();
-        const project_instance = await projects.project();
-        const project_slug = project_instance.get_project_slug();
-
-        // 判定：未選專案（URL 冇 slug）→ 直接清空（唔等後端）
-        if (project_slug === "") {
-            jQuery(".sc_composer").html("");
-
-            // 通知 input handler（主按鈕兩態重算）
-            jQuery("#sc_input").trigger("input");
-
-            // 載入標記（data-loaded 0→1——元素「已載入」語義；用家待未來）
-            jQuery(".sc_composer").attr("data-loaded", "1");
-
-            // prompt 區塊載入完成 → 派發 load_prompt hook（外部用家各自嘅反應）
-            chats.execute_hook_after("load_prompt", {});
-
-            return;
-        }
-
         // 橋接駁（req 橋——新方式）
         const prompt_fetch_instance = await prompt_instance.req().prompt_fetch();
 
@@ -50,6 +29,9 @@ class _prompt_fetch {
 
                 // 載入標記（data-loaded 0→1——元素「已載入」語義；用家待未來）
                 jQuery(".sc_composer").attr("data-loaded", "1");
+
+                // 後端回嘅專案 slug（home＝playground）——prompt_send 用
+                prompt_instance.set_composer_project_slug(response_data.project_slug);
 
                 // prompt 區塊載入完成 → 派發 load_prompt hook（外部用家各自嘅反應）
                 chats.execute_hook_after("load_prompt", response_data);
