@@ -41,9 +41,10 @@ trait shift_queue_message
         $model_pair = explode("/", $conf_data["model_name"], 2);
         
         $message_model_info = [];
-        $message_model_info["chat_mode"]   = $conf_data["chat_mode"];
-        $message_model_info["provider_id"] = $model_pair[0];
-        $message_model_info["model_id"]    = isset($model_pair[1]) ? $model_pair[1] : "";
+        $message_model_info["chat_mode"]        = $conf_data["chat_mode"];
+        $message_model_info["provider_id"]      = $model_pair[0];
+        $message_model_info["model_id"]         = isset($model_pair[1]) ? $model_pair[1] : "";
+        $message_model_info["reasoning_effort"] = isset($conf_data["reasoning_effort"]) ? $conf_data["reasoning_effort"] : "";
         
         $project_id     = (int)$conf_data["project_id"];
         $content        = (string)$queue_line["content"];

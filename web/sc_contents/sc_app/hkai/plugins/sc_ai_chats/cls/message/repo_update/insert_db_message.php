@@ -44,8 +44,14 @@ trait insert_db_message
                 // → 更新 count（同 SQL 單一 statement——子查詢即時 COUNT；新訊息＝queued → polling_msg +1；附帶記低本次模型——對話列顯示用）
                 $count_msg = "SELECT COUNT(*) FROM messages WHERE chat_id = {$chat_id}";
                 $db->statement(
-                    "UPDATE chats SET chat_message_count = (".$count_msg."), polling_msg = polling_msg + 1, chat_updated_at = ?, provider_id = ?, model_id = ? WHERE chat_id = ?",
-                    [$current_time, $message_model_info["provider_id"], $message_model_info["model_id"], $chat_id]
+                    "UPDATE chats SET chat_message_count = (".$count_msg."), polling_msg = polling_msg + 1, chat_updated_at = ?, provider_id = ?, model_id = ?, reasoning_effort = ?, chat_mode = ? WHERE chat_id = ?",
+                    [$current_time, $message_model_info["provider_id"], $message_model_info["model_id"], $message_model_info["reasoning_effort"], $message_model_info["chat_mode"], $chat_id]
+                );
+
+                // → 專案同步：記低本專案最後使用嘅模型／模式（新對話預設讀 projects）
+                $db->statement(
+                    "UPDATE projects SET provider_id = ?, model_id = ?, reasoning_effort = ?, chat_mode = ? WHERE project_id = ?",
+                    [$message_model_info["provider_id"], $message_model_info["model_id"], $message_model_info["reasoning_effort"], $message_model_info["chat_mode"], $project_id]
                 );
 
             });

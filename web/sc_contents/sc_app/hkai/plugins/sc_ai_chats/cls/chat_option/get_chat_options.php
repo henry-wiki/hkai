@@ -36,36 +36,37 @@ trait get_chat_options
             }
         }
         
-        // 來源 2：SESSION（畫面內已選——新 chat 未落地前的兜底）
-        if(!@$provider_id)
-        {
-            $session_chat_options = sc_session()->get("chat_options");
-            
-            if($session_chat_options)
-            {
-                
-                $provider_id = $session_chat_options["provider_id"];
-                $model_id = $session_chat_options["model_id"];
-                $reasoning_effort = $session_chat_options["reasoning_effort"];
-                $chat_mode = isset($session_chat_options["chat_mode"]) ? $session_chat_options["chat_mode"] : "";
-                
-                if($provider_id)
-                {
-                    $model_source = "session";
+        // 來源 2：專案預設（projects 記低最後一次送問用嘅模型／模式——新對話沿用）
+        $project_row = null;
+
+        // 判定：chat row 未有 provider → 讀專案列
+        if ($provider_id === "") {
+            $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
+
+            // 判定：專案列存在 → 取 4 欄
+            if ($project_row !== null) {
+                $provider_id      = $project_row["provider_id"];
+                $model_id         = $project_row["model_id"];
+                $reasoning_effort = $project_row["reasoning_effort"];
+                $chat_mode        = $project_row["chat_mode"];
+
+                // 判定：專案有 provider → 標示來源
+                if ($provider_id !== "") {
+                    $model_source = "project";
                 }
             }
-            
         }
-        
-        
-        // chat_mode 兜底（chat row 未帶——舊對話；補讀 SESSION）
-        if($chat_mode === "")
-        {
-            $session_chat_options = sc_session()->get("chat_options");
-            
-            if($session_chat_options)
-            {
-                $chat_mode = isset($session_chat_options["chat_mode"]) ? $session_chat_options["chat_mode"] : "";
+
+        // chat_mode 兜底（chat row 未帶——讀 projects 上次使用模式）
+        if ($chat_mode === "") {
+            // 判定：未讀過專案列 → 補讀
+            if ($project_row === null) {
+                $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
+            }
+
+            // 判定：有專案列 → 取 chat_mode
+            if ($project_row !== null) {
+                $chat_mode = $project_row["chat_mode"];
             }
         }
 
