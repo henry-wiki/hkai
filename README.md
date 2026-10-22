@@ -42,6 +42,14 @@ Choose one:
 1. **Portable build**: keep the folder structure intact, then double-click `execute/HKAI.exe`.
 2. **Manual**: from the site root, run `php -S 127.0.0.1:8000 -t . url_rewrite.php` (PHP 8.4.26).
 
+### Engines: bundled or install your own
+
+- **Portable release (recommended)**: download the release archive, extract the whole folder, and keep `externals/` next to `HKAI.exe`. Both engines are already inside.
+- **From source**: the repository does not include `externals/` (the binaries exceed GitHub's file-size limit). Install the engines yourself and point `.env` at them:
+  - goose: install the Goose CLI, then set `goose_executable=` (or add `goose` to `PATH`).
+  - aider: install aider, or place its Python packages in a folder and set `aider_pylibs_dir=`.
+  - Python: set `python_executable=` if `python` is not on `PATH`.
+
 ## Scope
 
 Single workstation, single operator; AI collaboration scoped to local projects.

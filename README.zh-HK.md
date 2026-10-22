@@ -42,6 +42,14 @@ Windows 10/11（x64）· Python 3.13 · 約 3 GB 磁碟空間
 1. **可攜版**：保持整個資料夾結構不變，然後雙擊 `execute/HKAI.exe`。
 2. **手動**：在站台根目錄執行 `php -S 127.0.0.1:8000 -t . url_rewrite.php`（PHP 8.4.26）。
 
+### 引擎：已附或自行安裝
+
+- **可攜版（建議）**：下載 release 壓縮檔，完整解壓，保持 `externals/` 同 `HKAI.exe` 同層；兩個引擎已內附。
+- **由源碼執行**：repo 唔包含 `externals/`（二進位超過 GitHub 單檔上限）。請自行安裝引擎，並在 `.env` 指向：
+  - goose：安裝 Goose CLI，設定 `goose_executable=`（或將 `goose` 加入 `PATH`）。
+  - aider：安裝 aider，或將其 Python 套件放入資料夾，設定 `aider_pylibs_dir=`。
+  - Python：若 `python` 不在 `PATH`，設定 `python_executable=`。
+
 ## 適用範圍
 
 單一工作站、單一操作者；以本機專案為單位的 AI 協作。
