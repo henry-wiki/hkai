@@ -204,5 +204,9 @@
     "settings.server.test_ok"     : "Connected (local server responded).",
     "settings.server.test_occupied" : "Port is in use by another service (HTTP ",
     "settings.process.kill_confirm" : "Terminate [[process_program]] (pid [[process_pid]])?",
-    "settings.process.kill_title" : "Terminate this process"
+    "settings.process.kill_title" : "Terminate this process",
+    "stream.full_title"          : "Connections full",
+    "stream.full_message"        : "This browser allows at most [[max_connections]] live connections per site and [[used_count]] are in use — this action needs a new connection and may not receive live updates.",
+    "presence.connect_timeout_title"   : "Live connection not established",
+    "presence.connect_timeout_message" : "Not connected to bridge within 6 seconds — the browser limit may be reached ([[max_connections]] connections per site). Close other pages and reload."
 }

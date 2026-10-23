@@ -26,8 +26,18 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+import psutil
+
 # 時間格式（與 daemon 的 main_started_at_fmt 一致——同一套呈現）
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def get_create_time(pid: int) -> float:
+    """程序建立時間（讀唔到 → 0——例如權限不足／已死）。"""
+    try:
+        return psutil.Process(int(pid)).create_time()
+    except psutil.Error:
+        return 0.0
 
 
 def get_list_path(daemon_conf_data: dict) -> "Path | None":
@@ -39,7 +49,7 @@ def get_list_path(daemon_conf_data: dict) -> "Path | None":
     return Path(list_path)
 
 
-def append_event(daemon_conf_data: dict, event: str, name: str, program: str, pid: int, ppid: int, chat_id: str = "", message_id: str = "") -> None:
+def append_event(daemon_conf_data: dict, event: str, program: str, program_label: str, pid: int, ppid: int, chat_id: str = "", message_id: str = "") -> None:
     """append 一行程序清單（永不改寫、永不刪行；失敗只記 log）。"""
     from . import sc_logger
 
@@ -49,14 +59,15 @@ def append_event(daemon_conf_data: dict, event: str, name: str, program: str, pi
             return
 
         record = {}
-        record["ts"]         = datetime.now().strftime(TIME_FORMAT)
-        record["event"]      = event
-        record["name"]       = name
-        record["pid"]        = int(pid)
-        record["ppid"]       = int(ppid)
-        record["program"]    = program
-        record["chat_id"]    = "" if chat_id is None else str(chat_id)
-        record["message_id"] = "" if message_id is None else str(message_id)
+        record["ts"]            = datetime.now().strftime(TIME_FORMAT)
+        record["create_time"]   = get_create_time(pid)
+        record["event"]         = event
+        record["pid"]           = int(pid)
+        record["ppid"]          = int(ppid)
+        record["program"]       = program
+        record["program_label"] = program_label
+        record["chat_id"]       = "" if chat_id is None else str(chat_id)
+        record["message_id"]    = "" if message_id is None else str(message_id)
 
         # 目錄不存在先建立（首次啟動——檔案尚不存在）
         list_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,13 +78,13 @@ def append_event(daemon_conf_data: dict, event: str, name: str, program: str, pi
         sc_logger.log(f"process list write failed: {exc}")
 
 
-def append_spawn(daemon_conf_data: dict, name: str, program: str, pid: int, ppid: "int | None" = None, chat_id: str = "", message_id: str = "") -> None:
+def append_spawn(daemon_conf_data: dict, program: str, program_label: str, pid: int, ppid: "int | None" = None, chat_id: str = "", message_id: str = "") -> None:
     """append 一筆 spawn（ppid 預設＝本程序——呼叫者就是父程序）。"""
     append_event(
         daemon_conf_data,
         event="spawn",
-        name=name,
         program=program,
+        program_label=program_label,
         pid=pid,
         ppid=os.getpid() if ppid is None else ppid,
         chat_id=chat_id,

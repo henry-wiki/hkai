@@ -61,8 +61,9 @@ class _server_evt_bridge {
 // act（動作——開單叫工作）
 class _server_act_bridge {
     constructor() {}
-    init() {
-
+    async init() {
+        const server_action_instance = await this.server();
+        server_action_instance.init();
     }
     async server()  { return (await import("./act/server.js")).server(); }
 }

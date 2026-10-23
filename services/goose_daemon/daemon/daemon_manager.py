@@ -511,8 +511,8 @@ class daemon_manager_class:
         # 台帳（append-only JSONL）：worker 子程序——daemon 為 spawn 者
         process_list.append_spawn(
             self._daemon_conf_data,
-            name="worker",
-            program=worker_info["program"],
+            program="worker",
+            program_label=worker_info["program"],
             pid=worker_proc.pid,
             chat_id=worker_identity["chat_id"],
             message_id=worker_identity["message_id"],
@@ -639,8 +639,8 @@ class daemon_manager_class:
         # 台帳（append-only JSONL）：暖 worker——daemon 為 spawn 者
         process_list.append_spawn(
             self._daemon_conf_data,
-            name="worker",
-            program=worker_entry["program"],
+            program="worker",
+            program_label=worker_entry["program"],
             pid=worker_proc.pid,
         )
         sc_logger.log("warm worker spawned pid=" + str(worker_proc.pid))
@@ -821,8 +821,8 @@ class daemon_manager_class:
         # 台帳（append-only JSONL）：daemon 自身啟動——ppid 為拉起它的父程序
         process_list.append_spawn(
             self._daemon_conf_data,
-            name="goose_daemon",
-            program="goose_daemon.main",
+            program="goose_daemon",
+            program_label="goose_daemon.main",
             pid=os.getpid(),
             ppid=os.getppid(),
         )

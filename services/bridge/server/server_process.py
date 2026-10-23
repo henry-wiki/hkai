@@ -13,9 +13,11 @@ server_process.py — process 端點。
 
 import json
 import time
-from pathlib import Path
 
 from fastapi import APIRouter, Request
+
+from ..context import DATA_DIR
+from ..runtime import sc_config
 
 router = APIRouter()
 
@@ -31,15 +33,10 @@ MAX_BLOOD_DEPTH = 5
 
 def write_kill_journal(config: dict, knife_name: str, process_pid: int, image_name: str, source_text: str) -> None:
     """落刀前寫殺戳日誌（append 一行 JSON 到 process_status/kill_journal.jsonl——同 PHP 側同一份；失敗唔影響落刀）。"""
-    # 判定：設定未帶 storage_dir → 放棄（日誌絕不影響主流程）
+    # 日誌失敗絕不影響落刀（整體包 try）
     try:
-        storage_dir = config.get("storage_dir", "")
-
-        if storage_dir == "":
-            return
-
         folders = config.get("folders", {})
-        journal_dir = Path(storage_dir) / folders.get("process_status", "process_status")
+        journal_dir = DATA_DIR / folders.get("process_status", "process_status")
         journal_path = journal_dir / "kill_journal.jsonl"
 
         record = {
@@ -205,7 +202,7 @@ def kill(request: Request, payload: dict) -> dict:
         target_image_name = ""
 
     kill_source_text = str(payload.get("source", "")) + ";children=" + str(len(child_pids_for_log))
-    write_kill_journal(request.app.state.config, "bridge:/process/kill/", kill_pid, target_image_name, kill_source_text)
+    write_kill_journal(sc_config.get_configs(), "bridge:/process/kill/", kill_pid, target_image_name, kill_source_text)
 
     # 先殺子（child_pids 由 PHP 依台帳血緣排好——deepest-first），再殺父
     killed_children = []

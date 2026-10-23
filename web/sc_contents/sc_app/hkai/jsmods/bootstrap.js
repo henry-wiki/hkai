@@ -50,6 +50,7 @@ class _bootstrap {
         // health 心跳（全 plugin init 之後才起——首輪 health 帶得到頁面語境；清單載入由 obs:page_loaded 驅動）
         await registry().sc_ai_health().init();
 
+
         // model selection（模型選擇器 modal——bind 註冊＋modal 暖載；動態 accessor＝兩步式）
         const providers = await registry().sc_ai_providers();
 

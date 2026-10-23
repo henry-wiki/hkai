@@ -38,8 +38,8 @@ trait find_worker_pids
                 continue;
             }
 
-            // 判定：非 worker 記錄 → 跳過
-            if (($process_record["name"] ?? "") !== "worker") {
+            // 判定：非 worker 記錄 → 跳過（新欄位 program；舊行兼容讀 name）
+            if (($process_record["program"] ?? $process_record["name"] ?? "") !== "worker") {
                 continue;
             }
 

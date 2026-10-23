@@ -13,7 +13,7 @@ process_status.py
 	寫入者：永遠只有「該程序自己」（worker 代寫 aider 子程序——它是監護人）；
 	        每程序一檔 → 無寫入競爭（同 runtime/process_list.py 的單一寫者原則）。
 
-	內容：pid／name／program／started_at／started_at_fmt／updated_at／updated_at_fmt／beat_count
+	內容：pid／ppid／program／program_label／create_time／parent_create_time／started_at／started_at_fmt／updated_at／updated_at_fmt／beat_count
 	      （只有這些——單一程序自身的資訊；ppid／來源 chat／message 走台帳，不在狀態檔重複）
 
 	生命週期：
@@ -29,8 +29,26 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+import psutil
+
 # 時間格式（與 daemon 的 main_started_at_fmt 一致——同一套呈現）
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+# 程序建立時間（防 pid 重用——讀唔到 → 0.0）
+def _get_create_time(process_pid: int) -> float:
+	try:
+		return psutil.Process(process_pid).create_time()
+	except psutil.Error:
+		return 0.0
+
+
+# 程序父 pid（讀唔到 → 0）
+def _get_parent_pid(process_pid: int) -> int:
+	try:
+		return psutil.Process(process_pid).ppid()
+	except psutil.Error:
+		return 0
 
 
 class process_status_class:
@@ -70,17 +88,22 @@ class process_status_class:
 
 		entry_key = name + "." + str(pid)
 
-		# 判定：已登記 → 只更新程式名後返回（保留 started_at 與 beat_count）
+		# 判定：已登記 → 只更新程式標籤後返回（保留 started_at 與 beat_count）
 		if entry_key in self._entries:
-			self._entries[entry_key]["program"] = program
+			self._entries[entry_key]["program_label"] = program
 			return
 
+		parent_pid = _get_parent_pid(pid)
+
 		self._entries[entry_key] = {
-			"name":       name,
-			"pid":        pid,
-			"program":    program,
-			"started_at": time.time(),
-			"beat_count": 0,
+			"pid":                pid,
+			"ppid":               parent_pid,
+			"program":            name,
+			"program_label":      program,
+			"create_time":        _get_create_time(pid),
+			"parent_create_time": _get_create_time(parent_pid),
+			"started_at":         time.time(),
+			"beat_count":         0,
 		}
 
 	# 心跳一次（每秒呼叫——覆寫全部登記項）
@@ -159,14 +182,17 @@ class process_status_class:
 
 			now_time = datetime.now()
 			record = {
-				"pid":             entry["pid"],
-				"name":            entry["name"],
-				"program":         entry["program"],
-				"started_at":      int(entry["started_at"]),
-				"started_at_fmt":  datetime.fromtimestamp(entry["started_at"]).strftime(TIME_FORMAT),
-				"updated_at":      int(now_time.timestamp()),
-				"updated_at_fmt":  now_time.strftime(TIME_FORMAT),
-				"beat_count":      entry["beat_count"],
+				"pid":                entry["pid"],
+				"ppid":               entry["ppid"],
+				"program":            entry["program"],
+				"program_label":      entry["program_label"],
+				"create_time":        entry["create_time"],
+				"parent_create_time": entry["parent_create_time"],
+				"started_at":         int(entry["started_at"]),
+				"started_at_fmt":     datetime.fromtimestamp(entry["started_at"]).strftime(TIME_FORMAT),
+				"updated_at":         int(now_time.timestamp()),
+				"updated_at_fmt":     now_time.strftime(TIME_FORMAT),
+				"beat_count":         entry["beat_count"],
 			}
 
 			# 覆寫（每程序一檔——只有自己會寫，無競爭；格式化輸出＋原子替換，避免讀到半截）
@@ -177,10 +203,10 @@ class process_status_class:
 		except Exception:  # noqa: BLE001
 			pass  # 狀態檔寫入失敗絕不影響主流程
 
-	# 狀態檔路徑（{name}.{pid}.json）
+	# 狀態檔路徑（{program}.{pid}.json）
 	def _get_status_path(self, entry: dict) -> Path:
 		status_dir = self._status_dir if self._status_dir is not None else Path()
-		return status_dir / (entry["name"] + "." + str(entry["pid"]) + ".json")
+		return status_dir / (entry["program"] + "." + str(entry["pid"]) + ".json")
 
 
 # ===== bridging（模組級——供 daemon_manager／worker／msg_processor 直接呼叫；同 sc_logger 的寫法）=====

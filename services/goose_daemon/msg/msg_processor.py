@@ -124,8 +124,8 @@ class msg_processor_class:
         if proc.pid is not None:
             process_list.append_spawn(
                 daemon().get_daemon_conf_data(),
-                name="goose",
-                program="goose_entry.run_coder",
+                program="goose",
+                program_label="goose_entry.run_coder",
                 pid=proc.pid,
                 chat_id=chat_id,
                 message_id=message_id,

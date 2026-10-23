@@ -24,7 +24,7 @@ class sc_python_launcher_Class
     {}
 
     // exec python launcher（$launcher_args＝有意義嘅參數 array——機械嘢唔喺度傳）
-    // 例：["bridge", "--bg", "--runtime", "<runtime.json>"]
+    // 例：["bridge", "--bg"]（runtime.json 路徑已由 bridge 自己食死——data/runtime.json）
     // 回 ["ok" => bool, "exit_code" => int, "output" => array]
     // 流程：launcher 身份（<python> -u -m launcher.main——本 class 內建）→ 逐粒轉義 → chdir services → exec → chdir 回
     public function exec($launcher_args)

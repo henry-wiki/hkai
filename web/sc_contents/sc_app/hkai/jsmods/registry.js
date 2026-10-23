@@ -3,7 +3,7 @@
 // 契約：registry().{模組名}() 回傳該模組單例——動態 accessor 皆 async（呼叫端要 await）；靜態 accessor 直回（await 照通）
 // 用途：跨 dir／js 取用其他模組（例：sc_ai_providers → sc_ai_chats）
 // 載入：動態模組＝await import()、靜態批＝頂層 import（一律 literal path——編輯器照樣解析型別、F12 可跳）
-// 例外（靜態——開機即需）：sc_loading／sc_modal／sc_i18n／shared／sc_ai_projects／sc_ai_chats／sc_ai_status_bar／sc_ai_health（accessor 直回、唔使 await）
+// 例外（靜態——開機即需）：sc_loading／sc_modal／sc_i18n／shared／sc_ai_projects／sc_ai_chats／sc_ai_status_bar／sc_ai_health／sc_stream／sc_presence（accessor 直回、唔使 await）
 // 次序：靜態載入嘅放最上、動態載入嘅放下面（新加嘅照跟）
 // 結構：class 單例 + export default factory（本檔由 bootstrap／各模組靜態 import——保持 default）
 
@@ -15,6 +15,8 @@ import { sc_ai_projects } from "../plugins/sc_ai_projects/jsmods/sc_ai_projects.
 import { sc_ai_chats }    from "../plugins/sc_ai_chats/jsmods/sc_ai_chats.js";
 import { sc_ai_status_bar } from "../plugins/sc_ai_status_bar/jsmods/sc_ai_status_bar.js";
 import { sc_ai_health } from "../plugins/sc_ai_health/jsmods/sc_ai_health.js";
+import { sc_stream }     from "./sc_stream/sc_stream.js";
+import { sc_presence }   from "./sc_stream/presence/presence.js";
 
 class _registry {
     constructor() {
@@ -58,6 +60,16 @@ class _registry {
     // sc_ai_health（靜態——開機即需）
     sc_ai_health() {
         return sc_ai_health();
+    }
+
+    // sc_stream（靜態——SSE 連線總管；開機即需）
+    sc_stream() {
+        return sc_stream();
+    }
+
+    // sc_presence（靜態——頁面在線 SSE；開機即需）
+    sc_presence() {
+        return sc_presence();
     }
 
     // sc_topnav（動態載入——用先載）

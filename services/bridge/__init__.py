@@ -11,16 +11,14 @@ bridge 套件——HTTP server + aider_daemon 管理。
     server/                        HTTP 伺服器
     ├── server.py                  FastAPI app + lifespan + uvicorn 啟動（singleton）
 
-    daemon/                        aider_daemon 管理
+    agent_daemon/                  喚醒 agent daemon（wake／registry）
     └── daemon_registry.py         PID 登記＋跨平台存活檢查
 
     utils/                         共用工具
     ├── io.py                      檔案讀取工具（tail content）
-    ├── timer.py                   時間格式化工具
-    └── process_helper.py          子程序安全終止工具
+    └── timer.py                   時間格式化工具
 """
 
-import sys
 from pathlib import Path
 
 # 套件根目錄（bridge/ 所在位置）
@@ -32,9 +30,5 @@ RUNTIME_DIR = BASE_DIR / "runtime"
 # 站台根（web／services 所在——BASE_DIR＝services/bridge/，向上兩層）
 ROOT_DIR = BASE_DIR.parent.parent
 
-# 站台資料目錄（預設慣例；實際 storage_dir 由 runtime.json 提供，可覆蓋）
+# 站台資料目錄（站台根 data/——所有執行產物集中喺呢度）
 DATA_DIR = ROOT_DIR / "data"
-
-# 動態設定路徑（runtime.json 絕對位置——PHP 拉起時代入 argv[1]；唯一設定來源）
-# 缺參數時為 None（由 main.py 明確檢查後退出——此處不可拋錯，否則 logger 未及接管）
-RUNTIME_CONFIG_PATH = Path(sys.argv[1]) if len(sys.argv) > 1 else None

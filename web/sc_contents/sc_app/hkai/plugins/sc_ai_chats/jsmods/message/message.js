@@ -102,7 +102,7 @@ class _message_act_bridge {
     async message_delete()    { return (await import("./act/message_delete.js")).message_delete(); }
     async message_writer()    { return (await import("./act/message_writer.js")).message_writer(); }
     async message_poll()      { return (await import("./act/message_poll.js")).message_poll(); }
-    async message_stream()    { return (await import("./act/message_stream.js")).message_stream(); }
+    async message_stream()    { return (await import("../../../../jsmods/sc_stream/message/message.js")).message_stream(); }
     async message_list_fetch()    { return (await import("./act/message_list_fetch.js")).message_list_fetch(); }
     async message_list_default()    { return (await import("./act/message_list_default.js")).message_list_default(); }
     async message_frame_build()    { return (await import("./act/message_frame_build.js")).message_frame_build(); }

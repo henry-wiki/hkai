@@ -257,7 +257,8 @@ class sc_python_bridge_process_Class
         $daemon_started = "";
         
         foreach ($heartbeat_records as $heartbeat_record) {
-            $process_name = (string)($heartbeat_record["name"] ?? "");
+            // 新格式：program／program_label；舊檔：name／program（兼容一個週期）
+            $process_name = (string)($heartbeat_record["program"] ?? $heartbeat_record["name"] ?? "");
             $started_fmt  = (string)($heartbeat_record["started_at_fmt"] ?? "");
             
             // 摘要列用：daemon 的啟動時間（鏈上第一顆常駐程序——兩引擎任一）
@@ -267,7 +268,7 @@ class sc_python_bridge_process_Class
             
             $live_processes[] = [
                 "name"       => $process_name,
-                "program"    => (string)($heartbeat_record["program"] ?? ""),
+                "program"    => (string)($heartbeat_record["program_label"] ?? $heartbeat_record["program"] ?? ""),
                 "pid"        => (int)($heartbeat_record["pid"] ?? 0),
                 "extra_text" => (string)($heartbeat_record["updated_at_fmt"] ?? ""),
             ];
@@ -666,6 +667,42 @@ class sc_python_bridge_process_Class
             }
 
             $process_pids[] = $python_process_record_item["pid"];
+        }
+
+        return $process_pids;
+    }
+
+    // 由心跳檔搵同名程序 pid（本站 process_status 目錄＝擁有權界線；唔靠命令列）
+    public function find_heartbeat_pids($process_name)
+    {
+        $process_status_dir = hkai__core()->get_process_status_dir();
+        $process_pids       = [];
+
+        $heartbeat_files = glob($process_status_dir . "/" . $process_name . ".*.json");
+
+        // 判定：冇心跳檔 → 空
+        if ($heartbeat_files === false) {
+            return $process_pids;
+        }
+
+        foreach ($heartbeat_files as $heartbeat_file)
+        {
+            $heartbeat_name = basename($heartbeat_file, ".json");
+            $pid_text       = substr($heartbeat_name, strlen($process_name) + 1);
+
+            // 判定：檔名冇有效 pid → 跳過
+            if (!ctype_digit($pid_text)) {
+                continue;
+            }
+
+            $process_pid = (int)$pid_text;
+
+            // 判定：程序已死 → 跳過（殘檔由 remove_dead_heartbeat_files 清）
+            if (!hkai__core()->is_process_alive($process_pid)) {
+                continue;
+            }
+
+            $process_pids[] = $process_pid;
         }
 
         return $process_pids;

@@ -18,7 +18,8 @@ sc_ai_health()->heartbeat()->initial([
 // is_enabled：是否允許輪詢（false → 前端收到後停止下一輪）
 // interval_seconds：每輪間隔秒數（9 秒——細 interval 對 PHP／curl 成本高）
 sc_ai_health()->health()->initial([
-    "is_enabled"       => true,
+    // 【測試暫停】health 輪詢停用（還原：改回 true）
+    "is_enabled"       => false,
     "interval_seconds" => 13,
 ]);
 
@@ -37,5 +38,4 @@ sc_ai_health()->health()->add_health_action("sweep_dead_process_lines", function
 // 註冊 request action（health——GET 健康狀態端點；URL /request/hkai/fetch_health/）
 $plugin->add_request_action("fetch_health", __DIR__ . "/request/health/fetch_health.php");
 
-// 註冊 request action（bridge_check——統一快速檢查端點；URL /request/hkai/fetch_bridge_check/）
-$plugin->add_request_action("fetch_bridge_check", __DIR__ . "/request/health/fetch_bridge_check.php");
+// server_status 已搬去 sc_ai_settings（server 域負責）

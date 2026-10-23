@@ -5,8 +5,7 @@
     "heartbeat": "aider_daemon.heartbeat",
     "conf": "runtime.json",
     "process_list": "process_status/process_list.jsonl",
-    "system_env_markdown": "instructions/system_env.md",
-    "server_status": "server_status.json"
+    "system_env_markdown": "instructions/system_env.md"
   },
   "folders": {
     "messages": "messages/polling",

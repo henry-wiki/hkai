@@ -204,5 +204,9 @@
     "settings.server.test_ok"     : "已連上（本機 server 應答）。",
     "settings.server.test_occupied" : "已有其他服務佔用此連接埠（HTTP ",
     "settings.process.kill_confirm" : "終止程序 [[process_program]] (pid [[process_pid]])？",
-    "settings.process.kill_title" : "終止此程序"
+    "settings.process.kill_title" : "終止此程序",
+    "stream.full_title"          : "連線已滿",
+    "stream.full_message"        : "瀏覽器每個網站最多 [[max_connections]] 條即時連線，目前已用 [[used_count]] 條——呢個動作需要新連線，可能收唔到即時更新。",
+    "presence.connect_timeout_title"   : "即時連線未能建立",
+    "presence.connect_timeout_message" : "6 秒內未連上 bridge——可能已達瀏覽器上限（同一網站 [[max_connections]] 條連線）。請關閉其他頁面後重新載入。"
 }

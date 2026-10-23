@@ -4,7 +4,7 @@ namespace sc\app\hkai\cls\sc_python_bridge;
 
 // == sc_python_bridge_Class：python server 生命週期管理（singleton——經 bridging hkai__python_bridge() 取得） ==
 // == 職責：start_server（拉起＋等 bridge 自報就緒）／stop_server（全清進程）／port_available（port 可用檢查） ==
-// == 啟動結果（2026-10-02 定案）：bridge 開機自己寫 server_status.json（running／failed＋原因）——PHP 拉起後輪詢讀 ==
+// == 啟動結果（2026-10-23 定案）：PHP 拉起後輪詢 process_status/bridge.*.json 心跳（started_at ≥ 拉起時間＝成功） ==
 // == 拉起前置（順序）：完整檢查（已起即回）→ 環境檢查 → 全清掃（停用同路——worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）→ port 佔用檢查（netstat） ==
 // == server 狀態四態（前端）：stopped（未啟用）／starting（啟用中）／running（已啟用）／stopping（停止中） ==
 
@@ -39,7 +39,7 @@ class sc_python_bridge_Class
     
     // 啟動 python server（拉起＋等 bridge 自報——回傳 ["ok" => bool, "message" => string]）
     // 流程：①完整檢查（已起即回錯誤）②全清掃（啟動＝前 session 已關——殘骸一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）
-    //       ③port 可用檢查（bind 測試）④清舊結果檔 → 拉起 ⑤輪詢 server_status.json
+    //       ③port 可用檢查（bind 測試）④拉起 ⑤輪詢 bridge 心跳
     public function start_server($server_host = "", $server_port = 0)
     {
         // python 執行檔／bridge 套件存在檢查已移除（10-13 用戶令）——啟動責任喺 launcher（exec 失敗即回 ok=false；python 存在性另由 runtime check 覆蓋）
@@ -118,17 +118,13 @@ class sc_python_bridge_Class
         $server_settings_update["port"] = $server_port;
         hkai__core()->write_runtime_configs("server_settings", $server_settings_update);
 
-        // 清舊啟動結果檔（bridge 開機後會自己寫新一份——保底：連清唔走都靠寫入時間閘）
-        @unlink(hkai__core()->get_server_status_path());
-
         $spawn_time = time();
 
         // 拉起 bridge（標準 launcher——關鍵字＋旗標；--bg＝非阻塞；runtime 路徑＝機器層值）
-        // bridge 自理日誌：bridge/runtime/error.log／audit.log
+        // bridge 自理日誌：data/logs/bridge.error.log／bridge.audit.log
         $launcher_result = hkai__python_launcher()->exec([
             "bridge",
             "--bg",
-            "--runtime", $runtime_config_file,
         ]);
 
         // 判定：launcher 送出失敗
@@ -174,51 +170,6 @@ class sc_python_bridge_Class
         }
     }
 
-    // 等待 bridge 自報啟動結果（輪詢 server_status.json——每 300ms、上限 $server_wait_timeout_sec；逾時回 null）
-    private function wait_server_status($server_wait_timeout_sec, $not_before_time)
-    {
-        $wait_start_at = time();
-
-        while (true) {
-            $server_status = $this->read_server_status($not_before_time);
-
-            // 判定：收到結果（running／failed）→ 回報
-            if ($server_status !== null) {
-                return $server_status;
-            }
-            // 判定：逾時 → null（bridge 冇回覆）
-            if ((time() - $wait_start_at) >= $server_wait_timeout_sec) {
-                return null;
-            }
-            usleep(300000);
-        }
-    }
-
-    // 讀啟動結果檔（只認 $not_before_time 之後寫嘅一份——清唔走嘅舊檔唔會誤判；唔存在／非法回 null）
-    private function read_server_status($not_before_time)
-    {
-        $server_status_path = hkai__core()->get_server_status_path();
-
-        // 判定：檔案唔存在 → null
-        if (!is_file($server_status_path)) {
-            return null;
-        }
-
-        // 判定：舊檔（拉起之前寫嘅）→ null
-        if (filemtime($server_status_path) < $not_before_time) {
-            return null;
-        }
-
-        $server_status = json_decode(@file_get_contents($server_status_path), true);
-
-        // 判定：非合法 JSON → null
-        if (!is_array($server_status)) {
-            return null;
-        }
-
-        return $server_status;
-    }
-
     // 等 port 放返出嚟（剛被殺嘅運行體退場——每 300ms 查 netstat，上限 $server_wait_timeout_sec 秒）
     private function wait_port_release($server_port, $server_wait_timeout_sec)
     {
@@ -251,9 +202,6 @@ class sc_python_bridge_Class
             }
         }
 
-        // 清啟動結果檔（本次運行嘅紀錄——下次啟動重新寫）
-        @unlink(hkai__core()->get_server_status_path());
-
         return $all_killed;
     }
 
@@ -283,10 +231,7 @@ class sc_python_bridge_Class
         $process_status_dir = hkai__core()->get_process_status_dir();
         $group_killed       = true;
 
-        // 自己個 runtime（擁有權界線——只殺本實例拉起嘅程序，唔准殺別個站）
-        $runtime_config_file = hkai__sc_runtime()->get_runtime_config_file();
-
-        foreach (hkai__python_bridge_process()->find_python_pids_by_program_name_and_runtime($process_name, $runtime_config_file) as $process_pid) {
+        foreach (hkai__python_bridge_process()->find_heartbeat_pids($process_name) as $process_pid) {
             $killed = hkai__python_bridge_process()->kill_process_native($process_pid);
 
             // 判定：殺唔到（程序仍在）→ 記錄
@@ -306,7 +251,7 @@ class sc_python_bridge_Class
     public function read_server_log_after_offset($log_byte_offset = 0, $log_line_limit = 500)
     {
         $python_script_dir = hkai__core()->get_python_script_dir();
-        $audit_log_file    = $python_script_dir . "/bridge/runtime/audit.log";
+        $audit_log_file    = dirname($python_script_dir) . "/data/logs/bridge.audit.log";
 
         $read_result = [];
         $read_result["mode"]   = "full";

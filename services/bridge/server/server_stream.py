@@ -25,6 +25,10 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
+from ..context import DATA_DIR
+from ..runtime import sc_config
+from .server_cors import origin_is_allowed, read_origin_allowlist
+
 # 終態（msg_status.txt 最後一行——出現即收尾）
 TERMINAL_STATUSES = ("completed", "failed", "cancelled", "aborted")
 
@@ -74,12 +78,12 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     if PROJECT_SLUG_PATTERN.match(project_slug) is None:
         return StreamingResponse(_error_stream("invalid project_slug"), media_type="text/event-stream")
 
-    config = request.app.state.config
+    config = sc_config.get_configs()
     origin = request.headers.get("origin", "")
-    allowed_origins = _read_origin_allowlist(config)
+    allowed_origins = read_origin_allowlist(config)
 
     # 判定：origin 唔喺允許清單 → 403（無 origin＝本機工具，照放行）
-    if origin != "" and _origin_is_allowed(origin, allowed_origins) is False:
+    if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
         return StreamingResponse(_error_stream("origin not allowed"), media_type="text/event-stream", status_code=403)
 
     message_dirs = _resolve_message_dirs(config, project_slug, message_id)
@@ -109,76 +113,16 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
 
 
 def _resolve_message_dirs(config: dict, project_slug: str, message_id: int) -> dict:
-    """解析 polling／archive 兩個訊息目錄（值全部由 runtime.json 帶）。"""
-    storage_dir = Path(config["storage_dir"])
+    """解析 polling／archive 兩個訊息目錄（根＝context.DATA_DIR；子目錄名由 runtime.json 帶）。"""
     folders = config.get("folders", {})
 
-    polling_root = storage_dir / folders.get("messages", "messages/polling")
-    archive_root = storage_dir / folders.get("archive", "messages/archive")
+    polling_root = DATA_DIR / folders.get("messages", "messages/polling")
+    archive_root = DATA_DIR / folders.get("archive", "messages/archive")
 
     message_dirs = {}
     message_dirs["polling"] = polling_root / project_slug / str(int(message_id))
     message_dirs["archive"] = archive_root / project_slug / str(int(message_id))
     return message_dirs
-
-
-def _read_origin_allowlist(config: dict) -> list:
-    """讀 CORS 允許清單（storage/bridge/origin.whitelist 優先；缺檔／空檔 → 回設定檔清單）。"""
-    storage_dir = Path(str(config.get("storage_dir", "")))
-    folders = config.get("folders", {})
-    whitelist_path = storage_dir / folders.get("bridge", "bridge") / "origin.whitelist"
-
-    whitelist = []
-
-    # 判定：白名單檔存在 → 逐行讀（# 開頭＝註釋；空白行跳）
-    if whitelist_path.is_file():
-        try:
-            for whitelist_line in whitelist_path.read_text(encoding="utf-8").splitlines():
-                whitelist_line = whitelist_line.strip()
-
-                if whitelist_line == "" or whitelist_line.startswith("#"):
-                    continue
-
-                whitelist.append(whitelist_line)
-        except OSError:
-            whitelist = []
-
-    # 判定：白名單有內容 → 直接用
-    if len(whitelist) > 0:
-        return whitelist
-
-    config_path = Path(str(config.get("static_config_path", "")))
-
-    # 判定：設定檔唔存在 → 空清單
-    if config_path.is_file() is False:
-        return []
-
-    try:
-        config_data = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-
-    stream_config = config_data.get("stream", {})
-
-    return list(stream_config.get("allowed_origins", []))
-
-
-def _origin_is_allowed(origin: str, allowed_origins: list) -> bool:
-    """判斷 origin 是否獲准（支援 "*"＝全開；萬用埠：http://127.0.0.1:*）。"""
-    # 判定：清單有 "*" → 全部放行
-    if "*" in allowed_origins:
-        return True
-
-    for allowed_origin in allowed_origins:
-        # 判定：完全相符 → 准
-        if allowed_origin == origin:
-            return True
-
-        # 判定：通配埠（結尾 :*）→ 前綴相符即准
-        if allowed_origin.endswith(":*") and origin.startswith(allowed_origin[:-1]):
-            return True
-
-    return False
 
 
 async def _event_generator(request: Request, message_dirs: dict, response_index: int, message_id: int):

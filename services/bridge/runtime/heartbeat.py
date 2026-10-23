@@ -1,96 +1,200 @@
 #!/usr/bin/env python3
 """
-heartbeat.py — 心跳（生存證明＋閒置自殺；bridge 專用，只依賴標準庫，可獨立搬走）
+heartbeat.py — 心跳（狀態檔＋生存證明＋閒置自殺；bridge 專用，可獨立搬走）
 
 對外入口：
-- start(interval_sec, idle_exit_sec, is_busy)
-      登記本程序 → 起背景執行緒：
-      ① 每 interval_sec 寫一次心跳（唔會停）
-      ② 每次跳都對比活動檔年齡——超過 idle_exit_sec 且冇進行中串流 → 自殺
-- stop()  停執行緒＋清心跳檔
+- init()        建立自己狀態檔 → 清在線標記 → 起背景執行緒
+                  ① 每 HEARTBEAT_INTERVAL_SEC 寫一次狀態檔（唔會停）
+                  ② 每次跳都對比在線檔年齡——超過 IDLE_EXIT_SEC 且冇進行中串流 → 自殺
+- start()       起背景心跳執行緒（已喺跑 → 唔重複開）
+- stop(reason)  停執行緒 → lifecycle.exit(reason)
+- exception_kill()  例外退出（atexit）：記 log → stop
 
-心跳寫檔交 runtime/process_status.py；活動時間交 runtime/activity.py。
+狀態檔：{PROCESS_DIR}/{PROGRAM_NAME}.{pid}.json（PHP 程序清單讀）
+在線時間交 runtime/presence.py（ping 時刷新）。
 """
 
-import os
+import atexit
 import threading
 import time
+from pathlib import Path
 
-from ..context import PROGRAM_LABEL, PROGRAM_NAME
+from ..context import (
+    HEARTBEAT_INTERVAL_SEC,
+    IDLE_EXIT_SEC,
+    PROCESS_DIR,
+    PROGRAM_LABEL,
+    PROGRAM_NAME,
+    get_timestamp,
+    strtotime,
+)
+from ..server import server_stream
+from ..utils.io import write_json_atomic
+from . import lifecycle, presence, process
 
-# 背景執行緒與停止訊號（start 建、stop 收）
-_beat_thread = None
-_stop_event = threading.Event()
+# 本程序狀態（entry_init 建立；update_entry 只更新時間欄）
+_heartbeat_entry = None
 
-# 進程啟動時間（活動檔未建立時，用佢做閒置基準）
-_started_at = time.time()
+# 背景執行緒（start 建立、stop 收掉）
+_heartbeat_thread = None
+
+# 停止旗：stop() 用 set() 通知收工；心跳執行緒每輪用 is_set() 檢查（True＝要走）
+_stop_requested = threading.Event()
 
 
-def start(interval_sec: float = 1.0, idle_exit_sec: int = 0, is_busy=None) -> None:
-    """開始心跳：登記＋背景執行緒（每 interval 秒 beat；閒置過久 → 自殺）。"""
-    global _beat_thread, _started_at
+# ===== 對外入口 =====
 
-    from . import process_status
+def init() -> None:
+    """初始化心跳：建立狀態檔＋清在線標記 → 起背景執行緒。"""
+    entry_init()
 
-    _started_at = time.time()
-    process_status.register(os.getpid())
+    # 開機清在線標記（上一條生命週期殘留嘅 mtime 唔可以當成本次有人連住）
+    presence.stop()
 
-    _stop_event.clear()
-    _beat_thread = threading.Thread(
-        target=_beat_loop,
-        args=(interval_sec, idle_exit_sec, is_busy),
-        name="heartbeat_beat",
-        daemon=True,
+    # 由開機一刻起計（檔案唔存在＝inf 會即刻自殺——所以開機即 touch 歸零）
+    presence.touch()
+
+    start()
+
+
+def start() -> None:
+    """起背景心跳執行緒（已喺跑 → 唔重複開）。"""
+    global _heartbeat_thread
+
+    # 判定：已有心跳執行緒喺跑 → 唔重複開（避免多條同時寫同一個狀態檔）
+    if _heartbeat_thread is not None and _heartbeat_thread.is_alive():
+        return
+
+    # 重設停止旗（上次 stop 設過）——否則新執行緒第一輪即退出（開即死）
+    _stop_requested.clear()
+
+    _heartbeat_thread = threading.Thread(
+        target      =_run_heartbeat,
+        name        ="heartbeat",
+        daemon      =True,
     )
-    _beat_thread.start()
+    _heartbeat_thread.start()
 
 
-def _beat_loop(interval_sec: float, idle_exit_sec: int, is_busy) -> None:
-    """背景心跳：每輪寫檔，再判斷閒置自殺。"""
-    from . import activity, process_status, sc_logger
+def stop(reason: str = "") -> None:
+    """停止心跳並結束程序：停執行緒 → lifecycle.exit(reason)（清狀態／在線檔＋死亡）。"""
+    global _heartbeat_thread
 
-    while _stop_event.is_set() is False:
-        process_status.beat()
+    # 通知心跳執行緒收工（佢下一輪檢查就跳出——唔係即時中斷）
+    _stop_requested.set()
 
-        # 判定：有設閒置上限 → 對比活動檔年齡
-        if idle_exit_sec > 0:
-            idle_sec = activity.age_sec()
+    if _heartbeat_thread is not None:
+        # 判定：喺心跳執行緒內叫 stop（閒置自殺）→ 唔可以 join 自己
+        if threading.current_thread() is not _heartbeat_thread:
+            _heartbeat_thread.join(timeout=2.0)
 
-            # 判定：活動檔未建立（inf）→ 由進程啟動起計
-            if idle_sec == float("inf"):
-                idle_sec = time.time() - _started_at
+        _heartbeat_thread = None
 
-            has_active_stream = is_busy() if is_busy is not None else False
-
-            # 判定：活動過期＋冇進行中串流 → 自殺（連清心跳／活動檔）
-            if idle_sec > idle_exit_sec and has_active_stream is False:
-                # 訊息用（inf 冇活動檔——唔可以 int()）
-                idle_sec_text = "inf" if idle_sec == float("inf") else str(int(idle_sec))
-                sc_logger.log("idle " + idle_sec_text + "s with no active stream, heartbeat exiting")
-                process_status.unregister(os.getpid())
-                activity.clear()
-                os._exit(0)
-
-        time.sleep(interval_sec)
+    # 收工（lifecycle.exit 會清狀態／在線檔再死）
+    lifecycle.exit(reason)
 
 
-def beat() -> None:
-    """寫一次心跳（手動／測試用——背景執行緒已每秒自動跳）。"""
-    from . import process_status
+def exception_kill() -> None:
+    """例外退出（atexit）：記 log → 停心跳（stop 內會刪狀態檔）。"""
+    # 記 log（非 os._exit 收工——留痕）
+    try:
+        from . import sc_logger
 
-    process_status.beat()
+        sc_logger.log("exit: unexpected interpreter exit (exception_kill)")
+    except Exception:  # noqa: BLE001, S110
+        pass
+
+    stop("unexpected interpreter exit")
 
 
-def stop() -> None:
-    """停止心跳：停背景執行緒，再清自己的心跳檔。"""
-    global _beat_thread
+# ===== 狀態檔 =====
 
-    from . import process_status
+def entry_init() -> None:
+    """建立自己狀態檔（啟動時間＋第一筆心跳）。"""
+    global _heartbeat_entry
 
-    _stop_event.set()
+    started_at = get_timestamp()
+    started_at_fmt = strtotime(started_at)
 
-    if _beat_thread is not None:
-        _beat_thread.join(timeout=2.0)
-        _beat_thread = None
+    _heartbeat_entry = {
+        "pid":               process.self_pid(),
+        "ppid":              process.mother_pid(),
+        "program":           PROGRAM_NAME,
+        "program_label":     PROGRAM_LABEL,
+        "create_time":       process.self_create_time(),
+        "parent_create_time": process.parent_create_time(),
+        "started_at":        started_at,
+        "started_at_fmt":    started_at_fmt,
+        "updated_at":        started_at,
+        "updated_at_fmt":    started_at_fmt,
+    }
 
-    process_status.unregister(os.getpid())
+    write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
+
+
+def update_entry() -> None:
+    """每秒覆寫 updated_at（檔案新鮮＝在跑）。"""
+    global _heartbeat_entry
+
+    # 判定：未登記（程式收工中）→ 唔寫
+    if _heartbeat_entry is None:
+        return
+
+    updated_at = get_timestamp()
+    _heartbeat_entry["updated_at"]     = updated_at
+    _heartbeat_entry["updated_at_fmt"] = strtotime(updated_at)
+
+    write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
+
+
+def remove_heartbeat_file() -> None:
+    """刪自己狀態檔（程序結束——唔留殘檔）。"""
+    global _heartbeat_entry
+
+    _heartbeat_entry = None
+
+    heartbeat_file = _get_heartbeat_file()
+
+    # 判定：檔案唔存在 → 無事可做
+    if heartbeat_file.exists() is False:
+        return
+
+    try:
+        heartbeat_file.unlink()
+    except OSError:
+        pass
+
+
+# ===== 內部 =====
+
+def _run_heartbeat() -> None:
+    """背景心跳：每輪寫狀態檔；有連線＝唔計閒置，冇連線＝計閒置（過期自殺）。"""
+    # 每輪先檢查停止旗：True（有人叫收工）→ 跳出迴圈，執行緒結束
+    while _stop_requested.is_set() is False:
+        # 每輪第一件事：寫心跳（生存證明——無論忙唔忙都要寫）
+        update_entry()
+
+        # 母親監視：母親唔在 → 只自殺（子孫自己 3 秒內自殺）
+        lifecycle.exit_when_mother_gone()
+
+        # 判定：有輸出串流（有人正在收即時輸出）→ 唔計閒置（等下一輪）
+        if server_stream.get_active_stream_count() > 0:
+            time.sleep(HEARTBEAT_INTERVAL_SEC)
+            continue
+
+        # 唯一條件：最後一次有頁面連住距今幾久（presence.py 喺 ping／連線時刷新）
+        presence_idle_sec = presence.age_sec()
+
+        # 判定：冇任何連線超過上限 → 自殺
+        if presence_idle_sec > IDLE_EXIT_SEC:
+            stop("stopped from heartbeat: presence_idle_sec=" + format(presence_idle_sec, ".0f"))
+
+        time.sleep(HEARTBEAT_INTERVAL_SEC)
+
+
+def _get_heartbeat_file() -> Path:
+    """自己狀態檔路徑（{PROGRAM_NAME}.{pid}.json）。"""
+    return Path(PROCESS_DIR) / (PROGRAM_NAME + "." + str(process.self_pid()) + ".json")
+
+
+atexit.register(exception_kill)

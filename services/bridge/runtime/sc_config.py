@@ -3,61 +3,62 @@
 sc_config.py — 全域唯一嘅 JSON 設定讀取。
 
 職責：
-- load_config(path)：讀取 runtime.json，失敗直接 sys.exit(1)
-- read_daemon_engine(config)：讀現行引擎（runtime.json 動態值＞靜態 SSOT daemon_engine）——缺／唔合法回預設
+- init_config()：開機載入站台固定 runtime.json（data/runtime.json）一次，失敗直接 sys.exit(1)
+- get_configs()：取整份已載入設定（init_config 之後必有值）
+- get_config(key, sub_key=None)：取第一層值；有 sub_key＝第一層 > 第二層
 
 注意：
 - read_json() 已移至 utils/io.py（通用 I/O 工具）
 """
 
 import sys
-from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from ..utils.io import read_json
+from . import sc_logger
 
-# 有效引擎（值＝同名設定組／同名 python 套件——services/{name}/）
-KNOWN_DAEMON_ENGINES = ("aider_daemon", "goose_daemon", "openhands_api_daemon")
+# 已載入設定（init_config 一次寫入；其後全程序共用同一份）
+_configs: dict = {}
 
 
-def load_config(config_path: Optional[Path]) -> dict:
-    """讀取 runtime.json，失敗直接 sys.exit(1)。"""
+def init_config() -> None:
+    """開機載入站台固定 runtime.json（data/runtime.json）——失敗直接 sys.exit(1)。"""
+    global _configs
+
+    from .. import context
+
+    config_path = context.RUNTIME_CONFIG_FILE
     data = read_json(config_path)
+
     if data is None:
-        from . import sc_logger
         sc_logger.log(f"runtime config unreadable: {config_path}")
         sys.exit(1)
-    return data
+
+    _configs = data
 
 
-def read_daemon_engine(config: dict) -> str:
-    """讀現行引擎（動態優先——runtime.json 已存值＞manifest 出廠值；皆唔合法 → aider_daemon）。"""
-    # 動態層（runtime.json 已存值——PHP 切換寫入處；檔路徑由 bridge 啟動時注入）
-    runtime_config_path = config.get("runtime_config_path", "")
+def get_configs() -> dict:
+    """取整份已載入設定（init_config 之後必有值）。"""
+    return _configs
 
-    # 判定：有 runtime 路徑 → 讀動態值
-    if runtime_config_path != "":
-        runtime_config = read_json(Path(runtime_config_path)) or {}
-        runtime_daemon_engine = str(runtime_config.get("daemon_engine", ""))
 
-        # 判定：動態值合法 → 回傳
-        if runtime_daemon_engine in KNOWN_DAEMON_ENGINES:
-            return runtime_daemon_engine
+def get_config(config_key: str, sub_key: str | None = None) -> Any:
+    """取設定值（冇 sub_key＝第一層；有＝第一層 > 第二層；缺 key＝記 log 回 None）。"""
+    # 判定：第一層 key 唔存在 → 記 log 並回 None
+    if config_key not in _configs:
+        sc_logger.log("config key missing: " + config_key)
+        return None
 
-    # 靜態出廠層（manifest）
-    static_config_path = config.get("static_config_path", "")
+    config_value = _configs[config_key]
 
-    # 判定：無靜態 SSOT 路徑 → 回預設
-    if static_config_path == "":
-        return "aider_daemon"
+    # 判定：冇指定第二層 → 回第一層值
+    if sub_key is None:
+        return config_value
 
-    static_config = read_json(Path(static_config_path)) or {}
-    daemon_engine = str(static_config.get("daemon_engine", ""))
+    # 判定：第二層 key 唔存在 → 記 log 並回 None
+    if sub_key not in config_value:
+        sc_logger.log("config sub key missing: " + config_key + "." + sub_key)
+        return None
 
-    # 判定：值唔係有效引擎（打錯／未設）→ 記 log、回預設
-    if daemon_engine not in KNOWN_DAEMON_ENGINES:
-        from . import sc_logger
-        sc_logger.log(f"daemon_engine invalid: {daemon_engine!r} — fallback aider_daemon")
-        return "aider_daemon"
+    return config_value[sub_key]
 
-    return daemon_engine

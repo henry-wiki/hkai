@@ -4,13 +4,13 @@ sc_logger.py
 
     bridge 執行日誌（sc_logger_class singleton——setup()／log()；handler 由 LOG_CONFIG 一次建立）。
 
-    兩個檔（全部在 bridge/runtime/）：
-        error.log       異常／崩潰（sys.excepthook 完整 traceback）
-        audit.log       一般記錄（啟動足跡／log()／print 重定向——append-only，永不修改）
+    兩個檔（全部在 data/logs/）：
+        bridge.error.log   異常／崩潰（sys.excepthook 完整 traceback）
+        bridge.audit.log   一般記錄（啟動足跡／log()／print 重定向——append-only，永不修改）
 
     拉起期（logger 接管前）失敗由 main.py 以 stdlib 直寫 error.log（防線）；輸出丟棄（PHP 端 NUL）。
 
-    依賴：只 import bridge/__init__.py 的 RUNTIME_DIR（純路徑常數——不會失敗）。
+    依賴：只 import bridge/__init__.py 的 DATA_DIR（純路徑常數——不會失敗）。
     其他 py 檔不需 import 本模組（例外／print 由本模組全域攔截）。
 
     使用方式（main.py 最頂部——主程序載入前）：
@@ -22,10 +22,9 @@ import atexit
 import logging
 import logging.config
 import sys
-from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from .. import RUNTIME_DIR
+from .. import DATA_DIR
 
 # log 格式常數
 LOG_FORMAT    = "%(asctime)s [%(levelname)s] (Line:%(lineno)d) : %(message)s"
@@ -35,6 +34,9 @@ LOG_MAX_BYTES = 5 * 1024 * 1024
 # 備份份數 3（不含現行檔；命名 X.log.1／.2／.3——最舊者於下次輪替被刪）
 # → 每個 log 共 4 檔、上限約 20 MiB（5 MiB × 4）；本模組 2 個 log 合計上限約 40 MiB
 LOG_BACKUP_COUNT = 3
+
+# 日誌目錄（站台 data/logs——程式碼目錄唔放執行產物）
+LOG_DIR = DATA_DIR / "logs"
 
 # 完整日誌配置（logging.config.dictConfig——單一擁有者：runtime.* ＋ uvicorn.*）
 # uvicorn.run(log_config=None) 唔會覆蓋；全部 logger 由呢份 config 定義
@@ -51,7 +53,7 @@ LOG_CONFIG = {
     "handlers": {
         "audit_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": str(RUNTIME_DIR / "audit.log"),
+            "filename": str(LOG_DIR / "bridge.audit.log"),
             "maxBytes": LOG_MAX_BYTES,
             "backupCount": LOG_BACKUP_COUNT,
             "encoding": "utf-8",
@@ -59,7 +61,7 @@ LOG_CONFIG = {
         },
         "error_file": {
             "class": "logging.handlers.RotatingFileHandler",
-            "filename": str(RUNTIME_DIR / "error.log"),
+            "filename": str(LOG_DIR / "bridge.error.log"),
             "maxBytes": LOG_MAX_BYTES,
             "backupCount": LOG_BACKUP_COUNT,
             "encoding": "utf-8",
@@ -129,7 +131,7 @@ class sc_logger_class:
         self._setup_done = True
 
         # 一次套用完整配置（audit／error／uvicorn 全部 logger——單一擁有者）
-        RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+        LOG_DIR.mkdir(parents=True, exist_ok=True)
         logging.config.dictConfig(LOG_CONFIG)
 
         audit_logger = self._get_logger("runtime.audit")

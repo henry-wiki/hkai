@@ -75,9 +75,39 @@ class _message_poll {
         }
 
         const project_slug = this.get_project_slug_from_url();
+
+        const stream_config = registry().sc_stream().get_config();
+
+        const stream_base_url = stream_config.base_url || "";
+
+        // 判定：未啟用串流 → 關掉殘留連線（純 poll）
+        if (stream_config.enabled !== true) {
+            message_stream_instance.stop();
+            this.stream_instance = null;
+
+            return false;
+        }
+
+        // 判定：冇 base_url → 關掉殘留連線（純 poll）
+        if (stream_base_url === "") {
+            message_stream_instance.stop();
+            this.stream_instance = null;
+
+            return false;
+        }
+
+        // SSE URL 由本域砌（message_stream 只收現成 URL）
+        const stream_url = stream_base_url
+            + "/stream?project_slug=" + encodeURIComponent(project_slug)
+            + "&message_id=" + encodeURIComponent(working_message_id)
+            + "&response_index=0";
+
         const thisObject = this;
 
-        const stream_started = message_stream_instance.start(project_slug, working_message_id, function () {
+        // 邊啲 SSE 事件當「內容有變」→ 即刻多跑一輪 poll（聊天域知識——留喺本域）
+        const change_event_names = ["delta", "status", "reset"];
+
+        const stream_started = message_stream_instance.start(stream_url, change_event_names, function () {
             thisObject.poll_soon();
         });
 

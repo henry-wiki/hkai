@@ -37,7 +37,6 @@ class hkai_core_Class
     private $daemon_heartbeat_path  = null;
     private $process_list_path    = null;
     private $process_status_dir     = null;
-    private $server_status_path     = null;
     private $settings_file           = null;
     
     // 外部環境依賴（機器層——env 檔路徑由入口 sc_get_config(app.env_file) 注入；私隱值讀自 .env）
@@ -141,7 +140,6 @@ class hkai_core_Class
         $this->storage_dir_bridge = $this->storage_dir . "/" . ($folders["bridge"] ?? "bridge");
 
         // 啟動結果檔（bridge 開機自寫、PHP 讀——running／failed＋原因）
-        $this->server_status_path = $this->storage_dir_bridge . "/" . ($filenames["server_status"] ?? "server_status.json");
 
         // 設定檔（sc_config/hkai/settings.json——同 hkai_config.json 同目錄；讀寫同一份）
         $this->settings_file = dirname($hkai_config_file) . "/" . ($filenames["settings"] ?? "settings.json");
@@ -364,12 +362,6 @@ class hkai_core_Class
         return $this->process_status_dir;
     }
 
-    // 啟動結果檔完整路徑（bridge 開機自寫、PHP 拉起後輪詢讀——storage_dir/bridge/server_status.json）
-    public function get_server_status_path()
-    {
-        return $this->server_status_path;
-    }
-    
     // 寫入 runtime.json（Python 讀的唯一動態檔——設定儲存用）
     // 帶 config_key／config_value：先以 array_replace 併入該 key（如 server_settings）再寫
     public function write_runtime_configs($config_key = "", $config_value = [])

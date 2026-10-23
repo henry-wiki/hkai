@@ -11,18 +11,53 @@ import time
 
 from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
 
-# 心跳狀態目錄（站台根 data/process_status——核心路徑，唔靠 runtime.json）
+# ===== 路徑（站台根 data/——核心路徑，唔靠 runtime.json） =====
+
+# 心跳狀態目錄
 PROCESS_DIR = DATA_DIR / "process_status"
 
 # 程序台帳（append-only JSONL）
 PROCESS_FILE_LIST = PROCESS_DIR / "process_list.jsonl"
 
-# 程序身份（心跳／台帳用——單一來源）
+# runtime.json（動態設定檔——固定喺站台 data/；唔再由 PHP 傳路徑）
+RUNTIME_CONFIG_FILE = DATA_DIR / "runtime.json"
+
+# BUILD 檔（站台根——發佈版本標記；release 檔名＝.build；build_file.py 讀）
+BUILD_FILE = ROOT_DIR / ".build"
+
+# ===== 程式身份（心跳／台帳用——單一來源） =====
+
 PROGRAM_NAME = "bridge"
 PROGRAM_LABEL = "bridge.main"
 
-# 閒置自殺上限（秒——核心行為，唔放 runtime.json）
-IDLE_EXIT_SEC = 120
+# 有冇母親？（bridge：冇——PHP 經 launcher 拉起，launcher 開完即死，bridge 係根）
+# 複製去 daemon 時改 True（母親＝bridge）
+NEED_MOTHER = False
+
+# ===== presence（頁面在線） =====
+
+# 在線標記（最後一次有頁面連住——presence.py 讀寫）
+PRESENCE_FILE = PROCESS_DIR / (PROGRAM_NAME + ".last_presence")
+
+# SSE ping 間隔（秒——server_presence.py 每幾秒寫一次 ping 事件）
+PRESENCE_PING_SEC = 3
+
+# 同時連線上限（滿額 → 503；前端彈警告）
+PRESENCE_MAX_CONNECTIONS = 32
+
+# ===== 心跳／生命週期 =====
+
+# 心跳間隔（秒——每輪寫狀態檔＋檢查母親／閒置）
+HEARTBEAT_INTERVAL_SEC = 1.0
+
+# 閒置自殺上限（秒——核心行為，唔放 runtime.json；＝3 個 ping 週期）
+IDLE_EXIT_SEC = PRESENCE_PING_SEC * 3
+
+# ===== agent daemon 喚醒 =====
+
+# 拉起後等待 daemon 登記的上限（秒——收窄「未登記又被叫醒」的窗口）
+DAEMON_WAKE_WAIT_SEC = 2.0
+
 
 # ==========================================
 # 統一獲取全局單例（Bridging Functions）
@@ -49,37 +84,29 @@ def strtotime(timestamp: int) -> str:
     return timer().strtotime(timestamp)
 
 
-def process_helper():
-    """取得 process_helper_class 單例。"""
-    from .utils.process_helper import process_helper_class
-    return process_helper_class.get_instance()
 def server():
     """取得 server_class 單例。"""
     from .server.server import server_class
     return server_class.get_instance()
 
 
-def load_config(config_path):
-    """載入 runtime.json 設定（失敗 exit）。"""
-    from .runtime.sc_config import load_config as _load_config
-    return _load_config(config_path)
-
-
 # 對外匯出（供 `from .context import *`）——本檔 bridging 函數
 __all__ = [
     "BASE_DIR",
     "DATA_DIR",
+    "HEARTBEAT_INTERVAL_SEC",
     "IDLE_EXIT_SEC",
+    "PRESENCE_MAX_CONNECTIONS",
+    "PRESENCE_PING_SEC",
     "PROCESS_DIR",
     "PROCESS_FILE_LIST",
     "PROGRAM_LABEL",
+    "NEED_MOTHER",
     "PROGRAM_NAME",
     "ROOT_DIR",
     "RUNTIME_DIR",
     "get_datetime",
     "get_timestamp",
-    "load_config",
-    "process_helper",
     "server",
     "strtotime",
     "timer",
