@@ -29,6 +29,20 @@ class _prompt_send_button_toggle {
             has_input = input_value.trim() !== "";
         }
 
+        // 條件①b：有圖片附件（chips 顯示中）→ 當有輸入
+        if (has_input === false) {
+            const j_attachments = jQuery(".sc_composer__attachments");
+
+            // 判定：容器存在＋未隱藏＋有 chip → 有輸入
+            if (
+                j_attachments.length
+                &&  j_attachments.is("[hidden]") === false
+                &&  j_attachments.children().length > 0
+            ) {
+                has_input = true;
+            }
+        }
+
         if (has_input === true) {
             j_btn_send.prop("hidden", false);
             j_btn_stop.prop("hidden", true);

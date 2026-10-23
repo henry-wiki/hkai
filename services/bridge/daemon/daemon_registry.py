@@ -4,7 +4,6 @@ daemon_registry.py — PID 登記＋跨平台存活檢查。
 
 職責：
 - is_daemon_alive(config, daemon_name)：供 daemon_wake 呼叫（daemon_name＝現行引擎；掃 process_status 心跳）
-- register_pid(pid, config)：供 daemon_manager 呼叫
 - _is_process_alive(pid)：跨平台 PID 檢查（私有）
 """
 
@@ -47,12 +46,6 @@ def is_daemon_alive(config: dict, daemon_name: str) -> bool:
         return True
 
     return False
-
-
-def register_pid(pid: int, config: dict) -> None:
-    """供 daemon_manager 呼叫，拉起 daemon 後登記 PID。"""
-    # TODO: 寫入 registry 檔案
-    pass
 
 
 def _is_process_alive(process_pid: int) -> bool:

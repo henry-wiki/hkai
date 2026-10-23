@@ -23,6 +23,9 @@ trait delete_msg_files
 
         // 歸檔位置：已完成（終態收尾後移入 archive）嘅記錄目錄（archive/{project_slug}/{message_id}）
         sc_ai_chats()->poll()->delete_poll_dir($archived_dir);
+
+        // 附件（DB 列＋磁盤檔——刪訊息即真刪）
+        sc_ai_chats()->attachment()->delete_by_message($message_id);
     }
 
 }

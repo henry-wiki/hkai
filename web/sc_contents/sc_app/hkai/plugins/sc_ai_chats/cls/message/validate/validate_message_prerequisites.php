@@ -16,9 +16,16 @@ trait validate_message_prerequisites
 
         $errors = [];
 
-        // 內容必填（沒打字 → 沒有問題可記錄）
+        // 附件 id（有圖片附件時——內容可以空白）
+        $attachment_ids = isset($input_data["attachment_ids"]) ? $input_data["attachment_ids"] : [];
+        $has_attachment = is_array($attachment_ids) && count($attachment_ids) > 0;
+
+        // 內容必填（沒打字＋冇附件 → 沒有問題可記錄）
         if ($content === "") {
-            $errors["content"] = ["message" => "請填寫訊息內容", "code" => "E_VALIDATION_FATAL"];
+            // 判定：有附件 → 唔當錯
+            if ($has_attachment === false) {
+                $errors["content"] = ["message" => "請填寫訊息內容", "code" => "E_VALIDATION_FATAL"];
+            }
         }
 
         // 專案必須存在（空 slug／home 段 → 查 Home 專案；查唔到＝錯）

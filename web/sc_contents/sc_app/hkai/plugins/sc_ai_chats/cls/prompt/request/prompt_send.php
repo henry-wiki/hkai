@@ -23,6 +23,12 @@ trait prompt_send
         
         $project_slug       = isset($input_data["project_slug"]) ? $input_data["project_slug"] : "";
         $chat_sid           = isset($input_data["chat_sid"]) ? $input_data["chat_sid"] : "";
+        $attachment_ids     = isset($input_data["attachment_ids"]) ? $input_data["attachment_ids"] : [];
+
+        // 判定：附件 id 唔係陣列 → 當冇附件
+        if (!is_array($attachment_ids)) {
+            $attachment_ids = [];
+        }
         
         // ===== 專案列（建立新對話需要 project_id——先取；查唔到一律 fallback Home）=====
         $existing_project_row = sc_ai_projects()->project()->get_project_row($project_slug);
@@ -41,6 +47,21 @@ trait prompt_send
         $project_slug = (string)$existing_project_row["project_slug"];
         $project_id   = (int)$existing_project_row["project_id"];
         $project_path = (string)$existing_project_row["project_path"];
+
+        // 附件列（只取本專案＋未綁定——無效 id 自動剔走）
+        $attachment_rows = sc_ai_chats()->attachment()->get_rows_by_ids($project_id, $attachment_ids);
+
+        $valid_attachment_ids = [];
+
+        // 逐個有效附件收集 id（綁定用）
+        foreach ($attachment_rows as $attachment_row_item) {
+            $valid_attachment_ids[] = (int)$attachment_row_item["attachment_id"];
+        }
+
+        // 判定：內容空白＋冇有效附件 → 冇問題可送
+        if ($content === "" && count($attachment_rows) < 1) {
+            return sc_response()->json(["ok" => false, "error" => "請填寫訊息內容或加入圖片"], 400);
+        }
 
         // ===== 發問前預檢：清 repo 幽靈（git 名單有、磁碟冇——唔清會令 aider repo-map 白行＋逐個警告）=====
         // 非致命：bridge 未行＝request 回失敗結構（300ms connect timeout）——衛生動作，唔阻發送
@@ -100,7 +121,15 @@ trait prompt_send
         if ($chat_sid === "") {
             $chat_data                     = [];
             $chat_data["chat_sid"]         = sc_generate_uuid();
-            $chat_data["chat_title"]       = sc_ai_chats()->chat()->build_chat_title($content);
+            // 標題：有文字用文字；純圖片用第一個附件原檔名
+            $chat_title_text = $content;
+
+            // 判定：冇文字＋有附件 → 用附件檔名
+            if ($chat_title_text === "" && count($attachment_rows) > 0) {
+                $chat_title_text = (string)$attachment_rows[0]["original_filename"];
+            }
+
+            $chat_data["chat_title"]       = sc_ai_chats()->chat()->build_chat_title($chat_title_text);
             $chat_data["provider_id"]      = $provider_id;
             $chat_data["model_id"]         = $model_id;
             $chat_data["reasoning_effort"] = $reasoning_effort !== null ? $reasoning_effort : "";
@@ -160,10 +189,26 @@ trait prompt_send
         $request_timeout_sec            = $aider_daemon_config["request_timeout_sec"] ?? 180;
         $conf_data["request_timeout"]   = $request_timeout_sec;
         
+        // 附件（原檔絕對路徑＋MIME——交 daemon 以 image block 傳模型；唔做文字抽取）
+        $attachment_files = [];
+
+        $storage_dir = sc_ai_chats()->storage()->get_storage_dir();
+
+        // 逐個附件砌路徑
+        foreach ($attachment_rows as $attachment_row) {
+            $attachment_file = [];
+            $attachment_file["path"]      = $storage_dir . "/" . $attachment_row["filepath"];
+            $attachment_file["mime_type"] = $attachment_row["mime_type"];
+            $attachment_files[] = $attachment_file;
+        }
+
+        $conf_data["attachments"] = $attachment_files;
+
         // 入等待列（queue 檔——append 一行：queue_uid + conf_data + user_prompt；順序＝送達順序；shift 即時出列）
         $prompt_message = [];
-        $prompt_message["conf_data"]   = $conf_data;
-        $prompt_message["user_prompt"] = $content;
+        $prompt_message["conf_data"]      = $conf_data;
+        $prompt_message["user_prompt"]    = $content;
+        $prompt_message["attachment_ids"] = $valid_attachment_ids;
         
         $queue_uid = sc_ai_chats()->queue()->append_queue_line($chat_id, $prompt_message);
         

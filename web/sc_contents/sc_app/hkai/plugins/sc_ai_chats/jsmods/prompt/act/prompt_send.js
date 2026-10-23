@@ -16,6 +16,10 @@ class _prompt_send {
         const prompt_instance = await registry().sc_ai_chats().prompt();
         const prompt_send_instance = await prompt_instance.req().prompt_send();
 
+        // 已選附件（File 陣列——交 req 上傳後才送問）
+        const prompt_attach_instance = await prompt_instance.evt().prompt_attach();
+        request_data.attachment_files = prompt_attach_instance.get_files();
+
         const thisObject = this;
 
         return prompt_send_instance.prompt_send(request_data, {
@@ -55,6 +59,11 @@ class _prompt_send {
     async prompt_send_success(ui_context, request_data, response_data) {
         const j_send_button = ui_context.j_send_button;
         const result_html   = response_data.html || {};
+
+        // 附件已送出 → 清空 chips（失敗時保留——錯誤路徑唔清）
+        const prompt_instance_attach = await registry().sc_ai_chats().prompt();
+        const prompt_attach_instance = await prompt_instance_attach.evt().prompt_attach();
+        prompt_attach_instance.clear_attachments();
 
         // 本次請求新建對話（後端事實 chat_created）→ 換 URL 入該對話（shallow——只追上畫面唔導航：唔觸發 URL 變化鏈、唔重載；URL 仍係唯一真相、重載後仍停在該對話）
         if (response_data.chat_created) {

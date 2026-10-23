@@ -83,6 +83,25 @@ CREATE TABLE IF NOT EXISTS activity (
             activity_at        DATETIME NOT NULL DEFAULT ''
             , activity_name VARCHAR(255) NOT NULL DEFAULT '', activity_content TEXT NOT NULL DEFAULT '');
 
+CREATE TABLE IF NOT EXISTS attachments (
+  attachment_id integer NULL PRIMARY KEY AUTOINCREMENT,
+  project_id integer NOT NULL DEFAULT '0',
+  chat_id integer NOT NULL DEFAULT '0',
+  message_id integer NOT NULL DEFAULT '0',
+  filepath text NOT NULL DEFAULT '',
+  filename text NOT NULL DEFAULT '',
+  original_filename text NOT NULL DEFAULT '',
+  mime_type text NOT NULL DEFAULT '',
+  file_size integer NOT NULL DEFAULT '0',
+  file_hash text NOT NULL DEFAULT '',
+  image_width integer NOT NULL DEFAULT '0',
+  image_height integer NOT NULL DEFAULT '0',
+  content text NOT NULL DEFAULT '',
+  attachment_status text NOT NULL DEFAULT 'pending',
+  attachment_created_at datetime NOT NULL DEFAULT '',
+  attachment_updated_at datetime NOT NULL DEFAULT ''
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_key ON meta (meta_key);
 
 CREATE INDEX IF NOT EXISTS idx_messages_chat_id ON messages (chat_id);
@@ -96,4 +115,10 @@ CREATE INDEX IF NOT EXISTS idx_message_response_chat ON message_response (chat_i
 CREATE INDEX IF NOT EXISTS idx_message_response_poll_file ON message_response (poll_file);
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_activity_name_scope ON activity (activity_name, project_id, chat_id) WHERE activity_name <> '';
+
+CREATE INDEX IF NOT EXISTS idx_attachments_message ON attachments (message_id);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_project ON attachments (project_id);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_hash ON attachments (file_hash);
 SQL;

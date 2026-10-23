@@ -7,7 +7,22 @@ context.py
 其他模組只需 `from .context import xxx`，無需關心底層初始化細節。
 """
 
-from . import BASE_DIR, RUNTIME_DIR
+import time
+
+from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+
+# 心跳狀態目錄（站台根 data/process_status——核心路徑，唔靠 runtime.json）
+PROCESS_DIR = DATA_DIR / "process_status"
+
+# 程序台帳（append-only JSONL）
+PROCESS_FILE_LIST = PROCESS_DIR / "process_list.jsonl"
+
+# 程序身份（心跳／台帳用——單一來源）
+PROGRAM_NAME = "bridge"
+PROGRAM_LABEL = "bridge.main"
+
+# 閒置自殺上限（秒——核心行為，唔放 runtime.json）
+IDLE_EXIT_SEC = 120
 
 # ==========================================
 # 統一獲取全局單例（Bridging Functions）
@@ -22,6 +37,11 @@ def timer():
 def get_datetime() -> str:
     """取得秒精度時間字串（Y-m-d H:M:S）。"""
     return timer().get_datetime()
+
+
+def get_timestamp() -> int:
+    """取得 epoch 秒（int——同 PHP time()）。"""
+    return int(time.time())
 
 
 def strtotime(timestamp: int) -> str:
@@ -48,11 +68,19 @@ def load_config(config_path):
 # 對外匯出（供 `from .context import *`）——本檔 bridging 函數
 __all__ = [
     "BASE_DIR",
+    "DATA_DIR",
+    "IDLE_EXIT_SEC",
+    "PROCESS_DIR",
+    "PROCESS_FILE_LIST",
+    "PROGRAM_LABEL",
+    "PROGRAM_NAME",
+    "ROOT_DIR",
     "RUNTIME_DIR",
-    "timer",
     "get_datetime",
-    "strtotime",
+    "get_timestamp",
+    "load_config",
     "process_helper",
     "server",
-    "load_config",
+    "strtotime",
+    "timer",
 ]

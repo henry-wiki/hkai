@@ -12,6 +12,7 @@ class prompt_Class
 {
     use get_prompt_draft;
     use request\prompt_send;
+    use request\upload_attachment;
     use view\render_input_stack;
     use view\render_queue_list;
     use request\prompt_fetch;

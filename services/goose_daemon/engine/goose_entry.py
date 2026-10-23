@@ -25,6 +25,7 @@ config 之下＝.goosehints（系統指示）＋custom_providers/<前綴>.json�
 """
 
 import asyncio
+import base64
 import json
 import os
 import queue
@@ -569,13 +570,46 @@ class goose_entry_class:
             msg_permission_decision.json  本側讀（使用者決定；逾時＝本側寫入 deny）
             msg_conf.json                 本側讀（permission_allow_all／permission_deny_all 旗標；PHP 寫——本輪免問）
         """
+        # 附件（msg_conf.attachments——原檔轉 base64 交 ACP image block；冇＝空）
+        prompt_images = []
+        attachment_paths = []
+
+        # 逐個附件讀檔
+        for attachment_file_item in msg_main().get_msg_conf_data().get("attachments", []):
+            attachment_path = str(attachment_file_item.get("path", ""))
+
+            # 判定：檔案唔存在 → 跳過
+            if attachment_path == "":
+                continue
+
+            try:
+                with open(attachment_path, "rb") as attachment_handle:
+                    attachment_bytes = attachment_handle.read()
+            except OSError:
+                continue
+
+            prompt_images.append({
+                "mime_type":   str(attachment_file_item.get("mime_type", "image/png")),
+                "data_base64": base64.b64encode(attachment_bytes).decode("ascii"),
+            })
+
+            attachment_paths.append(attachment_path)
+
+        # prompt 文字補附件路徑（image block 之外嘅後備——agent 可自行開檔）
+        prompt_text = content
+
+        # 判定：有附件 → 補路徑行
+        if len(attachment_paths) > 0:
+            prompt_text = prompt_text + "\n\n[附件圖片]\n" + "\n".join(attachment_paths)
+
         # 本次連線參數（dict——key 同名變數喺 acp_client 內解包）
         session_request = {
             "agent_command":   [goose_executable, "acp"],
             "agent_env":       goose_env,
             "project_path":    project_path,
             "session_title":   goose_session_name,
-            "prompt_text":     content,
+            "prompt_text":     prompt_text,
+            "prompt_images":   prompt_images,
             "session_mode":    goose_mode,
             "resume_session":  True,
             "session_history": None,

@@ -13,7 +13,11 @@
     "archive": "messages/archive",
     "history": "localdb/history",
     "process_status": "process_status",
-    "bridge": "bridge"
+    "bridge": "bridge",
+    "uploads": "uploads"
+  },
+  "attachments": {
+    "max_file_size_mb": 2
   },
   "instructions": {
     "system_prompt": {

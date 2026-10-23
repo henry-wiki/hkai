@@ -25,8 +25,8 @@ trait get_prompt_toolbar_html
         
         $output_lines = [];
         $output_lines[] = "<div class='sc_composer__prompt_toolbar'>";
-            // 附件（placeholder——coming_soon popup；功能鏈未起）
-            $output_lines[] = "<button class='sc_composer__tool_button' type='button' data-cmd='coming_soon'><i class='fa-solid fa-paperclip'></i><span>" . $label_attach . "</span></button>";
+            // 附件（開檔案選擇器——chips 交前端 prompt_attach 處理）
+            $output_lines[] = "<button class='sc_composer__tool_button' type='button' data-action='attach_files'><i class='fa-solid fa-paperclip'></i><span>" . $label_attach . "</span></button>";
             // 加入內容（placeholder——coming_soon popup；功能鏈未起）
             $output_lines[] = "<button class='sc_composer__tool_button' type='button' data-cmd='coming_soon'><i class='fa-solid fa-folder'></i><span>" . $label_add_context . "</span></button>";
             // 最頂（捲到頂——message 域 scroll_to_top）

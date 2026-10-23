@@ -38,6 +38,7 @@ from acp.schema import (
     AgentThoughtChunk,
     AllowedOutcome,
     ClientCapabilities,
+    ImageContentBlock,
     Implementation,
     RequestPermissionResponse,
     TextContentBlock,
@@ -119,6 +120,7 @@ class acp_client_class:
         project_path    = session_request["project_path"]
         session_title   = session_request["session_title"]
         prompt_text     = session_request["prompt_text"]
+        prompt_images   = session_request.get("prompt_images", [])
         session_mode    = session_request["session_mode"]
         resume_session  = session_request["resume_session"]
         session_history = session_request["session_history"]
@@ -185,9 +187,20 @@ class acp_client_class:
                 on_stdio_line("[acp] load replay separated: " + str(dropped_update_count) + " updates")
 
             # 查詢（阻塞至本輪結束——逐事件由回呼處理）
+            # 提示內容塊（文字＋圖片——圖片以 base64 原樣交模型）
+            prompt_blocks = [TextContentBlock(type="text", text=prompt_text)]
+
+            # 逐張圖片加 image block
+            for prompt_image_item in prompt_images:
+                prompt_blocks.append(ImageContentBlock(
+                    type="image",
+                    mimeType=prompt_image_item["mime_type"],
+                    data=prompt_image_item["data_base64"],
+                ))
+
             prompt_response = await connection.prompt(
                 session_id=session_id,
-                prompt=[TextContentBlock(type="text", text=prompt_text)],
+                prompt=prompt_blocks,
             )
             on_prompt_finished(prompt_response)
 

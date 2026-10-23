@@ -227,6 +227,60 @@
 .sc_composer__attachments[hidden] {
     display: none;
 }
+
+/* 附件 chip（檔名／大小／移除） */
+.sc_composer__attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 3px 6px 3px 8px;
+    border: 1px solid rgba(137,159,227,.28);
+    border-radius: 8px;
+    background: rgba(42,56,82,.55);
+    color: #c8d5e9;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.sc_composer__attachment_name {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sc_composer__attachment_size {
+    color: #8fa3c0;
+    font-size: 11px;
+}
+.sc_composer__attachment_remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #8fa3c0;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+}
+.sc_composer__attachment_remove:hover {
+    background: rgba(255,138,138,.16);
+    color: #ff8a8a;
+}
+.sc_composer__attachment_thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+/* 拖放高亮（檔案拖入輸入盒） */
+.sc_composer__editor--drag_over {
+    box-shadow: 0 0 0 2px rgba(115,144,255,.55), 0 10px 30px rgba(0,0,0,.19);
+}
 /* 文字輸入主體 */
 .sc_composer__field {
     grid-area: field;

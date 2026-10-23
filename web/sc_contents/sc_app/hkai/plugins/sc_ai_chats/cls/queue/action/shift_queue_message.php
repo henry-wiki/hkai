@@ -58,6 +58,14 @@ trait shift_queue_message
         }
         
         $message_id = (int)$message_row["message_id"];
+
+        // 附件綁定（queue 行帶 id——訊息落地後補 message_id／chat_id）
+        $queue_attachment_ids = isset($queue_line["attachment_ids"]) ? $queue_line["attachment_ids"] : [];
+
+        // 判定：有附件 → 綁定
+        if (count($queue_attachment_ids) > 0) {
+            sc_ai_chats()->attachment()->bind_to_message($project_id, $queue_attachment_ids, $chat_id, $message_id);
+        }
         
         // 建檔（queue 行 → conf／狀態／log／prompt——conf 最後寫＝掃描開關）
         sc_ai_chats()->queue()->materialize_queue_message($chat_id, $queue_line, $message_id);

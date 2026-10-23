@@ -7,9 +7,8 @@ server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
 - start()：啟動 uvicorn（阻塞；bind 預檢＋啟動結果回報）
 - _lifespan(app)：FastAPI lifespan context（就緒即寫 running）
 - _register_routes(app)：掛載所有 router
-- _prepare_logging()：uvicorn logger 導向 audit.log
 - _heartbeat_loop()：背景心跳任務（每秒寫一次統一心跳 process_status/*.json）
-- _check_port_bindable()：開機前 bind 預檢（失敗即帶原因寫 failed 退出）
+- sc_http.port_available()：開機前 bind 預檢（失敗即帶原因寫 failed 退出）
 - _write_server_status()：寫啟動結果檔（storage_dir/bridge/server_status.json——PHP 讀）
 
 使用方式：
@@ -20,20 +19,18 @@ server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
 
 import asyncio
 import json
-import logging
 import os
-import socket
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import lifecycle_guard
 import uvicorn
 from fastapi import FastAPI
 
-from ..runtime import process_list
-from ..runtime import process_status
-import lifecycle_guard
-from ..runtime import sc_logger
+from .. import context
+from ..runtime import activity, heartbeat, process_list, sc_logger
+from ..utils import sc_http
 
 
 class server_class:
@@ -59,7 +56,6 @@ class server_class:
             return
         self._initialized = True
         self.config = None
-        self._last_activity_at = time.monotonic()
 
     def initialize(self, config: dict) -> None:
         """注入設定（由 main.py 呼叫）。"""
@@ -73,33 +69,24 @@ class server_class:
 
         server_settings = self.config["server_settings"]
 
-        self._prepare_logging()
         sc_logger.log(f"server starting (host={server_settings['host']} port={server_settings['port']})")
 
         # 台帳（append-only JSONL）：server 自身啟動——本程序即 uvicorn 伺服器（非子程序）
         process_list.append_spawn(
-            self.config,
-            name="bridge",
-            program="bridge.main",
             pid=os.getpid(),
             ppid=os.getppid(),
         )
 
-        # 程序狀態（自我心跳）：初始化 ＋ 登記自己（目錄＝storage_dir ＋ folders.process_status）
-        process_status_dir = str(Path(self.config["storage_dir"]) / self.config.get("folders", {}).get("process_status", "process_status"))
-        process_status.initialize(process_status_dir)
-        process_status.register("bridge", os.getpid(), "bridge.main")
-
-        # bind 預檢（bind 一次即放——另一程序霸住嘅話唔等 uvicorn sys.exit：帶原因寫 failed、直接退出）
-        bind_error_reason = self._check_port_bindable(
+        # bind 預檢（試 bind 一次即放——唔等 uvicorn sys.exit；失敗即寫 failed 退出）
+        port_check = sc_http.port_available(
             server_settings["host"],
             server_settings["port"],
         )
 
-        # 判定：port 唔 bind 得 → 寫失敗結果檔、退出（PHP 拉起端讀檔即知失敗＋原因）
-        if bind_error_reason != "":
-            sc_logger.log(f"server start failed: {bind_error_reason}")
-            self._write_server_status("failed", bind_error_reason)
+        # 判定：port 唔可用 → 寫失敗結果檔、退出（PHP 拉起端讀檔即知失敗＋原因）
+        if port_check.is_available is False:
+            sc_logger.log(f"server start failed: {port_check.message}")
+            self._write_server_status("failed", port_check.message)
             return
 
         app = FastAPI(lifespan=self._lifespan)
@@ -108,7 +95,7 @@ class server_class:
         # 活動追蹤（每個 HTTP 請求＝仲有人用；閒置過久＋無串流 → 自我退出）
         @app.middleware("http")
         async def track_activity(request, call_next):
-            self._last_activity_at = time.monotonic()
+            activity.touch()
             return await call_next(request)
 
         self._register_routes(app)
@@ -131,14 +118,27 @@ class server_class:
         """啟動／關閉掛載點（背景心跳任務＋就緒後寫啟動結果）。"""
         heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
+        # 心跳：lifespan 就緒（伺服器真係起到）才開始——起唔到就冇心跳
+        from . import server_stream
+
+        heartbeat.start(
+            interval_sec    =1.0,
+            idle_exit_sec   =context.IDLE_EXIT_SEC,
+            is_busy         =lambda: server_stream.get_active_stream_count() > 0,
+        )
+
         # 啟動成功（bind 已過、lifespan 就緒）→ 寫 running（PHP 拉起後嘅成功判準）
         self._write_server_status("running")
 
         yield
+
+        # 正常關閉：收心跳執行緒＋清活動檔（唔留殘檔）
+        heartbeat.stop()
+        activity.clear()
         heartbeat_task.cancel()
 
     async def _heartbeat_loop(self) -> None:
-        """背景心跳任務（每秒寫一次程序狀態——統一心跳 process_status/*.json）。"""
+        """背景監控任務（runtime 檔被刪／BUILD 變更 → 自我退出；心跳由 heartbeat 執行緒負責）。"""
         runtime_config_path = str((self.config or {}).get("runtime_config_path", ""))
         build_watch = lifecycle_guard.build_watch_class(lifecycle_guard.find_site_root(runtime_config_path))
 
@@ -146,51 +146,19 @@ class server_class:
             # 判定：runtime.json 已被刪（建置／清理）→ 自我退出，不留孤兒心跳檔
             if runtime_config_path != "" and Path(runtime_config_path).is_file() is False:
                 sc_logger.log("runtime config removed, bridge exiting")
-                process_status.unregister("bridge", os.getpid())
-                os._exit(0)
-
-            # 判定：閒置過久＋冇開住嘅 SSE 串流 → 記錄後自我退出（關 UI 後自動收工）
-            idle_exit_sec = int((self.config or {}).get("bridge_idle_exit_sec", 120))
-            from . import server_stream
-            idle_sec = time.monotonic() - self._last_activity_at
-            if idle_sec > idle_exit_sec and server_stream.get_active_stream_count() == 0:
-                sc_logger.log("idle " + str(int(idle_sec)) + "s with no active stream, bridge exiting")
-                process_status.unregister("bridge", os.getpid())
+                heartbeat.stop()
+                activity.clear()
                 os._exit(0)
 
             # 判定：BUILD 已變（站台已重新發佈）→ 記錄後自我退出，等新版本再拉起
             build_watch_result = build_watch.check()
             if build_watch_result["changed"] is True:
                 sc_logger.log("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"] + ", bridge exiting")
-                process_status.unregister("bridge", os.getpid())
+                heartbeat.stop()
+                activity.clear()
                 os._exit(0)
 
-            # 程序狀態（自我心跳——每輪寫一次：本程序存在＝在跑）
-            process_status.beat_all()
-
             await asyncio.sleep(1)
-
-    def _check_port_bindable(self, host: str, port) -> str:
-        """開機前 bind 預檢（bind 到即放；成功回 ""，失敗回原因字串）。"""
-        # 解析目標位址（IPv4／IPv6 通吃——同 uvicorn 用同一套 address 語意）
-        try:
-            address_info = socket.getaddrinfo(host, int(port), type=socket.SOCK_STREAM)[0]
-        except socket.gaierror as resolve_error:
-            return self._format_start_error(resolve_error)
-
-        address_family = address_info[0]
-        address_sockaddr = address_info[4]
-
-        probe_socket = socket.socket(address_family, socket.SOCK_STREAM)
-
-        try:
-            probe_socket.bind(address_sockaddr)
-        except OSError as bind_error:
-            return self._format_start_error(bind_error)
-        finally:
-            probe_socket.close()
-
-        return ""
 
     def _write_server_status(self, status: str, reason: str = "") -> None:
         """寫啟動結果檔（storage_dir/bridge/server_status.json——PHP 拉起後輪詢讀取）。"""
@@ -234,26 +202,14 @@ class server_class:
 
     def _register_routes(self, app: FastAPI) -> None:
         """掛載所有 router。"""
-        from .server_health import build_router as build_health_router
         from .server_daemon import router as daemon_router
         from .server_diagnostics import router as diagnostics_router
         from .server_process import router as process_router
         from .server_projects import router as projects_router
         from .server_stream import build_router as build_stream_router
 
-        app.include_router(build_health_router())
         app.include_router(daemon_router)
         app.include_router(diagnostics_router)
         app.include_router(process_router)
         app.include_router(projects_router)
         app.include_router(build_stream_router())
-
-    def _prepare_logging(self) -> None:
-        """將 uvicorn logger 導向 audit.log。"""
-        audit_logger = logging.getLogger("runtime.audit")
-
-        for uvicorn_logger_name in ("uvicorn", "uvicorn.error"):
-            uvicorn_logger = logging.getLogger(uvicorn_logger_name)
-            uvicorn_logger.setLevel(logging.INFO)
-            uvicorn_logger.handlers = list(audit_logger.handlers)
-            uvicorn_logger.propagate = False

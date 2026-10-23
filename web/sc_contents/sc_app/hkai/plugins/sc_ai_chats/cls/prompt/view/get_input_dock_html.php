@@ -68,6 +68,8 @@ trait get_input_dock_html
         $output_lines = [];
         // 槽1：附件暫存區（hidden by default）
         $output_lines[] = "<div class='sc_composer__attachments' hidden></div>";
+        // 隱藏檔案選擇器（附件掣觸發——prompt_attach 處理）
+        $output_lines[] = "<input class='sc_composer__file_input' type='file' multiple hidden>";
         // 槽2：文字輸入主體
         $output_lines[] = "<div class='sc_composer__field'>";
             $output_lines[] = "<textarea id='sc_input' rows='1' placeholder='{$input_placeholder}' aria-label='Input message'>{$draft_text_html}</textarea>";

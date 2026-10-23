@@ -83,3 +83,36 @@ def update_json(path: Path | str, data: dict, encoding: str = "utf-8") -> bool:
         return True
     except Exception:
         return False
+
+
+def write_json_atomic(path: Path | str, data: dict, encoding: str = "utf-8") -> bool:
+    """全量寫入 JSON：path.tmp → os.replace 原子替換。
+
+    失敗 → 刪 .tmp ＋ 記 error log；回傳 成功 True／失敗 False。
+    """
+    target_path = Path(path)
+    tmp_path = Path(str(target_path) + ".tmp")
+
+    try:
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        content = json.dumps(data, indent=2, ensure_ascii=False)
+        tmp_path.write_text(content, encoding=encoding, newline="\n")
+        os.replace(tmp_path, target_path)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        # 判定：.tmp 仲在 → 刪除（避免留殘檔）
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except OSError:
+            pass
+
+        # 記 error log（logger 問題唔可以蓋過原本錯誤）
+        try:
+            from ..runtime import sc_logger
+
+            sc_logger.log("write_json_atomic failed: " + str(target_path) + " (" + str(exc) + ")")
+        except Exception:
+            pass
+
+        return False

@@ -65,7 +65,10 @@ trait get_queue_lines
             $queue_line["queue_uid"] = $queue_uid;
             $queue_line["content"]   = $user_prompt;
             $queue_line["conf_data"] = $line_conf_data;
-            
+
+            // 附件 id 清單（shift 綁定 message_id 用）
+            $queue_line["attachment_ids"] = isset($line_data["attachment_ids"]) ? $line_data["attachment_ids"] : [];
+
             $queue_lines[] = $queue_line;
         }
         

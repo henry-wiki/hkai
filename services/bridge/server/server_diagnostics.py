@@ -11,8 +11,8 @@ server_diagnostics.py — diagnostics 端點。
 - get_long_paths()：POST /diagnostics/files/get_long_paths（PHP 呼叫——檔案路徑長度掃描（帶 project_path））
 """
 
-from fastapi import APIRouter, Request
 from diagnostics.main import diagnostics_class
+from fastapi import APIRouter, Request
 
 router = APIRouter()
 

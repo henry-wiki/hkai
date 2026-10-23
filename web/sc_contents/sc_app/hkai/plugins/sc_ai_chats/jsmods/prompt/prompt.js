@@ -72,6 +72,7 @@ class _prompt_evt_bridge {
     // 綁定召集（開域一次——逐條拎 instance 再 init）
     async init() {
         (await this.daemon_engine_switch()).init();
+        (await this.prompt_attach()).init();
         (await this.prompt_draft_save()).init();
         (await this.prompt_enter_send()).init();
         (await this.prompt_gen_random()).init();
@@ -80,6 +81,7 @@ class _prompt_evt_bridge {
         (await this.prompt_stop()).init();
     }
     async daemon_engine_switch() { return (await import("./evt/daemon_engine_switch.js")).daemon_engine_switch(); }
+    async prompt_attach()      { return (await import("./evt/prompt_attach.js")).prompt_attach(); }
     async prompt_draft_save() { return (await import("./evt/prompt_draft_save.js")).prompt_draft_save(); }
     async prompt_enter_send() { return (await import("./evt/prompt_enter_send.js")).prompt_enter_send(); }
     async prompt_gen_random() { return (await import("./evt/prompt_gen_random.js")).prompt_gen_random(); }
@@ -111,6 +113,7 @@ class _prompt_req_bridge {
     async prompt_fetch() { return (await import("./req/prompt_fetch.js")).prompt_fetch(); }
     async prompt_send()  { return (await import("./req/prompt_send.js")).prompt_send(); }
     async prompt_stop()  { return (await import("./req/prompt_stop.js")).prompt_stop(); }
+    async upload_attachment() { return (await import("./req/upload_attachment.js")).upload_attachment(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）

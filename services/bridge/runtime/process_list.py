@@ -5,9 +5,8 @@ process_list.py
 程序程序清單（append-only JSONL）——每一個被拉起的程序（bridge／aider_daemon／worker／aider）各 append 一行。
 
 檔案：storage_dir/process_status/process_list.jsonl
-      檔名出自靜態 SSOT sc_config/hkai/hkai_config.json 的 filenames.process_list；
-      本模組由 runtime.json（storage_dir ＋ filenames）推導完整路徑——與 aider_daemon 的同名模組同格式
-      （兩套件各自持有自己的 runtime 基礎設施，同 runtime/sc_logger.py 的既有慣例）。
+      路徑＝context.PROCESS_FILE_LIST（站台根 data/process_status/process_list.jsonl——核心路徑，唔靠 runtime.json）；
+      與 aider_daemon 的同名模組同格式（兩套件各自持有自己的 runtime 基礎設施）。
 
 一行欄位：
     ts           寫入時間（Y-m-d H:M:S）
@@ -27,40 +26,29 @@ import os
 from datetime import datetime
 from pathlib import Path
 
+from ..context import PROCESS_FILE_LIST, PROGRAM_LABEL, PROGRAM_NAME
+
 # 時間格式（與 daemon 的 main_started_at_fmt 一致——同一套呈現）
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
-# 檔名缺漏時的退守值（同 PHP 端 $filenames["process_list"] ?? 的手法）
-DEFAULT_LIST_FILE = "process_status/process_list.jsonl"
+def get_list_path() -> Path:
+    """取得程序清單檔案路徑（固定：context.PROCESS_FILE_LIST）。"""
+    return PROCESS_FILE_LIST
 
 
-def get_list_path(config: dict) -> "Path | None":
-    """取得程序清單路徑（config = runtime.json：storage_dir ＋ filenames.process_list）。"""
-    storage_dir  = config.get("storage_dir", "")
-    filenames    = config.get("filenames", {})
-    list_file  = filenames.get("process_list", DEFAULT_LIST_FILE)
-
-    if not storage_dir or not list_file:
-        return None
-
-    return Path(storage_dir) / list_file
-
-
-def append_event(config: dict, event: str, name: str, program: str, pid: int, ppid: int, chat_id: str = "", message_id: str = "") -> None:
+def append_event(event: str, pid: int, ppid: int, chat_id: str = "", message_id: str = "") -> None:
     """append 一行程序清單（永不改寫、永不刪行；失敗只記 log）。"""
     from . import sc_logger
 
     try:
-        list_path = get_list_path(config)
-        if list_path is None:
-            return
+        list_path = get_list_path()
 
         record = {}
         record["ts"]         = datetime.now().strftime(TIME_FORMAT)
         record["event"]      = event
-        record["name"]       = name
+        record["name"]       = PROGRAM_NAME
         record["pid"]        = int(pid)
         record["ppid"]       = int(ppid)
-        record["program"]    = program
+        record["program"]    = PROGRAM_LABEL
         record["chat_id"]    = "" if chat_id is None else str(chat_id)
         record["message_id"] = "" if message_id is None else str(message_id)
 
@@ -69,17 +57,15 @@ def append_event(config: dict, event: str, name: str, program: str, pid: int, pp
 
         with open(list_path, "a", encoding="utf-8", newline="\n") as list_file:
             list_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
     except Exception as exc:  # noqa: BLE001
         sc_logger.log(f"process list write failed: {exc}")
 
 
-def append_spawn(config: dict, name: str, program: str, pid: int, ppid: "int | None" = None, chat_id: str = "", message_id: str = "") -> None:
+def append_spawn(pid: int, ppid: "int | None" = None, chat_id: str = "", message_id: str = "") -> None:
     """append 一筆 spawn（ppid 預設＝本程序——呼叫者就是父程序）。"""
     append_event(
-        config,
         event="spawn",
-        name=name,
-        program=program,
         pid=pid,
         ppid=os.getpid() if ppid is None else ppid,
         chat_id=chat_id,

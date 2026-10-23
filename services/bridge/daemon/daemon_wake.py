@@ -18,8 +18,8 @@ import sys
 import time
 from pathlib import Path
 
-from .daemon_registry import is_daemon_alive
 from ..runtime.sc_config import read_daemon_engine
+from .daemon_registry import is_daemon_alive
 
 # 拉起後等待 daemon 註冊的上限（秒——供回應準確；逾時仍算「已送出拉起」）
 _WAIT_REGISTER_SEC = 2.0

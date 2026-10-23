@@ -134,4 +134,14 @@ class sc_ai_chats_Class
         return permission\permission_Class::getInstance();
     }
 
+    /**
+     * 附件域（attachment_Class——上傳／抽取／綁定／刪除）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_chats\attachment\attachment_Class
+     */
+    public function attachment()
+    {
+        return attachment\attachment_Class::getInstance();
+    }
+
 }

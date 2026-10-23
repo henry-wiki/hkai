@@ -3,7 +3,7 @@
 namespace sc\app\hkai\cls\sc_python_bridge;
 
 // == sc_python_bridge_Class：python server 生命週期管理（singleton——經 bridging hkai__python_bridge() 取得） ==
-// == 職責：start_server（拉起＋等 bridge 自報就緒）／stop_server（全清進程）／check_server_alive（HTTP 存活檢查） ==
+// == 職責：start_server（拉起＋等 bridge 自報就緒）／stop_server（全清進程）／port_available（port 可用檢查） ==
 // == 啟動結果（2026-10-02 定案）：bridge 開機自己寫 server_status.json（running／failed＋原因）——PHP 拉起後輪詢讀 ==
 // == 拉起前置（順序）：完整檢查（已起即回）→ 環境檢查 → 全清掃（停用同路——worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）→ port 佔用檢查（netstat） ==
 // == server 狀態四態（前端）：stopped（未啟用）／starting（啟用中）／running（已啟用）／stopping（停止中） ==
@@ -38,8 +38,8 @@ class sc_python_bridge_Class
     }
     
     // 啟動 python server（拉起＋等 bridge 自報——回傳 ["ok" => bool, "message" => string]）
-    // 流程：①完整檢查（已起即回）②全清掃（啟動＝前 session 已關——殘骸一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）
-    //       ③port 佔用檢查（netstat listener——其他程序霸住即拒）④清舊結果檔 → 拉起 ⑤輪詢 server_status.json
+    // 流程：①完整檢查（已起即回錯誤）②全清掃（啟動＝前 session 已關——殘骸一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge＋孤兒＋死檔）
+    //       ③port 可用檢查（bind 測試）④清舊結果檔 → 拉起 ⑤輪詢 server_status.json
     public function start_server($server_host = "", $server_port = 0)
     {
         // python 執行檔／bridge 套件存在檢查已移除（10-13 用戶令）——啟動責任喺 launcher（exec 失敗即回 ok=false；python 存在性另由 runtime check 覆蓋）
@@ -70,21 +70,9 @@ class sc_python_bridge_Class
 
         $bridge_check = hkai__python_bridge_check()->check_is_python_bridge_running_full();
 
-        // 判定：完整檢查報 alive → 先驗身份（同一部機可能有另一個站嘅 bridge）
+        // 判定：bridge 已啟動（心跳新鮮＋pid 在生）→ 回錯誤（要重啟請用 restart）
         if ($bridge_check["is_alive"]) {
-            $bridge_health = $this->read_bridge_health($server_host, $server_port);
-
-            $bridge_owner_storage_dir = (string)($bridge_health["storage_dir"] ?? "");
-
-            $runtime_configs = hkai__core()->get_runtime_configs();
-            $own_storage_dir = (string)($runtime_configs["storage_dir"] ?? "");
-
-            // 判定：身份唔同（別個 HKAI 實例佔住呢個埠）→ 報錯（唔准當自己已運行）
-            if ($bridge_owner_storage_dir !== "" && $bridge_owner_storage_dir !== $own_storage_dir) {
-                return ["ok" => false, "message" => "連接埠 " . $server_port . " 已被另一個 HKAI 實例佔用（" . $bridge_owner_storage_dir . "）。請按「自動分配連接埠」改用可用埠。"];
-            }
-
-            return ["ok" => true, "message" => "server already running"];
+            return ["ok" => false, "message" => "伺服器已經啟動"];
         }
 
         // 前置大清掃（啟動＝前一個 session 已關——殘留一律殺清：worker／aider_daemon／goose_daemon／openhands_api_daemon／bridge；同停用同路）
@@ -113,12 +101,12 @@ class sc_python_bridge_Class
             $this->wait_port_release($server_port, 3);
         }
 
-        // port 佔用檢查（唔可以喺其他程序霸住嘅 port 上拉起——Windows 會照 bind 搶人個 port，必拒）
-        $listener_pid = $this->find_listener_pid($server_port);
+        // port 可用檢查（試 bind 一次即放——唔可用＝已被佔用）
+        $is_port_available = $this->port_available($server_host, $server_port);
 
-        // 判定：port 已被佔用（上面已排除我哋 bridge）→ 拒
-        if ($listener_pid > 0) {
-            return ["ok" => false, "message" => "連接埠 " . $server_port . " 已被其他程序佔用（PID " . $listener_pid . "）。請按「自動分配連接埠」改用可用埠。"];
+        // 判定：port 唔可用 → 拒
+        if ($is_port_available === false) {
+            return ["ok" => false, "message" => "連接埠 " . $server_port . " 不可用（已被佔用）。請按「自動分配連接埠」改用可用埠。"];
         }
 
         // 記錄本次來源 origin（白名單——SSE CORS；去重附加）
@@ -148,22 +136,42 @@ class sc_python_bridge_Class
             return ["ok" => false, "message" => "server command failed"];
         }
 
-        // 等待 bridge 自報（輪詢 server_status.json——每 300ms、上限 15s）
-        $server_status = $this->wait_server_status(15, $spawn_time);
+        // 等待 bridge 心跳出現（每 300ms、上限 15s——心跳＝生存證明）
+        $is_bridge_started = $this->wait_bridge_heartbeat(15, $spawn_time);
 
-        // 判定：逾時未收到任何回覆 → 失敗
-        if ($server_status === null) {
+        // 判定：逾時冇新心跳 → 失敗
+        if ($is_bridge_started === false) {
             return ["ok" => false, "message" => "啟動失敗：未收到 server 就緒回覆。"];
         }
 
-        $status_value = (string)($server_status["status"] ?? "");
-
-        // 判定：bridge 報 failed → 失敗（原樣帶上失敗原因）
-        if ($status_value === "failed") {
-            return ["ok" => false, "message" => "啟動失敗：" . (string)($server_status["reason"] ?? "unknown")];
-        }
-
         return ["ok" => true, "message" => "server started"];
+    }
+
+    // 等待新 bridge 心跳（process_status/bridge.*.json——started_at 唔早於拉起時間＝啟動成功；每 300ms，逾時回 false）
+    private function wait_bridge_heartbeat($server_wait_timeout_sec, $not_before_time)
+    {
+        $wait_start_at = time();
+
+        while (true) {
+            $heartbeat_record = hkai__python_bridge_process()->read_bridge_heartbeat();
+
+            // 判定：有最新心跳 → 核對係唔係本次拉起嘅程序
+            if (is_array($heartbeat_record)) {
+                $heartbeat_started_at = (int)($heartbeat_record["started_at"] ?? 0);
+
+                // 判定：心跳開始時間唔早於拉起時間 → 新程序已起
+                if ($heartbeat_started_at >= $not_before_time) {
+                    return true;
+                }
+            }
+
+            // 判定：逾時 → false
+            if ((time() - $wait_start_at) >= $server_wait_timeout_sec) {
+                return false;
+            }
+
+            usleep(300000);
+        }
     }
 
     // 等待 bridge 自報啟動結果（輪詢 server_status.json——每 300ms、上限 $server_wait_timeout_sec；逾時回 null）
@@ -456,66 +464,6 @@ class sc_python_bridge_Class
         return $read_result;
     }
 
-    // == 技術備註（timeout 語意——調整前先讀） ==
-    // == ・CONNECTTIMEOUT_MS＝只限 TCP 連接階段；connect 成功即刻返回（本地 <1ms），不會用滿上限 ==
-    // == ・TIMEOUT＝整個請求總時限（connect＋發送＋等回應＋收 body）——超過即中止 ==
-    // == ・本機（127.0.0.1）：connect 逾時可細（150ms）；無 listener 時 OS 層約 1s 先拒——設細＝失敗時更快放棄 ==
-    // == ・遠端／高並發：兩者都要調大（WAN connect 1-3s、總時限 5-10s）——否則慢網絡／排隊會被誤判「死」 ==
-    // == ・連接成功 ≠ 有內容：有 body 先可判內容（2xx＋status ok）；body 等幾久＝TIMEOUT ==
-    // == ・設定位置：plugins/sc_ai_health/__init__.php（server_check_timeout_ms／server_check_total_timeout_sec） ==
-    
-    // server 存活檢查（server_check_method：curl＝HTTP 驗內容／tcp＝快、只驗 port；timeout_ms＝connect 逾時）
-    public function check_server_alive($server_check_method = "curl", $server_check_timeout_ms = 150, $server_check_total_timeout_sec = 2)
-    {
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $server_settings = $runtime_configs["server_settings"] ?? [];
-        
-        $server_host        = $server_settings["host"];
-        $server_port        = $server_settings["port"];
-        // health 路徑＝固定契約（兩端硬編碼同一值——唔隨設定）
-        $server_health_path = "/health";
-        
-        // 判定：tcp（只驗 port——connect 得上即生）
-        if ($server_check_method === "tcp") {
-            return $this->check_server_alive_by_tcp($server_host, $server_port, $server_check_timeout_ms);
-        }
-        
-        // curl（HTTP GET health——驗證回應內容）
-        return $this->check_server_alive_by_curl($server_host, $server_port, $server_health_path, $server_check_timeout_ms, $server_check_total_timeout_sec);
-    }
-    
-    // aider_daemon 存活檢查（特殊命令——HTTP GET /daemon_alive；由 python server 本機原生查 pid 後回報）
-    public function check_daemon_alive($server_check_timeout_ms = 150, $server_check_total_timeout_sec = 2)
-    {
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $server_settings = $runtime_configs["server_settings"] ?? [];
-        
-        $server_host      = $server_settings["host"];
-        $server_port      = $server_settings["port"];
-        $daemon_alive_url = "http://" . $server_host . ":" . $server_port . "/daemon_alive";
-        
-        $curl_handle = curl_init($daemon_alive_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, $server_check_timeout_ms);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, $server_check_total_timeout_sec);
-        $response_body = curl_exec($curl_handle);
-        curl_close($curl_handle);
-        
-        // 判定：連唔上（python server 未運行）→ 無法得知 → false
-        if ($response_body === false) {
-            return false;
-        }
-        
-        $response_data = json_decode($response_body, true);
-        
-        // 判定：回應不可解析 → false
-        if (!is_array($response_data)) {
-            return false;
-        }
-        
-        return (bool)($response_data["daemon_alive"] ?? false);
-    }
-    
     // 通用 bridge 請求（POST /path——data 為 payload；$timeout_sec＝整個請求總時限（默認 30 秒——慢操作由呼叫端加大）；PHP 只負責傳參與讀 JSON）
     public function request($path, $data = [], $timeout_sec = 30)
     {
@@ -565,94 +513,6 @@ class sc_python_bridge_Class
         }
         
         return $decoded;
-    }
-
-    // curl 檢查：HTTP GET health（connect 逾時＋總逾時；判定＝2xx ＋ json status == "ok"）
-    private function check_server_alive_by_curl($server_host, $server_port, $server_health_path, $server_check_timeout_ms, $server_check_total_timeout_sec)
-    {
-        $health_url = "http://" . $server_host . ":" . $server_port . $server_health_path;
-        
-        $curl_handle = curl_init($health_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, $server_check_timeout_ms);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, $server_check_total_timeout_sec);
-        $response_body = curl_exec($curl_handle);
-        $http_code     = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
-        curl_close($curl_handle);
-        
-        // 判定：傳輸失敗（server 未啟動／連不上）→ 未運行
-        if ($response_body === false) {
-            return false;
-        }
-        
-        // 判定：非 2xx → 未運行（有回應但唔正常）
-        if ($http_code < 200 || $http_code >= 300) {
-            return false;
-        }
-        
-        $response_data = json_decode($response_body, true);
-        
-        // 判定：回應不可解析 → 未運行
-        if (!is_array($response_data)) {
-            return false;
-        }
-        
-        // 判定：status 非 ok → 未運行
-        if (($response_data["status"] ?? "") !== "ok") {
-            return false;
-        }
-        
-        return true;
-    }
-    
-    // tcp 檢查：只驗 port（fsockopen connect 得上即生——唔讀內容）
-    private function check_server_alive_by_tcp($server_host, $server_port, $server_check_timeout_ms)
-    {
-        $connect_timeout_sec  = $server_check_timeout_ms / 1000;
-        $socket_error_number  = 0;
-        $socket_error_string  = "";
-        
-        $socket_handle = @fsockopen($server_host, $server_port, $socket_error_number, $socket_error_string, $connect_timeout_sec);
-        
-        // 判定：連唔上 → 未運行
-        if ($socket_handle === false) {
-            return false;
-        }
-        
-        fclose($socket_handle);
-        
-        return true;
-    }
-    
-    // 目前設定的 server port（runtime 動態層——未存時為靜態預設）
-    // 讀 bridge 自報身份（/health——storage_dir 用嚟判別邊個實例；讀唔到＝空陣列）
-    private function read_bridge_health($server_host, $server_port)
-    {
-        $health_data = [];
-
-        $health_url = "http://" . $server_host . ":" . $server_port . "/health";
-
-        $curl_handle = curl_init($health_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 2);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, 3);
-
-        $response_body = curl_exec($curl_handle);
-        curl_close($curl_handle);
-
-        // 判定：無回應 → 空
-        if ($response_body === false) {
-            return $health_data;
-        }
-
-        $decoded_body = json_decode($response_body, true);
-
-        // 判定：解析到陣列 → 用
-        if (is_array($decoded_body)) {
-            $health_data = $decoded_body;
-        }
-
-        return $health_data;
     }
 
     // 附加本次請求來源去 origin 白名單（storage/bridge/origin.whitelist；去重·LOCK_EX）
@@ -709,6 +569,21 @@ class sc_python_bridge_Class
     }
 
     // 揀一個可用埠（6001–6999 第一個未監聽；0＝全段被佔）
+    // port 可用檢查（試 bind 一次即放——成功＝可用；失敗＝被佔用）
+    private function port_available($server_host, $server_port)
+    {
+        $probe_socket = @stream_socket_server("tcp://" . $server_host . ":" . $server_port, $probe_errno, $probe_errstr);
+
+        // 判定：bind 失敗 → 不可用
+        if ($probe_socket === false) {
+            return false;
+        }
+
+        fclose($probe_socket);
+
+        return true;
+    }
+
     public function find_available_server_port($port_range_start = 6001, $port_range_end = 6999)
     {
         $listening_ports = $this->collect_listening_ports();

@@ -2,7 +2,7 @@
 """
 sc_logger.py
 
-    bridge 執行日誌（sc_logger_class singleton——setup()／log()）。
+    bridge 執行日誌（sc_logger_class singleton——setup()／log()；handler 由 LOG_CONFIG 一次建立）。
 
     兩個檔（全部在 bridge/runtime/）：
         error.log       異常／崩潰（sys.excepthook 完整 traceback）
@@ -20,6 +20,7 @@ sc_logger.py
 
 import atexit
 import logging
+import logging.config
 import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -34,6 +35,46 @@ LOG_MAX_BYTES = 5 * 1024 * 1024
 # 備份份數 3（不含現行檔；命名 X.log.1／.2／.3——最舊者於下次輪替被刪）
 # → 每個 log 共 4 檔、上限約 20 MiB（5 MiB × 4）；本模組 2 個 log 合計上限約 40 MiB
 LOG_BACKUP_COUNT = 3
+
+# 完整日誌配置（logging.config.dictConfig——單一擁有者：runtime.* ＋ uvicorn.*）
+# uvicorn.run(log_config=None) 唔會覆蓋；全部 logger 由呢份 config 定義
+LOG_CONFIG = {
+    "version": 1,
+    # 保留已存在 logger（唔准 dictConfig 關掉 runtime.*）
+    "disable_existing_loggers": False,
+    "formatters": {
+        "standard": {
+            "format": LOG_FORMAT,
+            "datefmt": LOG_DATEFMT,
+        },
+    },
+    "handlers": {
+        "audit_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(RUNTIME_DIR / "audit.log"),
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "encoding": "utf-8",
+            "formatter": "standard",
+        },
+        "error_file": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": str(RUNTIME_DIR / "error.log"),
+            "maxBytes": LOG_MAX_BYTES,
+            "backupCount": LOG_BACKUP_COUNT,
+            "encoding": "utf-8",
+            "formatter": "standard",
+            "level": "ERROR",
+        },
+    },
+    "loggers": {
+        "runtime.audit":   {"handlers": ["audit_file", "error_file"], "level": "INFO", "propagate": False},
+        "runtime.error":   {"handlers": ["audit_file", "error_file"], "level": "INFO", "propagate": False},
+        "uvicorn":         {"handlers": ["audit_file", "error_file"], "level": "INFO", "propagate": False},
+        "uvicorn.error":   {"handlers": ["audit_file", "error_file"], "level": "INFO", "propagate": False},
+        "uvicorn.access":  {"handlers": ["audit_file"],               "level": "INFO", "propagate": False},
+    },
+}
 
 
 class sc_logger_class:
@@ -60,27 +101,10 @@ class sc_logger_class:
         """取得 sc_logger_class 單例（整個程序共用同一實例）。"""
         return cls()
 
-    # 建立單一 RotatingFileHandler logger（5MB×3——硬碟防爆；重複呼叫不疊加 handler）
+    # 取得 logger（handler 由 LOG_CONFIG 一次建立——唔再逐個手動加）
     @staticmethod
-    def _build_logger(logger_name: str, log_file_name: str) -> logging.Logger:
-        logger = logging.getLogger(logger_name)
-        logger.setLevel(logging.INFO)
-        logger.propagate = False
-
-        # 已有 handler → 不重複疊加（setup 可安全重複呼叫）
-        if logger.handlers:
-            return logger
-
-        log_path = RUNTIME_DIR / log_file_name
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-
-        handler = RotatingFileHandler(
-            str(log_path), maxBytes=LOG_MAX_BYTES, backupCount=LOG_BACKUP_COUNT, encoding="utf-8"
-        )
-        handler.setFormatter(logging.Formatter(LOG_FORMAT, datefmt=LOG_DATEFMT))
-        logger.addHandler(handler)
-
-        return logger
+    def _get_logger(logger_name: str) -> logging.Logger:
+        return logging.getLogger(logger_name)
 
     # 全域未捕捉例外 → error.log（KeyboardInterrupt 交回預設行為）
     def _global_exception_handler(self, exc_type, exc_value, exc_traceback) -> None:
@@ -89,13 +113,13 @@ class sc_logger_class:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        self._build_logger("runtime.error", "error.log").critical(
+        self._get_logger("runtime.error").critical(
             "unhandled exception", exc_info=(exc_type, exc_value, exc_traceback)
         )
 
     # 程序退出 → audit.log（正常或非正常退出皆觸發）
     def _exit_handler(self) -> None:
-        self._build_logger("runtime.audit", "audit.log").info("server process exited")
+        self._get_logger("runtime.audit").info("server process exited")
 
     # 一次性日誌設定（main.py 最頂部呼叫——主程序載入前完成）
     def setup(self) -> None:
@@ -104,9 +128,11 @@ class sc_logger_class:
             return
         self._setup_done = True
 
-        # 兩個檔（各自 RotatingFileHandler 5MB×3——error 先開，崩潰通道優先）
-        self._build_logger("runtime.error", "error.log")
-        audit_logger = self._build_logger("runtime.audit", "audit.log")
+        # 一次套用完整配置（audit／error／uvicorn 全部 logger——單一擁有者）
+        RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+        logging.config.dictConfig(LOG_CONFIG)
+
+        audit_logger = self._get_logger("runtime.audit")
 
         # 全域攔截：未捕捉例外 → error.log；程序退出 → audit.log；print → audit.log
         sys.excepthook = self._global_exception_handler
@@ -121,7 +147,7 @@ class sc_logger_class:
 
     # 寫入 audit.log（一般記錄——append-only；任何程序皆可直接呼叫）
     def log(self, message: str) -> None:
-        self._build_logger("runtime.audit", "audit.log").info(message)
+        self._get_logger("runtime.audit").info(message)
 
 
 # sys.stdout 重定向載體（print 不漏——需 write/flush 介面，獨立小 class）

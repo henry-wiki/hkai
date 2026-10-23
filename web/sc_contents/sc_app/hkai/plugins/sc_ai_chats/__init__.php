@@ -86,6 +86,7 @@ $plugin->add_request_action("message_list_fetch", __DIR__ . "/request/message/me
 $plugin->add_request_action("prompt_fetch", __DIR__ . "/request/prompt/prompt_fetch.php");
 $plugin->add_request_action("prompt_gen_random", __DIR__ . "/request/prompt/prompt_gen_random.php");
 $plugin->add_request_action("prompt_send", __DIR__ . "/request/prompt/prompt_send.php");
+$plugin->add_request_action("upload_attachment", __DIR__ . "/request/prompt/upload_attachment.php");
 $plugin->add_request_action("message_poll", __DIR__ . "/request/message/message_poll.php");
 $plugin->add_request_action("prompt_stop", __DIR__ . "/request/prompt/prompt_stop.php");
 $plugin->add_request_action("daemon_engine_switch", __DIR__ . "/request/prompt/daemon_engine_switch.php");
