@@ -65,8 +65,8 @@ def setup() -> None:
     from ..runtime import sc_logger
 
     try:
-        # runtime.json（is_reload=True——跳過 boot 宣告／keys；messages_dir 等路徑展開用）
-        daemon().load_daemon_conf_data(Path(_runtime_path), is_reload=True)
+        # runtime.json（無副作用——messages_dir 等路徑展開用）
+        daemon().load_config()
         # msg_conf.json（本訊息語境——message_id／chat_id／project_slug）
         msg_main().load_msg_conf_data(Path(_msg_conf_path))
     except Exception as exc:  # noqa: BLE001
@@ -335,7 +335,7 @@ def _short_error_text(exc) -> str:
 
 def _abort_summarize_stream(reason) -> None:
     """摘要收尾（止損／硬錯同一條鏈）：記事件 → FSM failed → 關通道 → 終止子程序（切斷上游串流）。"""
-    from ..context import exit_with_children
+    from ..runtime import lifecycle
 
     try:
         # 判定：重複偵測觸發
@@ -354,7 +354,7 @@ def _abort_summarize_stream(reason) -> None:
     except Exception:  # noqa: BLE001, S110
         pass
 
-    exit_with_children(1)
+    lifecycle.exit("litellm hook fatal", 1)
 
 
 # ==========================================

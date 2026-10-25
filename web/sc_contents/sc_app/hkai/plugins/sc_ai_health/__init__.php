@@ -29,12 +29,6 @@ sc_ai_health()->health()->add_health_report("conn", function () {
     return hkai__python_bridge_check()->check_is_python_bridge_running();
 });
 
-// 登記 health 動作（清潔工——每輪 health 順手剔 process_list 死行；殺程序從此唔改台帳——2026-10-08 改向）
-// 協議：命中「心跳新鮮」免現查；uid tmp＋原檔 checksum 比對（防並發——多頁並存各自跑都安全）
-sc_ai_health()->health()->add_health_action("sweep_dead_process_lines", function () {
-    return hkai__python_bridge_process()->sweep_dead_process_lines();
-});
-
 // 註冊 request action（health——GET 健康狀態端點；URL /request/hkai/fetch_health/）
 $plugin->add_request_action("fetch_health", __DIR__ . "/request/health/fetch_health.php");
 

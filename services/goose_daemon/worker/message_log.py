@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-msg_log.py
+message_log.py
 
-msg_log 檔（messages/polling/{project_slug}/{message_id}/msg_log.txt）讀寫專屬（msg_log_class singleton——get_instance() 取得）。
+message_log 檔（messages/polling/{project_slug}/{message_id}/msg_log.txt）讀寫專屬（message_log_class singleton——get_instance() 取得）。
 
 外殼（與 PHP polling_log_Class 同一格式）：
     datetime（Y-m-d H:i:s 本地時區）/ source / kind / level / event / message
@@ -16,19 +16,20 @@ import json
 import threading
 from pathlib import Path
 
-from ..msg.msg_main import msg_main_class
+from ..context import message_store
+from ..msg import message_context
 from ..utils.io import get_tail_content
 from ..utils.timer import timer_class
 
 
-class msg_log_class:
+class message_log_class:
     """
-    msg_log 檔的統一寫入/讀取（singleton——整個程序只有一個實例）。
+    message_log 檔的統一寫入/讀取（singleton——整個程序只有一個實例）。
 
-    職責單一：msg_log 檔案的「路徑解析＋寫入（JSONL append）＋讀取」；不含任何處理流程。
+    職責單一：message_log 檔案的「路徑解析＋寫入（JSONL append）＋讀取」；不含任何處理流程。
     """
 
-    _instance: "msg_log_class | None" = None
+    _instance: "message_log_class | None" = None
     # 串流追溯開關（預設開啟；set_stream_log() 控制）
     _stream_log_enabled: bool = True
     # 寫入鎖（callback 由多執行緒觸發——序列化寫入，避免行交錯；可重入——poll 更新整段持鎖再入寫檔）
@@ -42,19 +43,19 @@ class msg_log_class:
         return cls._instance
 
     @classmethod
-    def get_instance(cls) -> "msg_log_class":
-        """取得 msg_log_class 單例（整個程序共用同一實例）。"""
+    def get_instance(cls) -> "message_log_class":
+        """取得 message_log_class 單例（整個程序共用同一實例）。"""
         return cls()
 
     def _log_path(self) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("log", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "log")
 
     # 事件分類：state（有轉移定義——會驅動狀態）／trace（純足跡）
     def _get_event_kind(self, event: str) -> str:
         """查 FSM 轉移表判定事件分類（延遲 import——避免與 context 循環）。"""
-        from ..msg.msg_state_machine import msg_state_machine_class
-        return "state" if msg_state_machine_class.get_instance().is_status_event(event) else "trace"
+        from ..msg.message_status import message_status_class
+        return "state" if message_status_class.get_instance().is_status_event(event) else "trace"
 
     # 核心寫入（level 由呼叫端給——統一標準 JSONL append——與 PHP polling_log_Class 同一格式；回傳該行字串）
     def append_log(self, event: str, level: str, message: str, metadata: dict | None = None, payload: dict | None = None, detail: str = "", meta: dict | None = None) -> str:
@@ -74,7 +75,7 @@ class msg_log_class:
             "message": message,
         }
 
-        # 判定：ERROR 層級 → 完整內容另寫 error_log；msg_log 只留一句短話（不帶 metadata／payload）
+        # 判定：ERROR 層級 → 完整內容另寫 error_log；message_log 只留一句短話（不帶 metadata／payload）
         if level == "ERROR":
             _error_record = {}
             _error_record["datetime"] = log_data["datetime"]
@@ -108,7 +109,7 @@ class msg_log_class:
         return self.append_log(event, "SUCCESS", message, metadata, payload, meta=meta)
 
     # 語法糖：level 固定 ERROR（detail＝完整內容——僅寫入 error_log）
-    def append_error_log(self, event: str, message: str, metadata: dict | None = None, payload: dict | None = None, detail: str = "", meta: dict | None = None) -> str:
+    def append_error_log(self, event: str, message: str, metadata: dict[str, object] | None = None, payload: dict[str, object] | None = None, detail: str = "", meta: dict[str, object] | None = None) -> str:
         return self.append_log(event, "ERROR", message, metadata, payload, detail, meta)
 
     # 語法糖：level 固定 WARN
@@ -120,9 +121,9 @@ class msg_log_class:
         self._stream_log_enabled = enabled
 
     def _stream_log_path(self) -> Path:
-        """stream_log 檔路徑（與 msg_log 同目錄）。"""
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("stream_log", message_id)
+        """stream_log 檔路徑（與 message_log 同目錄）。"""
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "stream_log")
 
     # 串流追溯寫入（每個 callback 觸發寫一行 JSONL——datetime 置於最前）
     def append_stream_log(self, record: dict) -> None:
@@ -139,23 +140,23 @@ class msg_log_class:
 
     def _error_log_path(self) -> Path:
         """error_log 檔路徑（僅 ERROR 事件——與 stream_log 同目錄）。"""
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("error_log", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "error_log")
 
     # error_log 寫入（僅 ERROR 事件——append JSONL）
-    def append_error_log_record(self, record: dict) -> None:
+    def append_error_log_record(self, record: dict[str, object]) -> None:
         """寫入一行 error_log JSONL（錯誤事件）。"""
         with self._write_lock, self._error_log_path().open("a", encoding="utf-8", newline="") as output_file:
             output_file.write(json.dumps(record, ensure_ascii=False, default=str) + "\r\n")
 
     # response thinking / answer txt 路徑（索引制——與 stream_log 同目錄）
     def _response_thinking_path(self, response_index: int) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path(f"response.{response_index}.thinking", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, f"response.{response_index}.thinking")
 
     def _response_result_path(self, response_index: int) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path(f"response.{response_index}.result", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, f"response.{response_index}.result")
 
     # response thinking 純文字 append（reasoning_content——帶 response index）
     def append_response_thinking(self, response_index: int, text: str) -> None:
@@ -181,8 +182,8 @@ class msg_log_class:
 
     # response replay 路徑（引擎 load 重播——獨立歸檔）
     def _response_replay_path(self, response_index: int) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path(f"response.{response_index}.replay", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, f"response.{response_index}.replay")
 
     # response replay 純文字 append（引擎重播內容——帶 response index）
     # 刻意唔入 poll（_update_poll_list）：重播唔屬本輪回應——前端唔會拉、唔會顯示；此檔＝後端紀錄
@@ -197,13 +198,13 @@ class msg_log_class:
 
     # summarize thinking 路徑
     def _summarize_thinking_path(self) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("summarize.0.thinking", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "summarize.0.thinking")
 
     # summarize result 路徑
     def _summarize_result_path(self) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("summarize.0.result", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "summarize.0.result")
 
     # summarize thinking 純文字 append（reasoning_content）
     def append_summarize_thinking(self, text: str) -> None:
@@ -236,8 +237,8 @@ class msg_log_class:
 
     # poll 對照表路徑
     def _get_poll_list_path(self) -> Path:
-        message_id = msg_main_class.get_instance().get_message_id()
-        return msg_main_class.get_instance().get_msg_file_path("poll_list", message_id)
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "poll_list")
 
     # 讀 poll 對照表（逐行解析；舊制行——冇 poll_file——唔收）
     def _read_poll_list(self) -> list:
@@ -346,4 +347,4 @@ class msg_log_class:
 
 
 
-# 模組級實例已移除——改由 context.py 的 msg_log() bridging 函數取得單例
+# 模組級實例已移除——改由 context.py 的 message_log() bridging 函數取得單例

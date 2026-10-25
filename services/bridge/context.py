@@ -16,14 +16,29 @@ from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
 # 心跳狀態目錄
 PROCESS_DIR = DATA_DIR / "process_status"
 
+# 本機資料庫（SQLite／goose 資料根／checkpoints——執行期資料）
+LOCALDB_DIR = DATA_DIR / "localdb"
+
 # 程序台帳（append-only JSONL）
 PROCESS_FILE_LIST = PROCESS_DIR / "process_list.jsonl"
+
+# 訊息目錄（站台根 data/messages）
+MESSAGES_DIR = DATA_DIR / "messages"
+
+# 待處理訊息（PHP 寫入 msg_conf）
+MESSAGES_POLLING_DIR = MESSAGES_DIR / "polling"
+
+# 已歸檔訊息（PHP 完成後搬入）
+MESSAGES_ARCHIVE_DIR = MESSAGES_DIR / "archive"
 
 # runtime.json（動態設定檔——固定喺站台 data/；唔再由 PHP 傳路徑）
 RUNTIME_CONFIG_FILE = DATA_DIR / "runtime.json"
 
 # BUILD 檔（站台根——發佈版本標記；release 檔名＝.build；build_file.py 讀）
 BUILD_FILE = ROOT_DIR / ".build"
+
+# 環境檔（站台根 .env——API keys）
+ENV_FILE = ROOT_DIR / ".env"
 
 # ===== 程式身份（心跳／台帳用——單一來源） =====
 
@@ -94,8 +109,13 @@ def server():
 __all__ = [
     "BASE_DIR",
     "DATA_DIR",
+    "LOCALDB_DIR",
+    "ENV_FILE",
     "HEARTBEAT_INTERVAL_SEC",
     "IDLE_EXIT_SEC",
+    "MESSAGES_ARCHIVE_DIR",
+    "MESSAGES_DIR",
+    "MESSAGES_POLLING_DIR",
     "PRESENCE_MAX_CONNECTIONS",
     "PRESENCE_PING_SEC",
     "PROCESS_DIR",

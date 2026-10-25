@@ -2,9 +2,9 @@
 """
 openhands_api_daemon 套件——引擎接駁版（全 class、單一職責、singleton 統一入口）。
 
-    main.py                    入口（薄）：load_daemon_conf_data() + daemon_manager_class.run() 一行呼叫
+    main.py                    入口（薄）：initialize() + daemon_manager_class.run() 一行呼叫
     daemon/
-        daemon_manager.py     daemon_manager_class(singleton)——生命週期調度：load_daemon_conf_data() + 主迴圈（pid 驗證/重載配置/掃描處理）
+        daemon_manager.py     daemon_manager_class(singleton)——生命週期調度：initialize()／load_config() + 主迴圈（pid 驗證/重載配置/掃描處理）
         worker.py             worker 子程序入口（冷路徑 run_worker／暖路徑 run_warm_worker）
     msg/
         msg_log.py             msg_log_class(singleton)——msg_log 檔讀寫（外殼 JSONL＋完成/錯誤標記常數）
@@ -34,3 +34,9 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # runtime 目錄（log 等運行時資料）
 RUNTIME_DIR = BASE_DIR / "runtime"
+
+# 站台根（BASE_DIR＝services/openhands_api_daemon/，向上兩層）
+ROOT_DIR = BASE_DIR.parent.parent
+
+# 站台資料目錄（站台根 data/——所有執行產物集中喺呢度）
+DATA_DIR = ROOT_DIR / "data"

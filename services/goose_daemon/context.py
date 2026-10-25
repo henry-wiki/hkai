@@ -6,7 +6,57 @@ context.py
 
 其他模組只需 `from .context import xxx`，無需關心底層初始化細節。
 """
-from . import BASE_DIR, RUNTIME_DIR
+import time
+
+from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+
+# ===== 程式身份（心跳／台帳用——單一來源） =====
+PROGRAM_NAME = "goose_daemon"
+PROGRAM_LABEL = "goose_daemon.main"
+
+# 心跳間隔（秒——heartbeat 執行緒每拍一次；主迴圈節奏另見 daemon_manager.MAIN_LOOP_INTERVAL_SEC）
+HEARTBEAT_INTERVAL_SEC = 1.0
+
+# 暖 worker 閒置自殺（秒——收唔到工單即自己退出；daemon 下一輪清登錄）
+WARM_WORKER_IDLE_EXIT_SEC = 30
+
+# 閒置自殺門檻（秒——同 bridge 同名同結構；判斷條件唔同：呢邊＝名冊冇工人）
+IDLE_EXIT_SEC = 30
+
+# 有冇母親？（daemon：有——母親＝bridge；bridge 死 → 自殺）
+NEED_MOTHER = True
+
+# 心跳狀態目錄（站台根 data/process_status）
+PROCESS_DIR = DATA_DIR / "process_status"
+
+# 本機資料庫（SQLite／goose 資料根／checkpoints——執行期資料）
+LOCALDB_DIR = DATA_DIR / "localdb"
+
+# 程序台帳（append-only JSONL——核心路徑，唔靠 runtime.json）
+PROCESS_FILE_LIST = PROCESS_DIR / "process_list.jsonl"
+
+# 活躍標記（presence——有工人即刷新；畀 presence.exit_when_idle 計閒置）
+PRESENCE_FILE = PROCESS_DIR / (PROGRAM_NAME + ".last_presence")
+
+# 訊息目錄（站台根 data/messages——PHP 寫入；daemon 讀取）
+MESSAGES_DIR = DATA_DIR / "messages"
+
+# 待處理訊息（PHP 寫入 msg_conf）
+MESSAGES_POLLING_DIR = MESSAGES_DIR / "polling"
+
+# 已歸檔訊息（PHP 完成後搬入）
+MESSAGES_ARCHIVE_DIR = MESSAGES_DIR / "archive"
+
+# BUILD 檔（站台根 .build——發佈版本標記；同 bridge 一致；build_file.py 讀）
+BUILD_FILE = ROOT_DIR / ".build"
+
+# 環境檔（站台根 .env——sc_env 讀取＋注入）
+ENV_FILE = ROOT_DIR / ".env"
+
+
+# runtime.json（動態設定檔——固定喺站台 data/；唔再由外部傳路徑）
+
+RUNTIME_CONFIG_FILE = DATA_DIR / "runtime.json"
 
 # ==========================================
 # 統一獲取全局單例（Bridging Functions）
@@ -21,114 +71,113 @@ def daemon():
     from .daemon.daemon_manager import daemon_manager_class  # 延遲——避免循環 import
     return daemon_manager_class.get_instance()
 
+def get_timestamp() -> int:
+    """取得 epoch 秒（int——同 PHP time()）。"""
+    return int(time.time())
+
+
+def strtotime(timestamp: int) -> str:
+    """epoch 秒 → Y-m-d H:i:s 格式（PHP date() 同格式）。"""
+    return timer().strtotime(timestamp)
+
+
 def get_datetime() -> str:
     """取得秒精度時間字串（Y-m-d H:M:S）。"""
     return timer().get_datetime()
 
-def exit_with_children(exit_code: int = 1) -> None:
-    """自殺連帶自己全部子孫（只落子樹——唔掂母程序）。
-
-    terminate → 逾時 → kill；最後 os._exit（唔行 cleanup）。
-    """
-    import os
-    import psutil
-
-    # 自己嘅全部子孫（遞歸——只向下）
-    try:
-        child_processes = psutil.Process(os.getpid()).children(recursive=True)
-    except psutil.Error:
-        child_processes = []
-
-    # 先客氣（terminate）
-    for child_process in child_processes:
-        try:
-            child_process.terminate()
-        except psutil.Error:
-            pass
-
-    # 逾時未死 → 硬殺
-    _gone_processes, alive_processes = psutil.wait_procs(child_processes, timeout=5)
-    for child_process in alive_processes:
-        try:
-            child_process.kill()
-        except psutil.Error:
-            pass
-
-    # 自己收工（立即——唔行 atexit）
-    os._exit(exit_code)
-
-def process_helper():
-    """取得 process_helper_class 單例。"""
-    from .utils.process_helper import process_helper_class  # 延遲——避免循環 import
-    return process_helper_class.get_instance()
-
-def child_memory_guard():
-    """取得 child_memory_guard_class 單例。"""
-    from .daemon.child_memory_guard import child_memory_guard_class  # 延遲——避免循環 import
-    return child_memory_guard_class.get_instance()
-
-def session_sync():
-    """取得 session_sync_class 單例。"""
-    from .engine.session_sync import session_sync_class  # 延遲——避免循環 import
-    return session_sync_class.get_instance()
+def conversation_sync():
+    """取得 conversation_sync_class 單例。"""
+    # 延遲——避免循環 import
+    from .worker.engine.conversation_sync import conversation_sync_class
+    return conversation_sync_class.get_instance()
 
 def acp_client():
-    """取得 acp_client_class 單例。"""
-    from .engine.acp_client import acp_client_class  # 延遲——避免循環 import
-    return acp_client_class.get_instance()
+    """取得 acp_client 單例。"""
+    from .worker.engine.acp_client import acp_client  # 延遲——避免循環 import
+    return acp_client.get_instance()
 
-def goose_entry():
-    """取得 goose_entry_class 單例。"""
-    from .engine.goose_entry import goose_entry_class  # 延遲——避免循環 import
-    return goose_entry_class.get_instance()
+def engine_entry():
+    """取得 engine_entry_class 單例。"""
+    from .worker.engine.engine_entry import engine_entry_class  # 延遲——避免循環 import
+    return engine_entry_class.get_instance()
 
-def msg_processor():
-    """取得 msg_processor_class 單例。"""
-    from .msg.msg_processor import msg_processor_class  # 延遲——避免循環 import
-    return msg_processor_class.get_instance()
+def job_executor():
+    """取得 job_executor_class 單例。"""
+    from .worker.job_executor import job_executor_class  # 延遲——避免循環 import
+    return job_executor_class.get_instance()
 
-def msg_log():
-    """取得 msg_log_class 單例。"""
-    from .msg.msg_log import msg_log_class  # 延遲——避免循環 import
-    return msg_log_class.get_instance()
+def message_log():
+    """取得 message_log_class 單例。"""
+    from .worker.message_log import message_log_class  # 延遲——避免循環 import
+    return message_log_class.get_instance()
 
-def msg_stdout():
-    """取得 msg_stdout_class 單例。"""
-    from .msg.msg_stdout import msg_stdout_class  # 延遲——避免循環 import
-    return msg_stdout_class.get_instance()
+def job_stdout():
+    """取得 job_stdout_class 單例。"""
+    from .worker.job_stdout import job_stdout_class  # 延遲——避免循環 import
+    return job_stdout_class.get_instance()
 
-def msg_claim():
-    """取得 msg_claim_class 單例。"""
-    from .msg.msg_claim import msg_claim_class  # 延遲——避免循環 import
-    return msg_claim_class.get_instance()
+def message_claim():
+    """取得 message_claim_class 單例。"""
+    from .msg.message_claim import message_claim_class  # 延遲——避免循環 import
+    return message_claim_class.get_instance()
 
-def msg_main():
-    """取得 msg_main_class 單例。"""
-    from .msg.msg_main import msg_main_class  # 延遲——避免循環 import
-    return msg_main_class.get_instance()
+def message_store():
+    """取得 message_store_class 單例。"""
+    from .msg.message_store import message_store_class  # 延遲——避免循環 import
+    return message_store_class.get_instance()
 
-def msg_state_machine():
-    """取得 msg_state_machine_class 單例。"""
-    from .msg.msg_state_machine import msg_state_machine_class  # 延遲——避免循環 import
-    return msg_state_machine_class.get_instance()
+def chat_db():
+    """取得 chat_db_class 單例（我們 DB 唯讀）。"""
+    from .db.db_hkai import chat_db_class  # 延遲——避免循環 import
+    return chat_db_class.get_instance()
+
+
+def goose_db(project_path: str):
+    """建立 goose_db_class（每專案一個 sessions DB——按 project_path）。"""
+    from .db.db_goose import goose_db_class  # 延遲——避免循環 import
+    return goose_db_class(project_path)
+
+
+def message_status():
+    """取得 message_status_class 單例。"""
+    from .msg.message_status import message_status_class  # 延遲——避免循環 import
+    return message_status_class.get_instance()
 
 # 對外匯出（供 `from .context import *`）——本檔 bridging 函數
 __all__ = [
     "BASE_DIR",
+    "DATA_DIR",
+    "ENV_FILE",
+    "HEARTBEAT_INTERVAL_SEC",
+    "IDLE_EXIT_SEC",
+    "LOCALDB_DIR",
+    "MESSAGES_ARCHIVE_DIR",
+    "MESSAGES_DIR",
+    "MESSAGES_POLLING_DIR",
+    "NEED_MOTHER",
+    "PRESENCE_FILE",
+    "PROCESS_DIR",
+    "PROCESS_FILE_LIST",
+    "PROGRAM_LABEL",
+    "PROGRAM_NAME",
+    "ROOT_DIR",
+    "RUNTIME_CONFIG_FILE",
     "RUNTIME_DIR",
+    "WARM_WORKER_IDLE_EXIT_SEC",
     "acp_client",
-    "child_memory_guard",
+    "chat_db",
     "daemon",
-    "exit_with_children",
+    "goose_db",
     "get_datetime",
-    "goose_entry",
-    "msg_claim",
-    "msg_log",
-    "msg_main",
-    "msg_processor",
-    "msg_stdout",
-    "msg_state_machine",
-    "process_helper",
-    "session_sync",
+    "get_timestamp",
+    "engine_entry",
+    "conversation_sync",
+    "job_executor",
+    "job_stdout",
+    "message_claim",
+    "message_log",
+    "message_status",
+    "message_store",
+    "strtotime",
     "timer",
 ]

@@ -82,8 +82,8 @@ class aider_entry_class:
         冷路徑子程序入口（spawn target——每訊息一程序）：重初始化 → 綁通道 → 執行單次工單。
         暖模式下不走此入口（暖 worker 直接呼叫 run_job）。
         """
-        # 讀 runtime.json（is_reload=True：跳過 PID + keys，只讀 config + cwd）
-        daemon().load_daemon_conf_data(Path(daemon_conf_path), is_reload=True)
+        # 讀 runtime.json（只讀 config + cwd；無副作用）
+        daemon().load_config()
 
         # 綁定狀態事件通道（FSM 為唯一狀態管理者；子程序自行套用並回報）
         msg_state_machine().attach_channel(state_channel)
@@ -100,12 +100,7 @@ class aider_entry_class:
         msg_main().load_msg_conf_data(Path(msg_conf_path))
 
         # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
-        daemon_conf_data = daemon().get_daemon_conf_data()
-        oauth_keys_path  = str(daemon_conf_data.get("daemon_oauth_keys_path", "") or "")
-
-        # 判定：有路徑 → 重讀
-        if oauth_keys_path != "":
-            api_key_loader_class.get_instance().reload(Path(oauth_keys_path))
+        api_key_loader_class.get_instance().reload(ENV_FILE)
 
         # 取得語境（從載入後的 msg_main 狀態）
         chat_id    = msg_main().get_chat_id()
@@ -177,7 +172,7 @@ class aider_entry_class:
             acp_model_prefix = gateway_map[provider_prefix]["litellm_provider"]
 
         agent_env["AIDER_ACP_MODEL"]    = acp_model_prefix + "/" + model_part
-        agent_env["AIDER_ACP_ENV_FILE"] = str(daemon().get_daemon_conf_data().get("daemon_oauth_keys_path", "") or "")
+        agent_env["AIDER_ACP_ENV_FILE"] = str(ENV_FILE)
 
         return agent_env
 

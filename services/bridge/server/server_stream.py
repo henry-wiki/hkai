@@ -25,8 +25,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from ..context import DATA_DIR
-from ..runtime import sc_config
+from ..context import MESSAGES_ARCHIVE_DIR, MESSAGES_POLLING_DIR
 from .server_cors import origin_is_allowed, read_origin_allowlist
 
 # 終態（msg_status.txt 最後一行——出現即收尾）
@@ -78,15 +77,14 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     if PROJECT_SLUG_PATTERN.match(project_slug) is None:
         return StreamingResponse(_error_stream("invalid project_slug"), media_type="text/event-stream")
 
-    config = sc_config.get_configs()
     origin = request.headers.get("origin", "")
-    allowed_origins = read_origin_allowlist(config)
+    allowed_origins = read_origin_allowlist()
 
     # 判定：origin 唔喺允許清單 → 403（無 origin＝本機工具，照放行）
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
         return StreamingResponse(_error_stream("origin not allowed"), media_type="text/event-stream", status_code=403)
 
-    message_dirs = _resolve_message_dirs(config, project_slug, message_id)
+    message_dirs = _resolve_message_dirs(project_slug, message_id)
 
     # 判定：兩個目錄都唔存在 → 404 串流（前端收到 error 事件即停）
     if message_dirs["polling"].is_dir() is False and message_dirs["archive"].is_dir() is False:
@@ -112,12 +110,10 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     )
 
 
-def _resolve_message_dirs(config: dict, project_slug: str, message_id: int) -> dict:
-    """解析 polling／archive 兩個訊息目錄（根＝context.DATA_DIR；子目錄名由 runtime.json 帶）。"""
-    folders = config.get("folders", {})
-
-    polling_root = DATA_DIR / folders.get("messages", "messages/polling")
-    archive_root = DATA_DIR / folders.get("archive", "messages/archive")
+def _resolve_message_dirs(project_slug: str, message_id: int) -> dict:
+    """解析 polling／archive 兩個訊息目錄（固定：context.MESSAGES_*）。"""
+    polling_root = MESSAGES_POLLING_DIR
+    archive_root = MESSAGES_ARCHIVE_DIR
 
     message_dirs = {}
     message_dirs["polling"] = polling_root / project_slug / str(int(message_id))

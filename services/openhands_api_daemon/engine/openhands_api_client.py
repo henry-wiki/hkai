@@ -7,7 +7,7 @@ OpenHands agent-server（B2 原生 API）客戶端（openhands_api_client_class 
 職責單一：講 HTTP／WebSocket——容器生命週期、conversation CRUD、訊息送出、事件串流、權限回應。
 零業務判斷（唔識 chat／model／專案語義——全由 entry 傳入）。
 
-設定來源：.env（runtime external_paths.oauth_keys_file 指住嗰份）
+設定來源：.env（站台根 .env——context.ENV_FILE）
     OPENHANDS_AGENT_SERVER_URL      本機 server base（例：http://127.0.0.1:3010）
     OPENHANDS_DOCKER_EXECUTABLE     docker.exe 完整路徑
     OPENHANDS_CONTAINER_NAME        容器名（例：oh-agent-server）

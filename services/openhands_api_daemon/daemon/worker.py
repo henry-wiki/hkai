@@ -30,10 +30,13 @@ HEARTBEAT_INTERVAL_SEC = 1.0
 def run_worker(daemon_conf_path: str, msg_conf_path: str) -> None:
     """worker 入口（multiprocessing target——module 級函數，Windows spawn 可 pickle）。"""
     from ..context import daemon, msg_processor
-    from ..runtime import process_status
+    from ..runtime import process, process_status
+
+    # 啟動即記錄自己 pid ＋母親 pid＋建立時間（生命週期判斷用）
+    process.init()
 
     # 子程序重新載入 daemon 設定（spawn 後為新程序——同 openhands_api_entry.run_coder 模式）
-    daemon().load_daemon_conf_data(Path(daemon_conf_path), is_reload=True)
+    daemon().load_config()
 
     # 程序狀態（自我心跳）：登記自己 ＋ 開心跳執行緒
     # （worker 全期多在等子程序，不靠主流程打點——由執行緒每秒寫檔）
@@ -47,10 +50,13 @@ def run_worker(daemon_conf_path: str, msg_conf_path: str) -> None:
 def run_warm_worker(daemon_conf_path: str, job_queue, status_queue) -> None:
     """暖 worker 入口（常駐：預載引擎一次 → 迴圈收工單；生死全由 daemon 裁決）。"""
     from ..context import daemon, openhands_api_entry, msg_processor
-    from ..runtime import process_status
+    from ..runtime import process, process_status
+
+    # 啟動即記錄自己 pid ＋母親 pid＋建立時間（生命週期判斷用）
+    process.init()
 
     # 子程序重新載入 daemon 設定（spawn 後為新程序——同 run_worker 模式）
-    daemon().load_daemon_conf_data(Path(daemon_conf_path), is_reload=True)
+    daemon().load_config()
 
     # 程序狀態（自我心跳）：登記自己 ＋ 開心跳執行緒（全期覆寫——長駐）
     process_status.initialize(daemon().get_daemon_conf_data()["process_status_dir"])

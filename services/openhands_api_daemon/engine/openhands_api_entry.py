@@ -95,7 +95,7 @@ class openhands_api_entry_class:
 
     def run_coder(self, daemon_conf_path: str, msg_conf_path: str, state_channel) -> None:
         """冷路徑子程序入口（spawn target）：重初始化 → 綁通道 → 執行單次工單。"""
-        daemon().load_daemon_conf_data(Path(daemon_conf_path), is_reload=True)
+        daemon().load_config()
         msg_state_machine().attach_channel(state_channel)
         self.run_job(msg_conf_path)
 
@@ -106,12 +106,8 @@ class openhands_api_entry_class:
         """單次查詢：容器 → conversation → WS 串流 → 收尾。"""
         msg_main().load_msg_conf_data(Path(msg_conf_path))
 
-        daemon_conf_data = daemon().get_daemon_conf_data()
-        oauth_keys_path = str(daemon_conf_data.get("daemon_oauth_keys_path", "") or "")
-
-        # 判定：有 .env 路徑 → 金鑰即時重讀
-        if oauth_keys_path != "":
-            api_key_loader_class.get_instance().reload(Path(oauth_keys_path))
+        # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
+        api_key_loader_class.get_instance().reload(ENV_FILE)
 
         chat_id = msg_main().get_chat_id()
         message_id = msg_main().get_message_id()
@@ -750,6 +746,5 @@ class openhands_api_entry_class:
             output_file.write(raw_line + "\n")
 
     def _resolve_env_file_path(self) -> str:
-        """.env 路徑（daemon conf——缺＝空）。"""
-        daemon_conf_data = daemon().get_daemon_conf_data()
-        return str(daemon_conf_data.get("daemon_oauth_keys_path", "") or "")
+        """.env 路徑（固定：context.ENV_FILE）。"""
+        return str(ENV_FILE)

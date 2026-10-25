@@ -179,15 +179,11 @@ trait prompt_send
         $conf_data["project_id"]        = $project_id;
         $conf_data["project_slug"]      = $project_slug;
         $conf_data["chat_id"]           = $chat_id;
+        $conf_data["chat_sid"]          = $chat_sid;
         $conf_data["model_name"]        = $conf_model_name;
         $conf_data["chat_mode"]         = $conf_chat_mode;
         $conf_data["reasoning_effort"]  = $conf_reasoning_effort;
         $conf_data["context_length"]    = $conf_context_length;
-        
-        // 單請求逾時（全域 config——manifest aider_daemon.request_timeout_sec；缺 key → 180 秒兜底）
-        $aider_daemon_config             = hkai__core()->get_hkai_configs("aider_daemon");
-        $request_timeout_sec            = $aider_daemon_config["request_timeout_sec"] ?? 180;
-        $conf_data["request_timeout"]   = $request_timeout_sec;
         
         // 附件（原檔絕對路徑＋MIME——交 daemon 以 image block 傳模型；唔做文字抽取）
         $attachment_files = [];

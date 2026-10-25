@@ -2,7 +2,7 @@
 """
 acp_client.py
 
-ACP 協定客戶端（acp_client_class singleton——get_instance() 取得）。
+ACP 協定客戶端（acp_client singleton——get_instance() 取得）。
 
 職責單一：拉 aider_daemon.acp 子程序（stdio 協定——本 daemon 專用通道；命令由 session_request 帶入）
 並驅動單次查詢——拉程序 → initialize → session 開或續 → session 模式 → prompt；
@@ -68,14 +68,14 @@ CLIENT_INFO_TITLE = "HKAI"
 CLIENT_INFO_VERSION = "1.0.0"
 
 
-class acp_client_class:
+class acp_client:
     """
     ACP 客戶端（singleton——整個程序只有一個實例）。
 
     職責單一：單次 ACP 連線嘅協定驅動（見檔頭）；不含翻譯／權限政策。
     """
 
-    _instance: "acp_client_class | None" = None
+    _instance: "acp_client | None" = None
 
     def __new__(cls):
         """單例：整個程序只建立一次。"""
@@ -84,8 +84,8 @@ class acp_client_class:
         return cls._instance
 
     @classmethod
-    def get_instance(cls) -> "acp_client_class":
-        """取得 acp_client_class 單例。"""
+    def get_instance(cls) -> "acp_client":
+        """取得 acp_client 單例。"""
         return cls()
 
     def run_session(self, session_request: dict, callbacks: dict) -> None:

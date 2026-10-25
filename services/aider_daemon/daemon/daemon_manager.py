@@ -6,7 +6,7 @@ daemon_manager_class 單例——所有「動作(action)」集中於此（生命
 
 主迴圈（main.py 只負責一行呼叫，不重複寫判斷邏輯——單一事實來源）：
 
-    load_daemon_conf_data()     冷啟動（載入 daemon_conf / keys / 工作區）
+    load_config()               重新解析 runtime.json（無副作用）
     run()                       主迴圈（單一實例驗證 → 心跳自殺 → 重載配置 → 掃描處理 → 休眠）
 
 未來若要新增動作（例如：強制重啟、清快取、重載 daemon_conf……）一律加在這裡。
@@ -16,13 +16,14 @@ import json
 import multiprocessing
 import os
 import queue
-import sys
 import time
 from pathlib import Path
 
 from ..adapter.auth_setup import api_key_loader_class
 from ..context import *
 from ..runtime import process_list
+from ..runtime import lifecycle
+from ..runtime import sc_config
 from ..runtime import process_status
 import lifecycle_guard
 from ..runtime import sc_logger
@@ -40,7 +41,7 @@ class daemon_manager_class:
     3. 解法：用「心跳檔(heartbeat)」做無人使用的訊號——
        - PHP 端每次活動（前端輪詢 health / 發送訊息 Send）都會更新心跳檔的修改時間
        - daemon 每輪檢查「心跳檔最後更新距今幾秒」；超過自殺閾值
-         （daemon_conf["daemon_heartbeat_self_kill_sec"]，預設 30 秒）= 太久沒人使用 → 自己退出
+         （舊設定 daemon_heartbeat_self_kill_sec，預設 30 秒——現已移除，唔再用）
     4. 這是「按需常駐(on-demand)」設計：需要時（下次 Send / health）PHP 會重新拉起，
        所以自殺是安全的——不會造成功能消失，只是回收閒置資源。
     5. 心跳檔路徑與閾值都來自 runtime.json（PHP 單一來源控制，見 get_daemon_conf_data()）。
@@ -48,7 +49,7 @@ class daemon_manager_class:
 
     ===== 2026-09 調整（現行行為——與上述自殺機制不同）=====
     daemon 改為「長駐＋集中管理」：
-    - 自殺機制停用（_kill_self_if_stale 方法保留但 run() 不再呼叫）
+    - 心跳過期自殺機制已移除（唔再檢查舊心跳檔 mtime）
     - 由 daemon 統一調度 worker 子程序（同時最多 daemon_max_workers 個；同對話一次一條）
     - 殺／留集中由 daemon 決定並記 log（worker 結束即回收；worker 不自殺、不寫台帳）
     - process_list（append-only JSONL）：全部 spawn 一行一筆（name／pid／ppid／program／chat_id／message_id）
@@ -78,7 +79,6 @@ class daemon_manager_class:
 
         self._daemon_conf_data = {
             "daemon_heartbeat_check_interval": 1.0,
-            "daemon_heartbeat_self_kill_sec": 30,
             "daemon_idle_timeout_sec": 900,
             "daemon_max_workers": 3,
             "daemon_warm_workers": False,
@@ -89,44 +89,39 @@ class daemon_manager_class:
         # 活躍 worker（pid → worker 記錄＋Process 物件——由 daemon 主程序統一管理）
         self._active_workers: dict[int, dict] = {}
 
+        # 最後有 worker 活動嘅時間（閒置自殺計時）
+        self._last_active_at = time.time()
+
     @classmethod
     def get_instance(cls) -> "daemon_manager_class":
         """取得 daemon_manager_class 單例（整個程序共用同一實例）。"""
         return cls()
 
     def get_daemon_conf_data(self) -> dict:
-        """取得目前 daemon_conf（load_daemon_conf_data 已注入）。"""
+        """取得目前 daemon_conf（load_config 已注入）。"""
         return self._daemon_conf_data
 
     def get_daemon_conf_path(self) -> Path:
-        """取得 runtime.json 路徑（load_daemon_conf_data 已注入）。"""
+        """取得 runtime.json 路徑（load_config 已注入）。"""
         return self._daemon_conf_data_path
 
-    def load_daemon_conf_data(self, daemon_conf_path: Path, is_reload: bool = False) -> bool:
-        """
-        讀取 runtime.json（動態——argv 傳入的唯一入口）→ 依靜態 SSOT 展開全部設定
-        → merge → 更新 self._daemon_conf_data。
+    def initialize(self) -> None:
+        """載入固定 runtime.json（由 main.py 呼叫）。"""
+        self.load_config()
 
-        參數：
-            is_reload：False = 冷啟動（boot 宣告 + 載入 API keys）；
-                       True = 熱更新（跳過 PID + keys）。
+    def load_config(self) -> bool:
+        """
+        重新解析固定 runtime.json（data/runtime.json）→ 依靜態 SSOT 展開 → merge。
+
+        無副作用（唔宣告 boot、唔載 keys）——熱重載與 worker 共用。
         回傳：True = 成功更新；False = 變更無（mtime 相同——正常，非錯誤）。
-        失敗（讀不到 / JSON 壞）→ log + exit_with_children(1)。
+        失敗（讀不到 / JSON 壞）→ log + lifecycle.exit（連子程序退出）。
         """
-        self._daemon_conf_data_path = daemon_conf_path
+        self._daemon_conf_data_path = RUNTIME_CONFIG_FILE
 
-        # 讀取 runtime.json（動態——唯一入口）
-        try:
-            loaded_conf = json.loads(daemon_conf_path.read_text(encoding="utf-8"))
-            if not isinstance(loaded_conf, dict):
-                loaded_conf = {}
-        except Exception as exc:  # noqa: BLE001
-            loaded_conf = {}
-
-        # 讀取失敗 → log + exit
-        if not loaded_conf:
-            sc_logger.log("runtime spec unreadable")
-            exit_with_children(1)
+        # 讀取 runtime.json（唯一來源；sc_config 快取）
+        sc_config.init_config()
+        loaded_conf = dict(sc_config.get_configs())
 
         # 依靜態 SSOT 展開 runtime spec（動態先、靜態後）
         loaded_conf = self._apply_static_configs(loaded_conf)
@@ -138,33 +133,28 @@ class daemon_manager_class:
 
         # 更新配置
         self._daemon_conf_data = new_conf
-        self._daemon_conf_data_mtime = os.path.getmtime(daemon_conf_path)
-
-        # 冷啟動才做：boot 宣告（台帳＋心跳）＋載入 API keys
-        if not is_reload:
-            self._announce_daemon_boot()
-            try:
-                daemon_oauth_keys_path = self._daemon_conf_data["daemon_oauth_keys_path"]
-                api_key_loader_class.get_instance().load(Path(daemon_oauth_keys_path))
-            except Exception as exc:  # noqa: BLE001
-                sc_logger.log(f"cannot load oauth keys: {exc}")
-                exit_with_children(1)
+        self._daemon_conf_data_mtime = os.path.getmtime(RUNTIME_CONFIG_FILE)
 
         return True
 
-    # 依靜態 SSOT 展開 runtime spec（storage_dir ＋ 靜態名稱／設定＋ runtime 外部路徑 → 完整值）
+    def _load_api_keys(self) -> None:
+        """載入 API keys（只限冷啟動——worker 經環境變數繼承）。"""
+        try:
+            api_key_loader_class.get_instance().load(ENV_FILE)
+        except Exception as exc:  # noqa: BLE001
+            sc_logger.log(f"cannot load oauth keys: {exc}")
+            lifecycle.exit("cannot load oauth keys", 1)
+
+    # 依 runtime.json 自帶嘅 filenames／folders／引擎組展開完整路徑（storage_dir ＋ 外部路徑）
     def _apply_static_configs(self, runtime_spec: dict) -> dict:
-        static_conf = json.loads(Path(runtime_spec["static_config_path"]).read_text(encoding="utf-8"))
-        filenames      = static_conf["filenames"]
-        folders        = static_conf["folders"]
-        aider_daemon    = static_conf["aider_daemon"]
+        filenames      = runtime_spec["filenames"]
+        folders        = runtime_spec["folders"]
+        aider_daemon   = runtime_spec["aider_daemon"]
         # 外部路徑（機器層——PHP 注入 runtime.json：env 檔＋私隱執行檔）
         external_paths = runtime_spec["external_paths"]
         storage_dir    = Path(runtime_spec["storage_dir"])
 
         # 檔名（靜態 SSOT）＋ storage 基準路徑 → 完整路徑
-        runtime_spec["daemon_heartbeat_path"] = str(storage_dir / filenames["heartbeat"])
-        runtime_spec["daemon_conf_file"]      = str(storage_dir / filenames["conf"])
         # 程序台帳（append-only JSONL——每拉起一個程序 append 一行）
         runtime_spec["process_list_path"]   = str(storage_dir / filenames["process_list"])
 
@@ -183,7 +173,6 @@ class daemon_manager_class:
 
         # daemon 行為設定（靜態 SSOT——aider_daemon group）
         runtime_spec["daemon_heartbeat_check_interval"] = aider_daemon["heartbeat_check_interval"]
-        runtime_spec["daemon_heartbeat_self_kill_sec"]  = aider_daemon["heartbeat_self_kill_sec"]
         runtime_spec["daemon_idle_timeout_sec"]         = aider_daemon["idle_timeout_sec"]
         runtime_spec["daemon_max_workers"]              = aider_daemon.get("max_workers", 3)
         # summarize 輸出 token 上限（靜態 SSOT 可設——litellm_secure 讀取；缺／不正常數字 → 內建常數兜底）
@@ -209,7 +198,6 @@ class daemon_manager_class:
         runtime_spec["daemon_chat_mode_map"] = chat_mode_map
 
         # 外部路徑（靜態 SSOT）
-        runtime_spec["daemon_oauth_keys_path"] = external_paths["oauth_keys_file"]
 
         # Python 解釋器（aider_daemon.acp 子程序 spawn 用；缺＝aider_entry 退回現行解釋器）
         runtime_spec["python_executable"] = external_paths.get("python_executable", "")
@@ -221,12 +209,16 @@ class daemon_manager_class:
 
     def run(self) -> int:
         """
-        daemon 主迴圈（冷啟動已完成——load_daemon_conf_data 負責）。
+        daemon 主迴圈（冷啟動已完成——initialize 負責）。
 
         流程（觸發 → 處理 → 輸出）：
 
             迴圈：單一實例驗證 → 重載配置 → 回收 worker → 調度 msg_conf（非阻塞）→ 休眠
         """
+        # 冷啟動：boot 宣告（台帳＋心跳）＋載入 API keys
+        self._announce_daemon_boot()
+        self._load_api_keys()
+
         sc_logger.log(f"daemon started (model={self._daemon_conf_data.get('model_name', '')})")
 
         # 判定：暖池模式 → 開機預熱（背景拉引擎——不阻塞主迴圈）
@@ -239,6 +231,9 @@ class daemon_manager_class:
         # 主迴圈：單一實例驗證 → 重讀配置 → 收訊號／回收／監督 → 調度 pending → 休眠
         while True:
             try:
+                # 母親（bridge）唔在 → 自殺（NEED_MOTHER=True）
+                lifecycle.exit_when_mother_gone()
+
                 # 單一實例驗證（防多 daemon 並存——詳見 _verify_single_instance）
                 self._verify_single_instance()
 
@@ -246,14 +241,14 @@ class daemon_manager_class:
                 if self._daemon_conf_data_path.is_file() is False:
                     sc_logger.log("daemon conf removed, exit with children")
                     process_status.unregister("aider_daemon", os.getpid())
-                    exit_with_children(0)
+                    lifecycle.exit("self exit", 0)
 
                 # 判定：BUILD 已變（站台已重新發佈）→ 記錄後連子程序退出，等新版本再拉起
                 build_watch_result = self._build_watch.check()
                 if build_watch_result["changed"] is True:
                     sc_logger.log("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"] + ", exit with children")
                     process_status.unregister("aider_daemon", os.getpid())
-                    exit_with_children(0)
+                    lifecycle.exit("self exit", 0)
 
 
                 # 每輪重讀配置（PHP 動態控制——改檔即生效）
@@ -277,6 +272,9 @@ class daemon_manager_class:
                 # 程序狀態（自我心跳——每輪寫一次：本程序存在＝在跑）
                 process_status.beat_all()
 
+                # 閒置自殺（冇 worker 超過 daemon_idle_timeout_sec → 連子程序退出）
+                self._exit_when_idle()
+
             # 盲捕例外（刻意——迴圈錯誤不終止 daemon）
             except Exception as exc:  # noqa: BLE001
                 sc_logger.log(f"loop error: {exc}")
@@ -284,32 +282,22 @@ class daemon_manager_class:
             # 迴圈間隔 = 心跳檢查間隔（PHP 控制——heartbeat_check_interval）
             time.sleep(self._daemon_conf_data["daemon_heartbeat_check_interval"])
 
-    def _kill_self_if_stale(self) -> None:
-        """
-        心跳過期檢查 → 過期就自殺退出（已停用——run() 不再呼叫；保留供日後啟用）。
+    def _exit_when_idle(self) -> None:
+        """閒置（冇 worker 在跑）超過 daemon_idle_timeout_sec → 連子程序自殺。"""
+        # 判定：有 worker 在跑 → 刷新活躍時間
+        if len(self._active_workers) > 0:
+            self._last_active_at = time.time()
+            return
 
-        背景：瀏覽器關閉後 process 仍會常駐（見類別註解），
-        因此需要「超過 N 秒無人活躍就自己退出」的回收機制。
+        idle_timeout_sec = self._daemon_conf_data["daemon_idle_timeout_sec"]
+        idle_sec = time.time() - self._last_active_at
 
-        心跳定義：PHP 每次活動（health 輪詢 / Send）更新心跳檔 mtime。
-        過期 = 心跳檔最後更新距今超過 daemon_conf["daemon_heartbeat_self_kill_sec"]（30 秒）——
-        表示太久沒有使用者活動（瀏覽器關了 / 沒人發訊息）→ 自己退出。
-        下次需要時（Send / health）PHP 會重新拉起，按需常駐。
-        """
-        daemon_conf = self._daemon_conf_data
-        daemon_heartbeat_path = daemon_conf.get("daemon_heartbeat_path", "")
-        daemon_heartbeat_self_kill_sec = daemon_conf.get("daemon_heartbeat_self_kill_sec", 30)
+        # 判定：未夠閒置上限 → 繼續
+        if idle_sec < idle_timeout_sec:
+            return
 
-        # 讀心跳檔 mtime → 算出距今幾秒（檔案不存在視為已過期——PHP 從未活動過）
-        try:
-            heartbeat_age = time.time() - Path(daemon_heartbeat_path).stat().st_mtime
-        except OSError:
-            heartbeat_age = daemon_heartbeat_self_kill_sec + 1
-
-        # 超過閾值 → 記錄並退出（安全：下次 health/Send 由 PHP 重新拉起）
-        if heartbeat_age > daemon_heartbeat_self_kill_sec:
-            sc_logger.log(f"heartbeat stale ({heartbeat_age:.0f}s), self kill")
-            exit_with_children(0)
+        sc_logger.log(f"idle {idle_sec:.0f}s, exit with children")
+        lifecycle.exit("idle timeout", 0)
 
     def _verify_single_instance(self) -> None:
         """
@@ -341,7 +329,7 @@ class daemon_manager_class:
                     process_record = json.loads(process_list_line)
 
                     # 判定：非本程序記錄 → 跳過
-                    if process_record.get("name", "") != "aider_daemon":
+                    if (process_record.get("program") or process_record.get("name", "")) != "aider_daemon":
                         continue
 
                     pid_on_list = int(process_record.get("pid", 0))
@@ -356,14 +344,14 @@ class daemon_manager_class:
         # pid 與自己不同 → 另一實例（後寫者為勝）→ 自殺
         if pid_on_list != os.getpid():
             sc_logger.log("process_list last aider_daemon mismatch, another daemon instance, self kill")
-            exit_with_children(0)
+            lifecycle.exit("self exit", 0)
 
 
     def _reload_daemon_conf(self) -> None:
         """
         每輪重讀 runtime.json → 變更即生效（主迴圈每輪一行呼叫）。
 
-        機制：mtime 快速檢測 → 未變更跳過 → 變更才呼叫 load_daemon_conf_data 重載。
+        機制：mtime 快速檢測 → 未變更跳過 → 變更才呼叫 load_config 重載。
         """
         try:
             current_mtime = os.path.getmtime(self._daemon_conf_data_path)
@@ -374,8 +362,8 @@ class daemon_manager_class:
         if current_mtime == self._daemon_conf_data_mtime:
             return
 
-        # mtime 變更 → 重載（is_reload=True：跳過 PID + keys）
-        self.load_daemon_conf_data(self._daemon_conf_data_path, is_reload=True)
+        # mtime 變更 → 重載（load_config：無副作用）
+        self.load_config()
 
 
     def _process_pending_asks(self) -> None:
@@ -390,9 +378,8 @@ class daemon_manager_class:
         """
         msg_conf_paths = msg_main().get_msg_conf_files()
 
-        # 無待處理查詢 → 記錄並返回
+        # 無待處理查詢 → 直接返回（每拍都可能發生——唔寫 audit log）
         if not msg_conf_paths:
-            sc_logger.log("no pending asks")
             return
 
         # 判定：暖池模式 → 派工單制（規則同冷路徑——見 _process_pending_asks_warm）

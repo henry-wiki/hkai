@@ -6,7 +6,23 @@ context.py
 
 其他模組只需 `from .context import xxx`，無需關心底層初始化細節。
 """
-from . import BASE_DIR, RUNTIME_DIR
+from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+
+# ===== 程式身份（心跳／台帳用——單一來源） =====
+PROGRAM_NAME = "aider_daemon"
+PROGRAM_LABEL = "aider_daemon.main"
+
+# 有冇母親？（daemon：有——母親＝bridge；bridge 死 → 自殺）
+NEED_MOTHER = True
+
+# 心跳狀態目錄（站台根 data/process_status）
+PROCESS_DIR = DATA_DIR / "process_status"
+
+# runtime.json（動態設定檔——固定喺站台 data/；唔再由外部傳路徑）
+RUNTIME_CONFIG_FILE = DATA_DIR / "runtime.json"
+
+# 環境檔（站台根 .env——API keys；api_key_loader 讀）
+ENV_FILE = ROOT_DIR / ".env"
 
 # ==========================================
 # 統一獲取全局單例（Bridging Functions）
@@ -25,38 +41,6 @@ def get_datetime() -> str:
     """取得秒精度時間字串（Y-m-d H:M:S）。"""
     return timer().get_datetime()
 
-def exit_with_children(exit_code: int = 1) -> None:
-    """自殺連帶自己全部子孫（只落子樹——唔掂母程序）。
-
-    terminate → 逾時 → kill；最後 os._exit（唔行 cleanup）。
-    """
-    import os
-    import psutil
-
-    # 自己嘅全部子孫（遞歸——只向下）
-    try:
-        child_processes = psutil.Process(os.getpid()).children(recursive=True)
-    except psutil.Error:
-        child_processes = []
-
-    # 先客氣（terminate）
-    for child_process in child_processes:
-        try:
-            child_process.terminate()
-        except psutil.Error:
-            pass
-
-    # 逾時未死 → 硬殺
-    _gone_processes, alive_processes = psutil.wait_procs(child_processes, timeout=5)
-    for child_process in alive_processes:
-        try:
-            child_process.kill()
-        except psutil.Error:
-            pass
-
-    # 自己收工（立即——唔行 atexit）
-    os._exit(exit_code)
-
 def process_helper():
     """取得 process_helper_class 單例。"""
     from .utils.process_helper import process_helper_class  # 延遲——避免循環 import
@@ -68,9 +52,9 @@ def aider_entry():
     return aider_entry_class.get_instance()
 
 def acp_client():
-    """取得 acp_client_class 單例。"""
-    from .engine.acp_client import acp_client_class  # 延遲——避免循環 import
-    return acp_client_class.get_instance()
+    """取得 acp_client 單例。"""
+    from .engine.acp_client import acp_client  # 延遲——避免循環 import
+    return acp_client.get_instance()
 
 def agent_history():
     """取得 agent_history_class 單例。"""
@@ -111,12 +95,19 @@ def msg_state_machine():
 # 對外匯出（供 `from .context import *`）——本檔 bridging 函數＋外部 re-export class
 __all__ = [
     "BASE_DIR",
+    "DATA_DIR",
+    "ENV_FILE",
+    "NEED_MOTHER",
+    "PROCESS_DIR",
+    "PROGRAM_LABEL",
+    "PROGRAM_NAME",
+    "ROOT_DIR",
+    "RUNTIME_CONFIG_FILE",
     "RUNTIME_DIR",
     "acp_client",
     "agent_history",
     "aider_entry",
     "daemon",
-    "exit_with_children",
     "get_datetime",
     "msg_claim",
     "msg_log",

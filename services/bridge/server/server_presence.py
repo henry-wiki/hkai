@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse, Response, StreamingResponse
 
 from ..context import PRESENCE_MAX_CONNECTIONS, PRESENCE_PING_SEC, get_datetime
-from ..runtime import presence, sc_config
+from ..runtime import presence
 from .server_cors import origin_is_allowed, read_origin_allowlist
 
 # 現時在線頁面數（每條 SSE 連線 +1／斷線 -1）
@@ -52,9 +52,8 @@ async def _presence_stream(request: Request):
 @router.get("/presence")
 async def presence_stream(request: Request):
     """頁面在線 SSE（前端 EventSource 直連；唔經 PHP）。"""
-    config = sc_config.get_configs()
     origin = request.headers.get("origin", "")
-    allowed_origins = read_origin_allowlist(config)
+    allowed_origins = read_origin_allowlist()
 
     # 判定：origin 唔喺允許清單 → 403（無 origin＝本機工具，照放行）
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
@@ -85,9 +84,8 @@ async def presence_stream(request: Request):
 @router.options("/presence")
 def presence_options(request: Request):
     """CORS 預檢（fetch 帶 cache-control／pragma 等非簡單標頭時，瀏覽器會先問）。"""
-    config = sc_config.get_configs()
     origin = request.headers.get("origin", "")
-    allowed_origins = read_origin_allowlist(config)
+    allowed_origins = read_origin_allowlist()
 
     # 判定：origin 唔喺允許清單 → 403（無 origin＝本機工具，照放行）
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:

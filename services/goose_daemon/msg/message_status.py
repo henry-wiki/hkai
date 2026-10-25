@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-msg_state_machine.py
+message_status.py
 
 狀態機（FSM）——唯一的 msg_status 寫入者。
 
@@ -10,78 +10,34 @@ SSOT：web/sc_config/hkai/fsm_map.json → status（order／terminal／transitio
 - 只允許 transitions 定義的 (status, event) → next_status；未定義＝非法（不改 status）
 - 終態（completed／failed／cancelled）不可再轉出（late event 忽略）
 - 合法轉移才寫 msg_status（append——最新 status 在最後一行；單一詞彙——無翻譯）
-- 跨程序：FSM 為唯一狀態管理者；子程序自行 apply(event)＋report(event)（IPC 通道藏在 FSM 內，應用層不碰）
+- 單一入口：apply(event) 寫狀態；冇 IPC／回報通道（暖 worker 同程序）
 """
 
 import json
-import multiprocessing
-import queue
 from pathlib import Path
 
-from ..context import msg_main
+from ..context import message_store
 
 # fsm_map 路徑（本檔住 <工作區根>/services/goose_daemon/msg/——回升 web/sc_config/hkai）
 _FSM_MAP_PATH = Path(__file__).resolve().parents[3] / "web" / "sc_config" / "hkai" / "fsm_map.json"
 
 
-class msg_state_machine_class:
+class message_status_class:
     """狀態機（singleton——整個程序共用）。"""
 
-    _instance: "msg_state_machine_class | None" = None
+    _instance: "message_status_class | None" = None
 
     def __new__(cls):
         """單例：整個程序只建立一次（載入轉移表）。"""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._load_fsm_map()
-            cls._instance._channel = None
         return cls._instance
 
     @classmethod
-    def get_instance(cls) -> "msg_state_machine_class":
-        """取得 msg_state_machine_class 單例。"""
+    def get_instance(cls) -> "message_status_class":
+        """取得 message_status_class 單例。"""
         return cls()
-
-    def create_channel(self):
-        """建立跨程序事件通道（父程序——整個 run 一次）。"""
-        self._channel = multiprocessing.Queue()
-        return self._channel
-
-    def attach_channel(self, channel) -> None:
-        """綁定跨程序事件通道（子程序——由 spawn args 傳入）。"""
-        self._channel = channel
-
-    def get_channel(self):
-        """取得跨程序事件通道（父程序——傳給子程序用）。"""
-        return self._channel
-
-    def report(self, event_name: str) -> None:
-        """回報事件（子程序——只送通道喚醒父程序；狀態由 FSM 統一管理）。"""
-        # 判定：無通道（暖模式同程序執行）→ 只套用不報告
-        if self._channel is None:
-            return
-        self._channel.put(event_name)
-
-    def apply_and_report(self, event_name: str) -> str:
-        """子程序用：先套用事件（經 FSM 寫狀態），再回報父程序（喚醒）。"""
-        _next_status = self.apply(event_name)
-        self.report(event_name)
-        return _next_status
-
-    def wait_event(self, timeout: float) -> str:
-        """等待子程序事件（父程序——即時；逾時回空字串）。"""
-        try:
-            return self._channel.get(timeout=timeout)
-        except queue.Empty:
-            return ""
-
-    def close_channel(self) -> None:
-        """關閉通道並等待送出（子程序結束前 flush——避免 os._exit 丟失事件）。"""
-        # 判定：無通道（暖模式同程序執行）→ 無事可做
-        if self._channel is None:
-            return
-        self._channel.close()
-        self._channel.join_thread()
 
     def _load_fsm_map(self) -> None:
         """載入 fsm_map（SSOT）：terminal／transitions。"""
@@ -117,7 +73,7 @@ class msg_state_machine_class:
 
     def get_status(self) -> str:
         """目前 status（讀 msg_status 檔——檔案即 status）。"""
-        return msg_main().get_msg_status()
+        return message_store().get_msg_status()
 
     def apply(self, event_name: str) -> str:
         """套用事件：合法則轉移並寫 msg_status；回傳（可能未變的）狀態。"""
@@ -130,12 +86,12 @@ class msg_state_machine_class:
             _next_status = self._resolve_next_status(_current_status, event_name)
 
         # 判定：尚未落地（status 檔不存在）→ 先寫目前 status（建立第一行）
-        if not msg_main().get_msg_status_path().exists():
-            msg_main().set_msg_status(_current_status)
+        if not message_store().get_msg_status_path().exists():
+            message_store().set_msg_status(_current_status)
 
         # 判定：status 改變 → 寫入
         if _next_status != _current_status:
-            msg_main().set_msg_status(_next_status)
+            message_store().set_msg_status(_next_status)
 
         return _next_status
 

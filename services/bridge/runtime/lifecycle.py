@@ -14,14 +14,19 @@ lifecycle.py — 程序生死契約（bridge 專用；只依賴標準庫＋psuti
 """
 
 import os
+import threading
+import time
 
 import psutil
 
 from .. import context
-from . import presence, process
+from . import build_file, presence, process
 
 # terminate 之後等子孫自己收工嘅上限（秒——逾時即 kill）
 TERMINATE_WAIT_SEC = 3.0
+
+# 背景監看執行緒（watch_runtime 建立；同一程序只一條）
+_watch_thread = None
 
 
 def _safe_log(message: str) -> None:
@@ -64,6 +69,36 @@ def exit_when_mother_gone() -> None:
         return
 
     exit_self("mother pid " + str(process.mother_pid()) + " gone", 0)
+
+
+def watch_runtime() -> None:
+    """監看 runtime.json／BUILD（背景執行緒，1 秒一拍）——檔消失或 BUILD 變更 → 自殺。"""
+    global _watch_thread
+
+    # 判定：已有監看執行緒喺跑 → 唔重複開
+    if _watch_thread is not None and _watch_thread.is_alive():
+        return
+
+    _watch_thread = threading.Thread(target=_watch_loop, daemon=True, name="watch_runtime")
+    _watch_thread.start()
+
+
+def _watch_loop() -> None:
+    """背景監看：每拍檢查 runtime.json 存在＋BUILD 有冇變。"""
+    build_file.initialize()
+
+    while True:
+        # 判定：runtime.json 已被刪（建置／清理）→ 自我退出，不留孤兒心跳檔
+        if context.RUNTIME_CONFIG_FILE.is_file() is False:
+            exit("runtime config removed")
+
+        build_watch_result = build_file.changed()
+
+        # 判定：BUILD 已變（站台已重新發佈）→ 記錄後自我退出，等新版本再拉起
+        if build_watch_result["changed"] is True:
+            exit("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"])
+
+        time.sleep(1.0)
 
 
 def exit_children() -> None:

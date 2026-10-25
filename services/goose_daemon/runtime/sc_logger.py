@@ -5,10 +5,10 @@ sc_logger.py
     daemon 執行日誌（sc_logger_class singleton——setup()／log()）。
 
     兩個檔（全部在 goose_daemon/runtime/）：
-        error.log       異常／崩潰（sys.excepthook 完整 traceback）
-        audit.log       一般記錄（啟動足跡／log()／print 重定向——append-only，永不修改）
+        goose_daemon.error.log   異常／崩潰（sys.excepthook 完整 traceback）
+        goose_daemon.audit.log   一般記錄（啟動足跡／log()／print 重定向——append-only，永不修改）
 
-    拉起期（logger 接管前）失敗由 main.py 以 stdlib 直寫 error.log（防線）；輸出丟棄（PHP 端 NUL）。
+    拉起期（logger 接管前）失敗由 main.py 以 stdlib 直寫 goose_daemon.error.log（防線）；輸出丟棄（PHP 端 NUL）。
 
     依賴：只 import goose_daemon/__init__.py 的 RUNTIME_DIR（純路徑常數——不會失敗）。
     其他 py 檔不需 import 本模組（例外／print 由本模組全域攔截）。
@@ -24,7 +24,7 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from .. import RUNTIME_DIR
+from .. import DATA_DIR
 
 # log 格式常數
 LOG_FORMAT    = "%(asctime)s [%(levelname)s] (Line:%(lineno)d) : %(message)s"
@@ -34,6 +34,9 @@ LOG_MAX_BYTES = 5 * 1024 * 1024
 # 備份份數 3（不含現行檔；命名 X.log.1／.2／.3——最舊者於下次輪替被刪）
 # → 每個 log 共 4 檔、上限約 20 MiB（5 MiB × 4）；本模組 2 個 log 合計上限約 40 MiB
 LOG_BACKUP_COUNT = 3
+
+# 日誌目錄（站台 data/logs——程式碼目錄唔放執行產物）
+LOG_DIR = DATA_DIR / "logs"
 
 
 class sc_logger_class:
@@ -71,7 +74,7 @@ class sc_logger_class:
         if logger.handlers:
             return logger
 
-        log_path = RUNTIME_DIR / log_file_name
+        log_path = LOG_DIR / ("goose_daemon." + log_file_name)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
         handler = RotatingFileHandler(
@@ -89,13 +92,13 @@ class sc_logger_class:
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        self._build_logger("runtime.error", "error.log").critical(
+        self._build_logger("goose_daemon.error", "error.log").critical(
             "unhandled exception", exc_info=(exc_type, exc_value, exc_traceback)
         )
 
     # 程序退出 → audit.log（正常或非正常退出皆觸發）
     def _exit_handler(self) -> None:
-        self._build_logger("runtime.audit", "audit.log").info("daemon process exited")
+        self._build_logger("goose_daemon.audit", "audit.log").info("daemon process exited")
 
     # 一次性日誌設定（main.py 最頂部呼叫——主程序載入前完成）
     def setup(self) -> None:
@@ -105,8 +108,8 @@ class sc_logger_class:
         self._setup_done = True
 
         # 兩個檔（各自 RotatingFileHandler 5MB×3——error 先開，崩潰通道優先）
-        self._build_logger("runtime.error", "error.log")
-        audit_logger = self._build_logger("runtime.audit", "audit.log")
+        self._build_logger("goose_daemon.error", "error.log")
+        audit_logger = self._build_logger("goose_daemon.audit", "audit.log")
 
         # 全域攔截：未捕捉例外 → error.log；程序退出 → audit.log；print → audit.log
         sys.excepthook = self._global_exception_handler
@@ -121,7 +124,7 @@ class sc_logger_class:
 
     # 寫入 audit.log（一般記錄——append-only；任何程序皆可直接呼叫）
     def log(self, message: str) -> None:
-        self._build_logger("runtime.audit", "audit.log").info(message)
+        self._build_logger("goose_daemon.audit", "audit.log").info(message)
 
 
 # sys.stdout 重定向載體（print 不漏——需 write/flush 介面，獨立小 class）
@@ -147,7 +150,7 @@ class _print_logger_class:
         return -1
 
 
-# ===== bridging（模組級——供 main.py／daemon_manager／goose_entry 直接呼叫）=====
+# ===== bridging（模組級——供 main.py／daemon_manager／engine_entry 直接呼叫）=====
 # 一次性日誌設定（main.py 最頂部呼叫——主程序載入前完成）
 def setup() -> None:
     return sc_logger_class.get_instance().setup()

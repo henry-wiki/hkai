@@ -16,6 +16,8 @@ import os
 
 import psutil
 
+from . import sc_logger
+
 # 本程序 pid（init 時記錄）
 _self_pid = 0
 
@@ -50,22 +52,29 @@ def self_pid() -> int:
     return _self_pid
 
 
-def _get_process_create_time(process_pid: int):
-    """讀程序建立時間（讀唔到 → None）。"""
+def _get_process_create_time(process_pid: int) -> "int | None":
+    """讀程序建立時間（整數毫秒；讀唔到 → None）。
+
+    用整數毫秒：浮點尾位跨語言／JSON 序列化會漂移，整數先可以精確 == 對比。
+    """
     try:
-        return psutil.Process(process_pid).create_time()
-    except psutil.Error:
+        create_time = psutil.Process(process_pid).create_time()
+    except psutil.Error as exc:
+        sc_logger.log("create_time read failed pid=" + str(process_pid) + " | " + str(exc))
         return None
 
-
-def self_create_time() -> float:
-    """自己程序建立時間（讀唔到 → 0.0）。"""
-    return _get_process_create_time(_self_pid) or 0.0
+    # 轉整數毫秒（截斷——寫入同比對用同一個公式）
+    return int(create_time * 1000)
 
 
-def parent_create_time() -> float:
-    """母親（父）程序建立時間（未記錄／讀唔到 → 0.0）。"""
-    return _mother_create_time or 0.0
+def self_create_time() -> int:
+    """自己程序建立時間（整數毫秒；讀唔到 → 0）。"""
+    return _get_process_create_time(_self_pid) or 0
+
+
+def parent_create_time() -> int:
+    """母親（父）程序建立時間（整數毫秒；未記錄／讀唔到 → 0）。"""
+    return _mother_create_time or 0
 
 
 def mother_pid() -> int:

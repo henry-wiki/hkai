@@ -42,8 +42,6 @@ class hkai_core_Class
     // 外部環境依賴（機器層——env 檔路徑由入口 sc_get_config(app.env_file) 注入；私隱值讀自 .env）
     private $env_file          = null;
     private $python_executable = null;
-    private $goose_executable  = null;
-    private $aider_pylibs_dir  = null;
 
     // get_daemon_config 組裝結果快取（request 生命週期——同 request 內重複呼叫零成本）
     private $daemon_config_cache = null;
@@ -121,8 +119,6 @@ class hkai_core_Class
         // 外部環境依賴（機器層——私隱值讀自 .env：python／goose 執行檔）
         $env_values = $this->read_env_values();
         $this->python_executable = $env_values["python_executable"] ?? "";
-        $this->goose_executable  = $env_values["goose_executable"] ?? "";
-        $this->aider_pylibs_dir   = $env_values["aider_pylibs_dir"] ?? "";
 
         // storage 子目錄（storage_dir ＋ SSOT folders）
         $this->storage_dir_history  = $this->storage_dir . "/" . ($folders["history"] ?? "history");
@@ -203,7 +199,7 @@ class hkai_core_Class
         return $daemon_engines;
     }
 
-    // 現行引擎（動態優先——runtime.json 已存值＞manifest 出廠值；皆唔合法 → aider_daemon——同 Python 端 read_daemon_engine 一致）
+    // 現行引擎（動態優先——runtime.json 已存值＞manifest 出廠值；皆唔合法 → agents 第一條）
     public function get_daemon_engine()
     {
         $daemon_engines = $this->get_daemon_engines();
@@ -225,8 +221,8 @@ class hkai_core_Class
             return $static_daemon_engine;
         }
 
-        // 皆唔合法（缺／打錯）→ 預設
-        return "aider_daemon";
+        // 皆唔合法（缺／打錯）→ 清單第一條（agents 次序＝UI 次序）
+        return $daemon_engines[0] ?? "";
     }
 
     // daemon 設定（bridging 取得入口——呼叫端一律經 hkai__core()；內部路徑由 storage 推導，零寫死）
@@ -260,15 +256,10 @@ class hkai_core_Class
         // 動態覆蓋：storage 基準路徑 ＋ 靜態 SSOT 路徑 ＋ aider_daemon messages 目錄（full path）
         $runtime_override = [];
         $runtime_override["storage_dir"]              = $this->storage_dir;
-        $runtime_override["static_config_path"]       = $this->get_hkai_config_file();
-        $runtime_override["daemon_messages_dir"] = $this->storage_dir_messages;
 
         // 機器層外部路徑（Python 讀 runtime.json 取——key 名沿用既有契約；值＝.env 私隱值）
         $runtime_override["external_paths"] = [
             "python_executable" => $this->python_executable,
-            "oauth_keys_file"   => $this->env_file,
-            "goose_executable"  => $this->goose_executable,
-            "aider_pylibs_dir"  => $this->aider_pylibs_dir,
         ];
 
         $runtime_configs = array_replace($hkai_configs, $runtime_override);

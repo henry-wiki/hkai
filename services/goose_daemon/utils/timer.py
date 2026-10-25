@@ -5,6 +5,7 @@ timer.py
     統一時間格式輸出（timer_class singleton）。
 """
 
+import time
 from datetime import datetime, timezone
 
 
@@ -56,3 +57,9 @@ class timer_class:
     def strtotime(timestamp: int) -> str:
         """epoch 秒 → Y-m-d H:i:s 格式（PHP date() 同格式）。"""
         return datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
+
+    @staticmethod
+    def to_epoch_seconds(created_at_text: str) -> int:
+        """Y-m-d H:i:s 時間字串（本地時區）→ epoch 秒；格式唔對＝ValueError（政策交呼叫端）。"""
+        parsed_datetime = datetime.strptime(created_at_text, "%Y-%m-%d %H:%M:%S")
+        return int(time.mktime(parsed_datetime.timetuple()))

@@ -7,8 +7,8 @@ daemon_wake.py — 現行引擎 daemon 拉起（wake）。
   （供 server_daemon 的 add_message 呼叫；不對外開路由——外部不得直呼）
 
 說明：
-- 現行引擎讀 runtime.json 動態值＞靜態 SSOT daemon_engine（值＝同名套件；缺／唔合法回 aider_daemon）
-- 啟動命令與 PHP 端一致：python -m {daemon_engine}.main <runtime.json>（cwd = services）
+- 現行 agent daemon＝runtime.json 唯一來源（daemon_engine；冇 fallback）
+- 啟動命令：python -m {agent_daemon}.main（cwd = services；daemon 自己讀 data/runtime.json）
 - runtime 路徑＝context.RUNTIME_CONFIG_FILE（data/runtime.json，食死）
 - Python 執行檔由機器層設定提供（runtime external_paths.python_executable——PHP 注入）
 """
@@ -37,8 +37,7 @@ def wake_daemon() -> dict:
     if is_daemon_alive(agent_daemon):
         return {"ok": True}
 
-    runtime_config_path = str(context.RUNTIME_CONFIG_FILE)
-    python_executable   = str(sc_config.get_config("external_paths", "python_executable") or "")
+    python_executable = str(sc_config.get_config("external_paths", "python_executable") or "")
 
     # 判定：前置缺失（無法拉起）→ 回報失敗
     if python_executable == "":
@@ -47,7 +46,7 @@ def wake_daemon() -> dict:
     # 套件根目錄（bridge/agent_daemon/daemon_wake.py → services）
     services_dir = Path(__file__).resolve().parents[2]
 
-    command = [python_executable, "-u", "-m", agent_daemon + ".main", runtime_config_path]
+    command = [python_executable, "-u", "-m", agent_daemon + ".main"]
 
     # 判定：Windows → 無視窗＋新程序群組；POSIX → 新 session（皆脫離 bridge 生命週期）
     # 註：不可用 DETACHED_PROCESS——console 程式（python.exe）會被 Windows 新開一個可見黑窗

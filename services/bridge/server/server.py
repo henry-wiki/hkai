@@ -7,7 +7,7 @@ server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
 - start()：啟動 uvicorn（阻塞；bind 預檢＋失敗記錄）
 - _lifespan(app)：FastAPI lifespan context（就緒即起心跳；關閉即停）
 - _register_routes(app)：掛載所有 router
-- _watch_runtime()：背景監控任務（每秒檢查 runtime.json／BUILD——變更即自我退出）
+- lifecycle.watch_runtime()：背景監控任務（每秒檢查 runtime.json／BUILD——變更即自我退出）
 - sc_http.port_available()：開機前 bind 預檢（失敗即記錄原因並退出）
 
 使用方式：
@@ -16,18 +16,15 @@ server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
     server_class.get_instance().start()
 """
 
-import asyncio
 import os
-import traceback
 from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
 
-from .. import context
 from ..runtime import (
-    build_file,
     heartbeat,
+    lifecycle,
     process,
     process_list,
     sc_config,
@@ -107,7 +104,7 @@ class server_class:
     async def _lifespan(self, app: FastAPI):
         """啟動／關閉掛載點（背景監控任務＋心跳：就緒先開始跳）。"""
         # 背景監控 task（runtime 檔／BUILD）——程式結束時整個 event loop 一齊消失，唔需要 cancel
-        asyncio.create_task(self._watch_runtime())
+        lifecycle.watch_runtime()
 
         # 心跳：lifespan 就緒（伺服器真係起到）才開始——起唔到就冇心跳
         heartbeat.init()
@@ -117,27 +114,6 @@ class server_class:
 
         # 正常關閉：收工（self.stop → heartbeat.stop → lifecycle.exit）
         self.stop("server shutdown")
-
-    async def _watch_runtime(self) -> None:
-        """背景監控任務（runtime 檔被刪／BUILD 變更 → 自我退出；心跳由 heartbeat 執行緒負責）。"""
-        build_file.initialize()
-
-        try:
-            while True:
-                # 判定：runtime.json 已被刪（建置／清理）→ 自我退出，不留孤兒心跳檔
-                if context.RUNTIME_CONFIG_FILE.is_file() is False:
-                    self.stop("runtime config removed")
-
-                # 判定：BUILD 已變（站台已重新發佈）→ 記錄後自我退出，等新版本再拉起
-                build_watch_result = build_file.changed()
-                if build_watch_result["changed"] is True:
-                    self.stop("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"])
-
-                await asyncio.sleep(1)
-        except BaseException:
-            # 背景監控例外（唔可以靜靜死——記錄＋收工）
-            sc_logger.log("heartbeat loop failed:" + chr(10) + traceback.format_exc())
-            self.stop("heartbeat loop failed")
 
     def _register_routes(self, app: FastAPI) -> None:
         """掛載所有 router。"""
