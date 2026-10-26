@@ -41,7 +41,7 @@ trait save_tab_rule
 
         // 判定：開啟版本更新時間 ≠ 現行 → 409（檔案喺開啟後被外部改過——防覆寫；前端彈錯）
         if ($opened_update_time !== $current_update_time) {
-            return sc_response()->json(["ok" => false, "error" => hkai__i18n()->get("rule.conflict_error")], 409);
+            return sc_response()->json(["ok" => false, "error" => hkai()->i18n()->get("rule.conflict_error")], 409);
         }
 
         $write_result = @file_put_contents($rule_file, $content, LOCK_EX);

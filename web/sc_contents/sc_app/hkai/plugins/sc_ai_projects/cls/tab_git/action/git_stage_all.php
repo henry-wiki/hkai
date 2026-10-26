@@ -28,18 +28,18 @@ trait git_stage_all
         // 準確值：Python 只收 project_path
         $project_path     = $project_row["project_path"];
 
-        hkai__sc_runtime_io()->info("git_stage_all start: project_slug=" . $project_slug);
+        hkai()->runtime()->logger()->info("git_stage_all start: project_slug=" . $project_slug);
 
         $git_stage_result = $this->run_python_git_stage_all($project_path);
 
         // git add -A 失敗 → 記錄＋400（帶回 Python 的錯誤訊息）
         if ($git_stage_result["ok"] === false) {
-            hkai__sc_runtime_io()->warn("git_stage_all failed: project_slug=" . $project_slug . " — " . $git_stage_result["error"]);
+            hkai()->runtime()->logger()->warn("git_stage_all failed: project_slug=" . $project_slug . " — " . $git_stage_result["error"]);
 
             return sc_response()->json($git_stage_result, 400);
         }
 
-        hkai__sc_runtime_io()->info("git_stage_all done: project_slug=" . $project_slug);
+        hkai()->runtime()->logger()->info("git_stage_all done: project_slug=" . $project_slug);
 
         return sc_response()->json($git_stage_result);
     }

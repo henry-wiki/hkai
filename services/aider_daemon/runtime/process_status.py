@@ -35,12 +35,14 @@ import psutil
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-# 程序建立時間（防 pid 重用——讀唔到 → 0.0）
-def _get_create_time(process_pid: int) -> float:
+# 程序建立時間（防 pid 重用——整數毫秒；讀唔到 → 0）
+def _get_create_time(process_pid: int) -> int:
 	try:
-		return psutil.Process(process_pid).create_time()
+		create_time = psutil.Process(process_pid).create_time()
 	except psutil.Error:
-		return 0.0
+		return 0
+
+	return int(create_time * 1000)
 
 
 # 程序父 pid（讀唔到 → 0）

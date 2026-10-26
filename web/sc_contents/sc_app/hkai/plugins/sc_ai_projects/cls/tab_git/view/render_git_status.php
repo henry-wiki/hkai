@@ -10,18 +10,18 @@ trait render_git_status
     public function render_git_status($git_status)
     {
         // i18n 列標籤（單一來源——cls/i18n/lang/*.json）
-        $row_status_label      = hkai__i18n()->get("git.row_status");
-        $row_unstaged_label    = hkai__i18n()->get("git.row_unstaged");
-        $row_staged_label      = hkai__i18n()->get("git.row_staged");
-        $row_branch_label      = hkai__i18n()->get("git.row_branch");
-        $row_last_commit_label = hkai__i18n()->get("git.row_last_commit");
-        $read_failed_label     = hkai__i18n()->get("git.read_failed");
-        $not_initialized_text  = hkai__i18n()->get("git.row_not_initialized");
-        $recent_commits_label  = hkai__i18n()->get("git.recent_commits");
-        $stage_all_label       = hkai__i18n()->get("git.stage_all");
-        $commit_label          = hkai__i18n()->get("git.commit");
-        $unit_files_label      = hkai__i18n()->get("git.unit_files");
-        $unit_conflicts_label  = hkai__i18n()->get("git.unit_conflicts");
+        $row_status_label      = hkai()->i18n()->get("git.row_status");
+        $row_unstaged_label    = hkai()->i18n()->get("git.row_unstaged");
+        $row_staged_label      = hkai()->i18n()->get("git.row_staged");
+        $row_branch_label      = hkai()->i18n()->get("git.row_branch");
+        $row_last_commit_label = hkai()->i18n()->get("git.row_last_commit");
+        $read_failed_label     = hkai()->i18n()->get("git.read_failed");
+        $not_initialized_text  = hkai()->i18n()->get("git.row_not_initialized");
+        $recent_commits_label  = hkai()->i18n()->get("git.recent_commits");
+        $stage_all_label       = hkai()->i18n()->get("git.stage_all");
+        $commit_label          = hkai()->i18n()->get("git.commit");
+        $unit_files_label      = hkai()->i18n()->get("git.unit_files");
+        $unit_conflicts_label  = hkai()->i18n()->get("git.unit_conflicts");
 
         $outputLines   = [];
         $outputLines[] = "<div class='git_pane'>";

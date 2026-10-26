@@ -49,11 +49,9 @@ class _instructions_evt_bridge {
     constructor() {}
     // 綁定召集（開域一次——逐條拎 instance 再 init）
     async init() {
-        (await this.instructions_save()).init();
         (await this.instructions_reset()).init();
         (await this.instructions_refresh_system_env()).init();
     }
-    async instructions_save()    { return (await import("./evt/instructions_save.js")).instructions_save(); }
     async instructions_reset()   { return (await import("./evt/instructions_reset.js")).instructions_reset(); }
     async instructions_refresh_system_env() { return (await import("./evt/instructions_refresh_system_env.js")).instructions_refresh_system_env(); }
 }

@@ -12,18 +12,18 @@ trait get_git_headline
         $git_changes = $git_status["changes"];
 
         $state_class = "clean";
-        $state_text  = hkai__i18n()->get("git.clean");
+        $state_text  = hkai()->i18n()->get("git.clean");
 
         // 判定：有未提交變更 → dirty
         if ($git_changes["total"] > 0) {
             $state_class = "dirty";
-            $state_text  = $git_changes["total"] . " " . hkai__i18n()->get("git.unit_files");
+            $state_text  = $git_changes["total"] . " " . hkai()->i18n()->get("git.unit_files");
         }
 
         // 判定：有衝突 → conflict（覆蓋 dirty）
         if ($git_changes["conflicts"] > 0) {
             $state_class = "conflict";
-            $state_text  = $git_changes["conflicts"] . " " . hkai__i18n()->get("git.unit_conflicts");
+            $state_text  = $git_changes["conflicts"] . " " . hkai()->i18n()->get("git.unit_conflicts");
         }
 
         $outputLines   = [];

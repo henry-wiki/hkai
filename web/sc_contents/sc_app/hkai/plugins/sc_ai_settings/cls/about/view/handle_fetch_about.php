@@ -11,7 +11,7 @@ trait handle_fetch_about
     public function handle_fetch_about()
     {
         // about 資料源（sc_config/hkai/about_hkai.php——唯一來源；靜態＋動態皆喺檔內產生）
-        $about = require hkai__core()->get_about_file();
+        $about = require sc_get_config("hkai.about_file");
 
         // 從 array 取值先落同名變數
         $about_name          = $about["name"];
@@ -24,15 +24,15 @@ trait handle_fetch_about
         $about_supported_by  = $about["supported_by"];
 
         // 顯示文字（i18n——跟有效設定語言走）
-        $about_title_label        = hkai__i18n()->get("settings.about.title");
-        $about_version_label      = hkai__i18n()->get("settings.about.version");
-        $about_build_label        = hkai__i18n()->get("settings.about.build");
-        $about_tech_label         = hkai__i18n()->get("settings.about.tech");
-        $about_updated_label      = hkai__i18n()->get("settings.about.updated");
-        $about_tagline            = hkai__i18n()->get("settings.about.tagline");
-        $about_check_update_label = hkai__i18n()->get("settings.about.check_update");
-        $about_author_label       = hkai__i18n()->get("settings.about.author");
-        $about_supported_by_label = hkai__i18n()->get("settings.about.supported_by");
+        $about_title_label        = hkai()->i18n()->get("settings.about.title");
+        $about_version_label      = hkai()->i18n()->get("settings.about.version");
+        $about_build_label        = hkai()->i18n()->get("settings.about.build");
+        $about_tech_label         = hkai()->i18n()->get("settings.about.tech");
+        $about_updated_label      = hkai()->i18n()->get("settings.about.updated");
+        $about_tagline            = hkai()->i18n()->get("settings.about.tagline");
+        $about_check_update_label = hkai()->i18n()->get("settings.about.check_update");
+        $about_author_label       = hkai()->i18n()->get("settings.about.author");
+        $about_supported_by_label = hkai()->i18n()->get("settings.about.supported_by");
 
         // 品牌 logo（app 資產——磁碟路徑正規化後轉 web URL）
         $brand_logo_src = sc_to_web_path(SC_DIR_APP . "/hkai/asset/hkai-logo.png");

@@ -22,7 +22,7 @@ def active_connection_count() -> int:
     return _active_connection_count
 
 
-async def _presence_stream(request: Request):
+async def _presence_stream():
     """SSE 串流：連線期間每 PRESENCE_PING_SEC 秒送一次 ping 事件；客戶端斷線即結束。"""
     global _active_connection_count
 
@@ -75,7 +75,7 @@ async def presence_stream(request: Request):
         return PlainTextResponse("too many connections", status_code=503, headers=response_headers)
 
     return StreamingResponse(
-        _presence_stream(request),
+        _presence_stream(),
         media_type="text/event-stream",
         headers=response_headers,
     )

@@ -13,8 +13,7 @@ trait sweep_old_archived_messages
     //---------------------------------------------------------
     public function sweep_old_archived_messages()
     {
-        $daemon_config = hkai__core()->get_daemon_config();
-        $archive_dir   = $daemon_config["daemon_archive_dir"];
+        $archive_dir = sc_get_config("hkai.messages_archive_dir");
 
         // 判定：archive 根唔存在 → 唔動作
         if (!is_dir($archive_dir)) {

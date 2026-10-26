@@ -5,7 +5,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\process;
 
 trait kill_message_children
 {
-    // 依賴顯式化（find_worker_pids 嚟自同域 trait；kill_process 嚟自 sc_python_bridge_process——殺嘅統一刀）
+    // 依賴顯式化（find_worker_pids 嚟自同域 trait；kill_process 嚟自 hkai()->process()——殺嘅統一刀）
 
     // 終止指定訊息嘅回應（＝殺 worker 樹：worker 連血緣子孫——血緣最深層先殺，統一經 kill_process：bridge → Python）
     // 殺完唔改台帳（死行由 health 清潔工剔——2026-10-08 改向）
@@ -17,7 +17,7 @@ trait kill_message_children
 
         // 逐個 worker → 統一刀（worker 連血緣子孫一齊殺）
         foreach ($worker_pids as $worker_pid_item) {
-            $result[$worker_pid_item] = hkai__python_bridge_process()->kill_process($worker_pid_item);
+            $result[$worker_pid_item] = hkai()->process()->kill_process($worker_pid_item);
         }
 
         return $result;

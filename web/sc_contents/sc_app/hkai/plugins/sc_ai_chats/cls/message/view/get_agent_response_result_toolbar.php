@@ -12,8 +12,8 @@ trait get_agent_response_result_toolbar
         $content = [];
         $content[] = "<div class='seg__bar'>";
             $content[] = "<div class='seg__bar_actions'>";
-            $zoom_title = hkai__i18n()->get("answer.zoom");
-            $zoom_modal_title = hkai__i18n()->get("answer.zoom_title");
+            $zoom_title = hkai()->i18n()->get("answer.zoom");
+            $zoom_modal_title = hkai()->i18n()->get("answer.zoom_title");
             $btn_attr = [];
             $btn_attr[] = "data-action='response_zoom'";
             $btn_attr[] = "data-zoom_scope='[data-message_id]'";
@@ -26,7 +26,7 @@ trait get_agent_response_result_toolbar
             $content[] = "<button {$btn_attr}>";
             $content[] = "<i class='fa-solid fa-up-right-and-down-left-from-center'></i>";
             $content[] = "</button>";
-            $copy_title = hkai__i18n()->get("answer.copy");
+            $copy_title = hkai()->i18n()->get("answer.copy");
             $btn_attr = [];
             $btn_attr[] = "data-action='message_copy'";
             $btn_attr[] = "data-copy_scope='[data-message_id]'";

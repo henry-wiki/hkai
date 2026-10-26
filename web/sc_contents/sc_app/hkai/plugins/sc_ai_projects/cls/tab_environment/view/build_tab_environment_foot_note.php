@@ -16,8 +16,7 @@ trait build_tab_environment_foot_note
         }
 
         // 準確值：環境檔＝storage/hkai/environment/env.{slug}.md（app storage——唔寫專案根）
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $storage_dir     = $runtime_configs["storage_dir"];
+        $storage_dir     = sc_get_config("storage.app_dir");
         $env_file        = $storage_dir . "/environment/env." . $project_row["project_slug"] . ".md";
 
         // 顯示路徑（統一 "/"——G:/ 樣）
@@ -26,10 +25,10 @@ trait build_tab_environment_foot_note
         // 判定：環境檔存在 → 顯示最後更新時間
         if (is_file($env_file)) {
             $env_updated_at = date("Y-m-d H:i:s", (int)@filemtime($env_file));
-            $foot_note_text = hkai__i18n()->get("environment.updated_label") . $env_updated_at;
+            $foot_note_text = hkai()->i18n()->get("environment.updated_label") . $env_updated_at;
         } else {
             // 否則 → 未產生提示字眼（撳「更新」重試）
-            $foot_note_text = hkai__i18n()->get("environment.not_generated");
+            $foot_note_text = hkai()->i18n()->get("environment.not_generated");
         }
 
         $outputLines   = [];

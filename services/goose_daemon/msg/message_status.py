@@ -15,6 +15,7 @@ SSOT：web/sc_config/hkai/fsm_map.json → status（order／terminal／transitio
 
 import json
 from pathlib import Path
+from typing import cast
 
 from ..context import message_store
 
@@ -26,13 +27,35 @@ class message_status_class:
     """狀態機（singleton——整個程序共用）。"""
 
     _instance: "message_status_class | None" = None
+    _terminal_status: tuple[str, ...]
+    _status_order: tuple[str, ...]
+    _transitions: dict[tuple[str, str], str]
+    _status_events: set[str]
+    _loaded: bool = False
 
     def __new__(cls):
-        """單例：整個程序只建立一次（載入轉移表）。"""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._load_fsm_map()
+        """單例：整個程序只建立一次。"""
+        # 已存在實例 → 直接回傳（單一實例共享）
+        if cls._instance is not None:
+            return cls._instance
+
+        cls._instance = super().__new__(cls)
         return cls._instance
+
+    def __init__(self) -> None:
+        """初始化（首次建立才載入轉移表——單例重複呼叫唔重載）。"""
+        # 判定：已載入 → 唔重載
+        if self._loaded is True:
+            return
+
+        self._terminal_status = ()
+        self._status_order = ()
+        self._transitions = {}
+        self._status_events = set()
+
+        self._load_fsm_map()
+
+        self._loaded = True
 
     @classmethod
     def get_instance(cls) -> "message_status_class":
@@ -41,21 +64,22 @@ class message_status_class:
 
     def _load_fsm_map(self) -> None:
         """載入 fsm_map（SSOT）：terminal／transitions。"""
-        _fsm_map = json.loads(_FSM_MAP_PATH.read_text(encoding="utf-8"))
-        _status = _fsm_map["status"]
+        fsm_map = cast("dict[str, object]", json.loads(_FSM_MAP_PATH.read_text(encoding="utf-8")))
+        status_map = cast("dict[str, object]", fsm_map["status"])
 
-        self._terminal_status = tuple(_status["terminal"])
-        self._status_order    = tuple(_status["order"])
+        self._terminal_status = tuple(cast("list[str]", status_map["terminal"]))
+        self._status_order    = tuple(cast("list[str]", status_map["order"]))
 
         # (from_state, event) -> to_state（"*" 為萬用來源——transitions 喺頂層）
         self._transitions = {}
+
         # 逐條登錄轉移
-        for _transition in _fsm_map["transitions"]:
-            _key = (_transition["from"], _transition["event"])
-            self._transitions[_key] = _transition["to"]
+        for transition_item in cast("list[dict[str, str]]", fsm_map["transitions"]):
+            transition_key = (transition_item["from"], transition_item["event"])
+            self._transitions[transition_key] = transition_item["to"]
 
         # 有轉移定義的事件集合（＝會驅動狀態——供 log 分類 state／trace）
-        self._status_events = {_transition["event"] for _transition in _fsm_map["transitions"]}
+        self._status_events = {transition_key[1] for transition_key in self._transitions}
 
         # 檔案＝status（單一詞彙——本機器嘅狀態源；全鏈同一粒值）
 
@@ -68,7 +92,7 @@ class message_status_class:
         return status in self._terminal_status
 
     # 契約 status 清單（fsm_map status order＋terminal——唯一來源）
-    def get_status_values(self) -> tuple:
+    def get_status_values(self) -> tuple[str, ...]:
         return self._status_order + self._terminal_status
 
     def get_status(self) -> str:

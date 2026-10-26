@@ -1,5 +1,6 @@
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Optional
 
@@ -36,7 +37,7 @@ def get_tail_content(
         return ""
 
 
-def read_json(path: Optional[Path | str]) -> Optional[dict]:
+def read_json(path: Optional[Path | str]) -> Optional[dict[str, object]]:
     """防禦性讀取 JSON，失敗回 None，唔拋例外。"""
     if path is None:
         return None
@@ -85,7 +86,7 @@ def update_json(path: Path | str, data: dict, encoding: str = "utf-8") -> bool:
         return False
 
 
-def write_json_atomic(path: Path | str, data: dict, encoding: str = "utf-8") -> bool:
+def write_json_atomic(path: Path | str, data: Mapping[str, object], encoding: str = "utf-8") -> bool:
     """全量寫入 JSON：path.tmp → os.replace 原子替換。
 
     失敗 → 刪 .tmp ＋ 記 error log；回傳 成功 True／失敗 False。

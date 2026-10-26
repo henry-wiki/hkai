@@ -1,34 +1,10 @@
 {
-    "filenames": {
-        "heartbeat": "aider_daemon.heartbeat",
-        "process_list": "process_status/process_list.jsonl",
-        "system_env_markdown": "instructions/system_env.md"
-    },
-    "folders": {
-        "_note": "邁向刪除：messages／archive 兩鍵——PHP core（hkai_core.cls.php:129-130）＋storage bridge 仲用；aider／openhands 未遷移；全部改食死後刪此兩鍵",
-        "messages": "messages/polling",
-        "archive": "messages/archive",
-        "history": "localdb/history",
-        "process_status": "process_status",
-        "bridge": "bridge",
-        "uploads": "uploads"
-    },
-    "attachments": {
-        "max_file_size_mb": 2
-    },
-    "instructions": {
-        "system_prompt": {
-            "path": "instructions/system_prompt.md",
-            "editable": 1
-        },
-        "system_env": {
-            "path": "instructions/system_env.md",
-            "editable": 0
+    "agents": {
+        "goose": {
+            "daemon": "goose_daemon",
+            "label": "goose"
         }
     },
-    "agents": [
-        "goose_daemon"
-    ],
     "goose_daemon": {
         "chat_mode": {
             "ask": {

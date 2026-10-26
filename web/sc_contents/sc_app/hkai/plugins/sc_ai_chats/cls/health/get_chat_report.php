@@ -18,7 +18,13 @@ trait get_chat_report
         $project_slug = $request_data["project_slug"] ?? "";
 
         // 專案段查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
-        $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+        $project_slug = $resolved_project_slug["project_slug"];
+
+        // Home 語境（未指定專案段）→ 用固定 home（同 chat_list_fetch 同一 fallback——兩邊清單必須同一批對話）
+        if ($project_slug === "") {
+            $project_slug = sc_get_config("hkai.default_project_slug");
+        }
 
         $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
 

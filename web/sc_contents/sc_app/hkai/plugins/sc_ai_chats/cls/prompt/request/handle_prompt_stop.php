@@ -17,12 +17,12 @@ trait handle_prompt_stop
         $message_id = (int)($input_data["message_id"] ?? 0);
 
         // 診斷 log：收到嘅刪除請求
-        hkai__sc_runtime_io()->info("message_delete received: message_id=" . $message_id);
+        hkai()->runtime()->logger()->info("message_delete received: message_id=" . $message_id);
 
         // 判定：參數不合法 → 回錯誤
         if ($message_id < 1) {
             // 診斷 log：非法 message_id
-            hkai__sc_runtime_io()->warn("message_delete invalid: message_id=" . $message_id);
+            hkai()->runtime()->logger()->warn("message_delete invalid: message_id=" . $message_id);
 
             return sc_response()->json(["ok" => false, "error" => "invalid message"], 400);
         }
@@ -46,6 +46,14 @@ trait handle_prompt_stop
 
         // 狀態：CANCELLATION_REQUESTED → cancelled（fsm 對應表）
         $next_status = sc_ai_chats()->poll()->append_msg_status_by_event($chat_id, $message_id, "CANCELLATION_REQUESTED");
+
+        // 圖片抽取中（有 job 目錄）→ 叫 bridge 停 extractor（idempotent）
+        $extract_job_dir = sc_get_config("hkai.image_extract_dir") . "/" . $message_id;
+
+        // 判定：有抽取 job → 停（殺進程樹＋標記 cancelled；已完成者保留）
+        if (is_dir($extract_job_dir)) {
+            hkai()->process()->bridge()->request("/image_extract/stop/", ["message_id" => $message_id], 20);
+        }
 
         // 精準終止該訊息的子程序（只殺本訊息——唔會誤殺同對話其他訊息）
         sc_ai_chats()->process()->kill_message_children($chat_id, $message_id);

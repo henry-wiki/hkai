@@ -27,6 +27,8 @@ class chat_Class
     use resolver\get_latest_chat_sid;
     use resolver\is_archive_chat_segment;
     use resolver\get_bare_chat_sid;
+    use resolver\resolve_chat_sid;
+    use resolver\is_valid_chat_sid;
     use view\render_chat_item;
     use view\render_chat_list;
     use view\render_archived_chat_list;
@@ -86,7 +88,7 @@ class chat_Class
 
         // 判定：無專案（home／project_id 0）→ URL 用 home 段
         if ($project_segment === "" || $project_segment === null) {
-            $project_segment = "home";
+            $project_segment = sc_get_config("hkai.default_project_slug");
         }
 
         return "/" . $project_segment . "/" . $this->build_chat_segment($chat_sid, $chat_status) . "/";
@@ -95,9 +97,8 @@ class chat_Class
     // 歷史檔路徑（localdb/history/{project_slug}/{chat_sid}{尾綴}——命名規則唯一來源；尾綴由呼叫端帶．jsonl／_meta.json）
     public function get_chat_history_file_path($chat_id, $file_suffix)
     {
-        $daemon_configs = hkai__core()->get_daemon_config();
-        $project_slug   = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
-        $chat_row       = $this->get_chat_row($chat_id);
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+        $chat_row     = $this->get_chat_row($chat_id);
 
         $chat_sid = "";
 
@@ -106,7 +107,7 @@ class chat_Class
             $chat_sid = $chat_row["chat_sid"];
         }
 
-        return $daemon_configs["daemon_history_dir"] . "/" . $project_slug . "/" . $chat_sid . $file_suffix;
+        return sc_get_config("hkai.history_dir") . "/" . $project_slug . "/" . $chat_sid . $file_suffix;
     }
 
 

@@ -65,7 +65,7 @@ class status_bar_Class
                     "items" => [
                         "sb_conn" => [
                             "icon"     => "●",
-                            "default"  => hkai__i18n()->get("status_bar.conn_offline"),
+                            "default"  => hkai()->i18n()->get("status_bar.conn_offline"),
                             "class"    => "bad",
                             "priority" => 20,
                             "click"    => ["type" => "settings", "tab" => "server"],

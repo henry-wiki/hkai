@@ -31,7 +31,7 @@ trait validate_message_prerequisites
         // 專案必須存在（空 slug／home 段 → 查 Home 專案；查唔到＝錯）
         // Home 語境（空 slug）→ 呼叫端 fallback：用固定 home 查（空 slug 本身查唔到嘢）
         if ($project_slug === "") {
-            $project_slug = "home";
+            $project_slug = sc_get_config("hkai.default_project_slug");
         }
 
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
@@ -41,12 +41,13 @@ trait validate_message_prerequisites
             $errors["project_slug"] = ["message" => "專案不存在：" . $project_slug, "code" => "E_VALIDATION_FATAL"];
         }
 
-        // chat_sid 非空 → 對話必須存在
-        if ($chat_sid !== "") {
-            $chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
-            if ($chat_row === null) {
-                $errors["chat_sid"] = ["message" => "對話不存在：" . $chat_sid, "code" => "E_VALIDATION_FATAL"];
-            }
+        // 格式判定（32 hex＝合法 sid；空白＝新對話，未配 sid 都合法）
+        $is_chat_sid_blank = ($chat_sid === "");
+        $is_chat_sid_valid = sc_ai_chats()->chat()->is_valid_chat_sid($chat_sid);
+
+        // 判定：有值但格式唔合 → 記錄錯誤
+        if ($is_chat_sid_blank === false && $is_chat_sid_valid === false) {
+            $errors["chat_sid"] = ["message" => "無效的對話 ID：" . $chat_sid, "code" => "E_VALIDATION_FATAL"];
         }
 
         // 有錯誤 → 回傳（title／hint／message＝後台文案 SSOT——前端零彙整）
@@ -60,9 +61,9 @@ trait validate_message_prerequisites
             return [
                 "ok"      => false,
                 "code"    => "E_VALIDATION_FATAL",
-                "title"   => hkai__i18n()->get("error.E_VALIDATION_FATAL.title"),
+                "title"   => hkai()->i18n()->get("error.E_VALIDATION_FATAL.title"),
                 "message" => implode("\n", $error_messages),
-                "hint"    => hkai__i18n()->get("error.E_VALIDATION_FATAL.hint"),
+                "hint"    => hkai()->i18n()->get("error.E_VALIDATION_FATAL.hint"),
                 "errors"  => $errors,
             ];
         }

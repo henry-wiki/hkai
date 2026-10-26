@@ -2,7 +2,7 @@
 """
 message_log.py
 
-message_log 檔（messages/polling/{project_slug}/{message_id}/msg_log.txt）讀寫專屬（message_log_class singleton——get_instance() 取得）。
+message_log 檔（data/messages/polling/{project_slug}/{message_id}/msg_log.txt）讀寫專屬（message_log_class singleton——get_instance() 取得）。
 
 外殼（與 PHP polling_log_Class 同一格式）：
     datetime（Y-m-d H:i:s 本地時區）/ source / kind / level / event / message
@@ -15,6 +15,7 @@ message_log 檔（messages/polling/{project_slug}/{message_id}/msg_log.txt）讀
 import json
 import threading
 from pathlib import Path
+from typing import cast
 
 from ..context import message_store
 from ..msg import message_context
@@ -33,7 +34,7 @@ class message_log_class:
     # 串流追溯開關（預設開啟；set_stream_log() 控制）
     _stream_log_enabled: bool = True
     # 寫入鎖（callback 由多執行緒觸發——序列化寫入，避免行交錯；可重入——poll 更新整段持鎖再入寫檔）
-    _write_lock = threading.RLock()
+    _write_lock: "threading.RLock" = threading.RLock()
 
     def __new__(cls):
         """單例：整個程序只建立一次（無狀態——單例為統一入口）。"""
@@ -58,7 +59,7 @@ class message_log_class:
         return "state" if message_status_class.get_instance().is_status_event(event) else "trace"
 
     # 核心寫入（level 由呼叫端給——統一標準 JSONL append——與 PHP polling_log_Class 同一格式；回傳該行字串）
-    def append_log(self, event: str, level: str, message: str, metadata: dict | None = None, payload: dict | None = None, detail: str = "", meta: dict | None = None) -> str:
+    def append_log(self, event: str, level: str, message: str, metadata: dict[str, object] | None = None, payload: dict[str, object] | None = None, detail: str = "", meta: dict[str, object] | None = None) -> str:
         """
         外殼：datetime（Y-m-d H:i:s 本地時區）/ source / kind / level / event / message
         metadata／payload（有值才寫——ERROR 層級不寫，只進 error_log）。
@@ -66,7 +67,7 @@ class message_log_class:
 
         detail：error_log 專用的完整內容（空 → 沿用 message）。
         """
-        log_data: dict = {
+        log_data: dict[str, object] = {
             "datetime": timer_class.get_datetime(),
             "source": "python-daemon",
             "kind": self._get_event_kind(event),
@@ -77,7 +78,7 @@ class message_log_class:
 
         # 判定：ERROR 層級 → 完整內容另寫 error_log；message_log 只留一句短話（不帶 metadata／payload）
         if level == "ERROR":
-            _error_record = {}
+            _error_record: dict[str, object] = {}
             _error_record["datetime"] = log_data["datetime"]
             _error_record["event"] = event
             _error_record["message"] = detail or message
@@ -94,18 +95,18 @@ class message_log_class:
 
         log_line = json.dumps(log_data, ensure_ascii=False)
         # append 模式（不覆寫既有內容）+ CRLF 結尾（newline="" 避免 text mode 翻譯成 \r\r\n）
-        # 多執行緒（主流程／摘要 worker／cache warming）→ 以鎖序列化寫入（避免行交錯）
+        # 多執行緒（主流程／記憶體守衛）→ 以鎖序列化寫入（避免行交錯）
         with self._write_lock, self._log_path().open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(log_line + "\r\n")
+            _ = output_file.write(log_line + "\r\n")
 
         return log_line
 
     # 語法糖：level 固定 INFO（event/message/metadata/payload 由呼叫端給）
-    def append_info_log(self, event: str, message: str, metadata: dict | None = None, payload: dict | None = None, meta: dict | None = None) -> str:
+    def append_info_log(self, event: str, message: str, metadata: dict[str, object] | None = None, payload: dict[str, object] | None = None, meta: dict[str, object] | None = None) -> str:
         return self.append_log(event, "INFO", message, metadata, payload, meta=meta)
 
     # 語法糖：level 固定 SUCCESS
-    def append_success_log(self, event: str, message: str, metadata: dict | None = None, payload: dict | None = None, meta: dict | None = None) -> str:
+    def append_success_log(self, event: str, message: str, metadata: dict[str, object] | None = None, payload: dict[str, object] | None = None, meta: dict[str, object] | None = None) -> str:
         return self.append_log(event, "SUCCESS", message, metadata, payload, meta=meta)
 
     # 語法糖：level 固定 ERROR（detail＝完整內容——僅寫入 error_log）
@@ -113,7 +114,7 @@ class message_log_class:
         return self.append_log(event, "ERROR", message, metadata, payload, detail, meta)
 
     # 語法糖：level 固定 WARN
-    def append_warn_log(self, event: str, message: str, metadata: dict | None = None, payload: dict | None = None, meta: dict | None = None) -> str:
+    def append_warn_log(self, event: str, message: str, metadata: dict[str, object] | None = None, payload: dict[str, object] | None = None, meta: dict[str, object] | None = None) -> str:
         return self.append_log(event, "WARN", message, metadata, payload, meta=meta)
 
     # 設定串流追溯開關（預設開啟；set_stream_log(false) 可關閉）
@@ -126,17 +127,17 @@ class message_log_class:
         return message_context.get_msg_file_path(message_dir, "stream_log")
 
     # 串流追溯寫入（每個 callback 觸發寫一行 JSONL——datetime 置於最前）
-    def append_stream_log(self, record: dict) -> None:
+    def append_stream_log(self, record: dict[str, object]) -> None:
         """寫入一行 stream_log JSONL 記錄（datetime 置前——main information）。"""
         if not self._stream_log_enabled:
             return
         # datetime 置於最前（record 其餘鍵依序接續）
-        output_record = {"datetime": timer_class.get_datetime()}
+        output_record: dict[str, object] = {"datetime": timer_class.get_datetime()}
         output_record.update(record)
         # newline="" 避免 text mode 把 \r\n 翻譯成 \r\r\n（導致 splitlines 誤判行界）
         # 多執行緒（主流程／摘要 worker／cache warming）→ 以鎖序列化寫入（避免行交錯）
         with self._write_lock, self._stream_log_path().open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(json.dumps(output_record, ensure_ascii=False, default=str) + "\r\n")
+            _ = output_file.write(json.dumps(output_record, ensure_ascii=False, default=str) + "\r\n")
 
     def _error_log_path(self) -> Path:
         """error_log 檔路徑（僅 ERROR 事件——與 stream_log 同目錄）。"""
@@ -147,7 +148,7 @@ class message_log_class:
     def append_error_log_record(self, record: dict[str, object]) -> None:
         """寫入一行 error_log JSONL（錯誤事件）。"""
         with self._write_lock, self._error_log_path().open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(json.dumps(record, ensure_ascii=False, default=str) + "\r\n")
+            _ = output_file.write(json.dumps(record, ensure_ascii=False, default=str) + "\r\n")
 
     # response thinking / answer txt 路徑（索引制——與 stream_log 同目錄）
     def _response_thinking_path(self, response_index: int) -> Path:
@@ -166,7 +167,7 @@ class message_log_class:
             return
         response_thinking_path = self._response_thinking_path(response_index)
         with response_thinking_path.open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(text)
+            _ = output_file.write(text)
         self._update_poll_list(response_thinking_path)
 
     # response result 純文字 append（content——帶 response index）
@@ -177,15 +178,15 @@ class message_log_class:
             return
         response_result_path = self._response_result_path(response_index)
         with response_result_path.open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(text)
+            _ = output_file.write(text)
         self._update_poll_list(response_result_path)
 
-    # response replay 路徑（引擎 load 重播——獨立歸檔）
+    # response replay 路徑（agent load 重播——獨立歸檔）
     def _response_replay_path(self, response_index: int) -> Path:
         message_dir = message_store().get_message_dir()
         return message_context.get_msg_file_path(message_dir, f"response.{response_index}.replay")
 
-    # response replay 純文字 append（引擎重播內容——帶 response index）
+    # response replay 純文字 append（agent重播內容——帶 response index）
     # 刻意唔入 poll（_update_poll_list）：重播唔屬本輪回應——前端唔會拉、唔會顯示；此檔＝後端紀錄
     def append_response_replay(self, response_index: int, text: str) -> None:
         if not self._stream_log_enabled:
@@ -194,7 +195,7 @@ class message_log_class:
             return
         response_replay_path = self._response_replay_path(response_index)
         with response_replay_path.open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(text)
+            _ = output_file.write(text)
 
     # summarize thinking 路徑
     def _summarize_thinking_path(self) -> Path:
@@ -214,7 +215,7 @@ class message_log_class:
             return
         summarize_thinking_path = self._summarize_thinking_path()
         with summarize_thinking_path.open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(text)
+            _ = output_file.write(text)
         self._update_poll_list(summarize_thinking_path)
 
     # summarize result 純文字 append（content）
@@ -225,7 +226,7 @@ class message_log_class:
             return
         summarize_result_path = self._summarize_result_path()
         with summarize_result_path.open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(text)
+            _ = output_file.write(text)
         self._update_poll_list(summarize_result_path)
 
     #---------------------------------------------------------
@@ -241,16 +242,16 @@ class message_log_class:
         return message_context.get_msg_file_path(message_dir, "poll_list")
 
     # 讀 poll 對照表（逐行解析；舊制行——冇 poll_file——唔收）
-    def _read_poll_list(self) -> list:
+    def _read_poll_list(self) -> list[dict[str, object]]:
         poll_list_path = self._get_poll_list_path()
         if not poll_list_path.exists():
             return []
-        poll_list = []
+        poll_list: list[dict[str, object]] = []
         for poll_list_line in poll_list_path.read_text(encoding="utf-8").splitlines():
             # 判定：空行 → 跳過
             if poll_list_line.strip() == "":
                 continue
-            poll_list_entry = json.loads(poll_list_line)
+            poll_list_entry = cast("dict[str, object]", json.loads(poll_list_line))
             # 判定：舊制行（冇 poll_file——PHP 時代遺留）→ 唔收
             if "poll_file" not in poll_list_entry:
                 continue
@@ -258,12 +259,12 @@ class message_log_class:
         return poll_list
 
     # 寫 poll 對照表（整檔重寫——JSONL；LF）
-    def _write_poll_list(self, poll_list: list) -> None:
-        poll_list_lines = []
+    def _write_poll_list(self, poll_list: list[dict[str, object]]) -> None:
+        poll_list_lines: list[str] = []
         for poll_list_entry in poll_list:
             poll_list_lines.append(json.dumps(poll_list_entry, ensure_ascii=False))
         with self._write_lock, self._get_poll_list_path().open("w", encoding="utf-8", newline="") as output_file:
-            output_file.write("\n".join(poll_list_lines) + "\n")
+            _ = output_file.write("\n".join(poll_list_lines) + "\n")
 
     # 對照更新（一檔 append 完）：只更新本檔時間／長度（狀態交 msg_status 單一來源）
     def _update_poll_list(self, poll_file_path: Path) -> None:
@@ -276,7 +277,7 @@ class message_log_class:
         current_time = timer_class.get_datetime()
         file_content_length = poll_file_path.stat().st_size
 
-        current_entry = None
+        current_entry: dict[str, object] | None = None
 
         # 逐 entry：只取返本檔（狀態由 msg_status 決定——poll_list 唔准代判完成）
         for poll_list_entry in poll_list:

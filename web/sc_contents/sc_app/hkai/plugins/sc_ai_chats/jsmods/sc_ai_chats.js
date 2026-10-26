@@ -304,6 +304,11 @@ class _sc_ai_chats {
                 const prompt_input_height_observer_instance = await prompt_instance.obs().prompt_input_height_observer();
 
                 prompt_input_height_observer_instance.init();
+
+                // 草稿還原（composer 已入畫面——文字／附件／model／chat_mode 一次過回填）
+                const prompt_draft_restore_instance = await prompt_instance.evt().prompt_draft_restore();
+
+                await prompt_draft_restore_instance.prompt_draft_restore();
             }
         });
 

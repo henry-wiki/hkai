@@ -52,10 +52,12 @@ class _server_evt_bridge {
         (await this.server_start()).init();
         (await this.server_restart()).init();
         (await this.server_stop()).init();
+        (await this.server_refresh()).init();
     }
     async server_start()   { return (await import("./evt/server_start.js")).server_start(); }
     async server_restart() { return (await import("./evt/server_restart.js")).server_restart(); }
     async server_stop()    { return (await import("./evt/server_stop.js")).server_stop(); }
+    async server_refresh() { return (await import("./evt/server_refresh.js")).server_refresh(); }
 }
 
 // act（動作——開單叫工作）

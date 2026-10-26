@@ -53,11 +53,52 @@ class provider_Class
         return null;
     }
 
+    // token 顯示遮蔽（空 → ""；短過 4 字 → 全星；否則 18 星＋尾 4 字）
+    private function mask_token($token_value)
+    {
+        // 判定：空值 → 無 mask
+        if ($token_value === "") {
+            return "";
+        }
+
+        // 判定：短過 4 字 → 全星
+        if (strlen($token_value) < 4) {
+            return str_repeat("*", 18);
+        }
+
+        return str_repeat("*", 18) . substr($token_value, -4);
+    }
+
+    // token 正規化（剝外層配對引號——用戶可能連引號一齊貼上）
+    private function normalize_token($token_value)
+    {
+        $value = trim($token_value);
+
+        // 判定：短過 2 字 → 無引號可剝
+        if (strlen($value) < 2) {
+            return $value;
+        }
+
+        $first_char = $value[0];
+        $last_char  = substr($value, -1);
+
+        // 判定：首字唔係引號 → 原樣
+        if (!in_array($first_char, ['"', "'"])) {
+            return $value;
+        }
+
+        // 判定：首尾唔同款引號 → 原樣（唔配對唔剝）
+        if ($first_char !== $last_char) {
+            return $value;
+        }
+
+        return substr($value, 1, -1);
+    }
+
     // Provider 分頁組裝（一頁列全部 provider——讀 .env 現值出 mask；每列鎖匙三態〔唯讀＋重設／輸入＋儲存＋取消／輸入＋儲存〕）
     private function build_provider_settings_page()
     {
-        $oauth_keys = hkai__sc_oauth_keys();
-        $providers  = $this->get_providers();
+        $providers = $this->get_providers();
 
         // === header ===
         $modal_header   = [];
@@ -73,8 +114,8 @@ class provider_Class
                 $provider_id      = $provider_item["id"];
                 $provider_env_key = $provider_item["env_key"];
 
-                $current_value = $oauth_keys->get_key($provider_env_key);
-                $mask_value    = $oauth_keys->make_mask($current_value);
+                $current_value = sc_get_env($provider_env_key, "");
+                $mask_value    = $this->mask_token($current_value);
                 $mask_encoded  = sc_html_encode($mask_value);
 
                 // 列態（已有 key＝saved；未設＝empty；resetting 由前端切態）
@@ -85,10 +126,10 @@ class provider_Class
                 }
 
                 // 輸入位提示（saved 態按重設先露——輸入新值；empty 態＝初次輸入）
-                $input_placeholder = hkai__i18n()->get("settings.provider.token_placeholder");
+                $input_placeholder = hkai()->i18n()->get("settings.provider.token_placeholder");
                 // 判定：已設 → 提示輸入新 Token
                 if ($provider_state === "saved") {
-                    $input_placeholder = hkai__i18n()->get("settings.provider.token_placeholder_new");
+                    $input_placeholder = hkai()->i18n()->get("settings.provider.token_placeholder_new");
                 }
 
                 $modal_body[] = "<div class='modal-form__row form_row provider_key_row' data-provider_state='" . $provider_state . "'>";
@@ -128,7 +169,7 @@ class provider_Class
                             $reset_attr[] = "data-provider_part='reset'";
                             $reset_attr[] = "data-provider='" . $provider_id . "'";
                             $reset_attr   = implode(" ", $reset_attr);
-                            $modal_body[] = "<button {$reset_attr}>" . hkai__i18n()->get("common.reset") . "</button>";
+                            $modal_body[] = "<button {$reset_attr}>" . hkai()->i18n()->get("common.reset") . "</button>";
 
                             // 取消（resetting 態顯示——不進行重設、回唯讀）
                             $cancel_attr   = [];
@@ -138,7 +179,7 @@ class provider_Class
                             $cancel_attr[] = "data-provider_part='cancel'";
                             $cancel_attr[] = "data-provider='" . $provider_id . "'";
                             $cancel_attr   = implode(" ", $cancel_attr);
-                            $modal_body[] = "<button {$cancel_attr}>" . hkai__i18n()->get("common.cancel") . "</button>";
+                            $modal_body[] = "<button {$cancel_attr}>" . hkai()->i18n()->get("common.cancel") . "</button>";
 
                             // 儲存（empty／resetting 態顯示——提交新值）
                             $save_attr   = [];
@@ -148,7 +189,7 @@ class provider_Class
                             $save_attr[] = "data-provider_part='save'";
                             $save_attr[] = "data-provider='" . $provider_id . "'";
                             $save_attr   = implode(" ", $save_attr);
-                            $modal_body[] = "<button {$save_attr}>" . hkai__i18n()->get("common.save") . "</button>";
+                            $modal_body[] = "<button {$save_attr}>" . hkai()->i18n()->get("common.save") . "</button>";
 
                         $modal_body[] = "</div>";
                         $modal_body[] = "<div class='form_err'></div>";

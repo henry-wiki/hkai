@@ -4,10 +4,9 @@ message_store.py
 
 msg 檔路徑／掃描／jobs 邏輯（message_store_class singleton——get_instance() 取得）。
 
-對應 PHP 的 sc_ai_chats_message_poll_main_Class——路徑 bundle／掃描／單一路徑／jobs 清單（目錄制 messages/polling/{project_slug}/{message_id}/msg_{type}.{ext}）。
+對應 PHP 的 sc_ai_chats_message_poll_main_Class——路徑 bundle／掃描／單一路徑／jobs 清單（目錄制 data/messages/polling/{project_slug}/{message_id}/msg_{type}.{ext}）。
 """
 
-import json
 from pathlib import Path
 
 from .. import context
@@ -23,11 +22,19 @@ class message_store_class:
     """
 
     _instance: "message_store_class | None" = None
+    _project_id: str
+    _project_slug: str
     _chat_id: str
     _chat_sid: str
     _message_id: str
     _message_dir: Path
     _claim_path: Path
+    _msg_conf_data: dict[str, object]
+    _project_path: str
+    _model_name: str
+    _chat_mode: str
+    _context_length: int | None
+    _reasoning_effort: str
 
     def __new__(cls):
         """單例：整個程序只建立一次（無狀態——單例為統一入口）。"""
@@ -45,7 +52,14 @@ class message_store_class:
         self._chat_id = ""
         self._chat_sid = ""
         self._message_id = ""
-        self._msg_conf_data: dict = {
+        self._message_dir = Path()
+        self._claim_path = Path()
+        self._project_path = ""
+        self._model_name = ""
+        self._chat_mode = ""
+        self._context_length = None
+        self._reasoning_effort = ""
+        self._msg_conf_data = {
 
             "project_id"    : "",
             "project_slug"  : "",
@@ -63,7 +77,7 @@ class message_store_class:
         """取得 message_store_class 單例（整個程序共用同一實例）。"""
         return cls()
 
-    def init_msg_conf_data(self, msg_conf_data: dict) -> None:
+    def init_msg_conf_data(self, msg_conf_data: dict[str, object]) -> None:
         """整包覆蓋 msg_conf_data ＋同步 chat_id/message_id（語境設定的統一入口）。"""
         self._msg_conf_data     = msg_conf_data
 
@@ -76,7 +90,13 @@ class message_store_class:
         self._project_path      = str(self._msg_conf_data.get("project_path", "")).strip()
         self._model_name        = str(self._msg_conf_data.get("model_name", "")).strip()
         self._chat_mode         = str(self._msg_conf_data.get("chat_mode", "")).strip()
-        self._context_length    = self._msg_conf_data.get("context_length", None)
+        context_length_value = self._msg_conf_data.get("context_length", None)
+
+        # 判定：冇值 → None；有值 → 轉 int
+        if context_length_value is None:
+            self._context_length = None
+        else:
+            self._context_length = int(str(context_length_value))
         self._reasoning_effort  = str(self._msg_conf_data.get("reasoning_effort", "")).strip()
 
         self.init_msg_paths()
@@ -88,13 +108,15 @@ class message_store_class:
 
     def load(self, msg_conf_path: Path) -> None:
         """讀取 msg_conf 檔 → 與默認值合併（載入覆蓋默認）→ 存入 self。"""
-        try:
-            data = json.loads(msg_conf_path.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                merged_conf = {**self._msg_conf_data, **data}
-                self.init_msg_conf_data(merged_conf)
-        except Exception:  # noqa: BLE001, S110
-            pass
+        msg_conf_data = io.read_json(msg_conf_path)
+
+        # 判定：讀唔到（缺失／損壞）→ 保持默認值
+        if msg_conf_data is None:
+            return
+
+        merged_conf: dict[str, object] = {**self._msg_conf_data, **msg_conf_data}
+
+        self.init_msg_conf_data(merged_conf)
 
     def get_chat_id(self) -> str:
         return self._chat_id
@@ -106,7 +128,7 @@ class message_store_class:
     def get_message_id(self) -> str:
         return self._message_id
 
-    def get_msg_conf_data(self) -> dict:
+    def get_msg_conf_data(self) -> dict[str, object]:
         """回傳目前已載入的 msg_conf 內容（load 時已讀入）。"""
         return self._msg_conf_data
 
@@ -119,33 +141,33 @@ class message_store_class:
         return self._project_path
 
     def get_model_name(self) -> str:
-        """本輪 job 的 model_name（provider/model——引擎解析用）。"""
+        """本輪 job 的 model_name（provider/model——agent解析用）。"""
         return self._model_name
 
     def get_chat_mode(self) -> str:
-        """本輪 job 的 chat_mode（UI 模——引擎對映 goose 模式）。"""
+        """本輪 job 的 chat_mode（UI 模——agent對映 goose 模式）。"""
         return self._chat_mode
 
-    def get_context_length(self):
+    def get_context_length(self) -> int | None:
         """本輪 job 的 context_length（msg_conf 帶入；缺＝None）。"""
         return self._context_length
 
     def get_reasoning_effort(self) -> str:
-        """本輪 job 的 reasoning_effort（我們自己決定；空＝引擎用默認）。"""
+        """本輪 job 的 reasoning_effort（我們自己決定；空＝agent用默認）。"""
         return self._reasoning_effort
 
     def get_message_dir(self) -> Path:
         """訊息目錄（init_msg_paths 已算好：messages/polling/{project_slug}/{message_id}）。"""
         return self._message_dir
 
-    def get_response_result_paths(self) -> list:
+    def get_response_result_paths(self) -> list[Path]:
         """全部 response result 檔路徑（msg_response.{n}.result.txt——按 index 自然序；收尾判準用）。"""
         message_dir = self.get_message_dir()
 
         response_result_paths = list(message_dir.glob("msg_response.*.result.txt"))
 
         # 自然序（按 index 數字——唔係字典序）
-        response_result_paths.sort(key=lambda response_result_path_item: int(response_result_path_item.name.split(".")[1]))
+        response_result_paths.sort(key=_response_index)
         return response_result_paths
 
     def get_msg_summarize_path(self) -> Path:
@@ -177,18 +199,18 @@ class message_store_class:
         msg_conf_path 有值 → 由該目錄直接推 msg_status.txt（唔使載入 msg_conf）；
         無值 → 用目前已載入嘅 message_id。
         """
-        status_path = self.get_msg_status_path()
-
-        # 判定：有 msg_conf 路徑 → 同目錄嘅 msg_status.txt
+        # 判定：有 msg_conf 路徑 → 同目錄嘅 msg_status.txt（唔碰自己嘅 _message_dir）
         if msg_conf_path is not None:
             status_path = Path(msg_conf_path).parent / "msg_status.txt"
+        else:
+            status_path = self.get_msg_status_path()
 
         return io.get_last_non_empty_line(status_path)
 
     def set_msg_status(self, status: str) -> None:
         """寫入 msg_status（append——每次寫入新增一行；最新狀態為最後一行）。"""
         with self.get_msg_status_path().open("a", encoding="utf-8", newline="") as output_file:
-            output_file.write(status + "\n")
+            _ = output_file.write(status + "\n")
 
     def get_msg_conf_files(self) -> list[Path]:
         """掃描 messages/polling/*/*/msg_conf.json → 按建立時間排序回傳路徑清單（最舊優先）。"""
@@ -197,6 +219,12 @@ class message_store_class:
             key=lambda p: p.stat().st_birthtime,
         )
 
+
+
+def _response_index(response_result_path: Path) -> int:
+    """由 msg_response.{n}.result.txt 抽 index 數字（排序鍵）。"""
+    file_name_parts = response_result_path.name.split(".")
+    return int(file_name_parts[1])
 
 
 # 模組級實例已移除——改由 context.py 的 message_store() bridging 函數取得單例

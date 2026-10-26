@@ -11,15 +11,20 @@ server_diagnostics.py — diagnostics 端點。
 - get_long_paths()：POST /diagnostics/files/get_long_paths（PHP 呼叫——檔案路徑長度掃描（帶 project_path））
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false, reportImplicitRelativeImport=false
+# （返回 dict 由 diagnostics 提供——Unknown/Any 警告一律關，其餘照檢）
+
+from typing import Any
+
 from diagnostics.main import diagnostics_class
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 
 router = APIRouter()
 
 diagnostics = diagnostics_class()
 
 @router.post("/diagnostics/git/get_status")
-def get_git_status(request: Request, payload: dict) -> dict:
+def get_git_status(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 Git 狀態診斷。"""
     project_path = payload.get("project_path")
     
@@ -30,7 +35,7 @@ def get_git_status(request: Request, payload: dict) -> dict:
     return result
 
 @router.post("/diagnostics/git/get_config_list")
-def get_config_list(request: Request, payload: dict) -> dict:
+def get_config_list(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 Git 設定一覽（帶 project_path——該專案嘅 git config 攤開）。"""
     project_path = payload.get("project_path")
 
@@ -42,7 +47,7 @@ def get_config_list(request: Request, payload: dict) -> dict:
 
 
 @router.post("/diagnostics/git/clean_repo_ghosts")
-def clean_repo_ghosts(request: Request, payload: dict) -> dict:
+def clean_repo_ghosts(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 發問前預檢——清 git 幽靈（名單有、磁碟冇）。"""
     project_path = payload.get("project_path")
 
@@ -54,13 +59,13 @@ def clean_repo_ghosts(request: Request, payload: dict) -> dict:
 
 
 @router.post("/diagnostics/system_env/get")
-def get_system_env(request: Request) -> dict:
+def get_system_env() -> dict[str, Any]:
     """PHP 執行系統級環境偵測（無參數——整台機器一份）。"""
     result = diagnostics.get_system_env()
     return result
 
 @router.post("/diagnostics/project_env/get")
-def get_project_env(request: Request, payload: dict) -> dict:
+def get_project_env(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行專案級環境偵測（帶 project_path——偵測該專案目錄）。"""
     project_path = payload.get("project_path")
 
@@ -72,7 +77,7 @@ def get_project_env(request: Request, payload: dict) -> dict:
 
 
 @router.post("/diagnostics/files/get_long_paths")
-def get_long_paths(request: Request, payload: dict) -> dict:
+def get_long_paths(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行檔案路徑長度掃描（帶 project_path——掃描該專案目錄）。"""
     project_path = payload.get("project_path")
 

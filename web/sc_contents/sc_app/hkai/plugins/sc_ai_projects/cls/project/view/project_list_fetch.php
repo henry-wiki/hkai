@@ -16,13 +16,17 @@ trait project_list_fetch
         
         // 備註：未指定專案＝冇 active（home——唔自動揀；自動選取（首個）待未來需求——get_default_project 保留唔叫）
         
-        // 清單語境旗標（歸檔語境＝archive／archive@<project_slug>——URL 第一段原值由前端帶；旗標由後台出，前端據此上歸檔視覺）
-        $is_archive = sc_ai_projects()->project()->is_archive_project_key($selected_project_slug);
+        // 專案段解析（歸檔旗標＋純 slug——單一來源）
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($selected_project_slug);
 
-        // 瀏覽高亮：語境形（archive@<project_slug>）→ 取純 slug 作 active（路徑共用）；純關鍵字（archive——列面）→ 原值對唔中任何 slug＝冇高亮
-        if (strpos($selected_project_slug, "@") !== false) {
-            $selected_project_slug = sc_ai_projects()->project()->get_bare_project_slug($selected_project_slug);
+        // 清單語境旗標（歸檔語境＝archive／archive@<project_slug>——旗標由後台出）
+        $is_archive = false;
+        if ($resolved_project_slug["archive"] === 1) {
+            $is_archive = true;
         }
+
+        // 瀏覽高亮：語境形（archive@<project_slug>）→ 純 slug 作 active（路徑共用）
+        $selected_project_slug = $resolved_project_slug["project_slug"];
 
         // 判定：歸檔語境 → 已歸檔清單；普通語境 → 正常清單
         $project_list_html = "";
@@ -44,7 +48,7 @@ trait project_list_fetch
         $auto_home = false;
 
         // 判定：有指定 slug、非歸檔語境、非 home 段、查唔到專案 → 回 home
-        if ($selected_project_slug !== "" && $selected_project_slug !== "home" && $is_archive === false) {
+        if ($selected_project_slug !== "" && $selected_project_slug !== sc_get_config("hkai.default_project_slug") && $is_archive === false) {
             if ($selected_project_row === null) {
                 $auto_home = true;
             }

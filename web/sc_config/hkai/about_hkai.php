@@ -6,11 +6,11 @@
 // == 例外：需要掃描／外部查詢嘅特殊值（如更新檢查）先至喺其他地方組合後併入 ==
 // == 注意：文案類字串（tagline 等）唔喺此檔——入 i18n 字典 settings.about.*（中英各一版） ==
 
-// 版本號（唯一來源＝repo 根 VERSION 檔——bump 版本＝只改嗰度，about 自動跟）
-$about_version = trim(file_get_contents(hkai__core()->get_version_file()));
+// 版本號（唯一來源＝sc_config core.version → repo 根 VERSION 檔——bump 版本＝只改嗰度，about 自動跟）
+$about_version = trim(file_get_contents(sc_get_config("core.version")));
 
 // 建置日期（唯一來源＝站根 .build 檔——build 時寫入 Ymd.His）
-$about_build_file = dirname(hkai__core()->get_version_file()) . "/.build";
+$about_build_file = dirname(sc_get_config("core.version")) . "/.build";
 $about_build      = date("Y-m-d", filemtime(__FILE__));
 
 // 判定：.build 存在且格式合 → 用 build 時間

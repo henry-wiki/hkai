@@ -45,12 +45,12 @@ trait render_chat_item
         $updated_time = sc_format_relative_time($chat_updated_at);
 
         // 歸檔／還原／刪除文案（i18n——先落變數，後入 attr）
-        $archive_title       = hkai__i18n()->get("chat.archive");
-        $restore_title       = hkai__i18n()->get("chat.restore");
-        $archive_confirm_msg = hkai__i18n()->get("chat.archive_confirm");
-        $restore_confirm_msg = hkai__i18n()->get("chat.restore_confirm");
-        $delete_title        = hkai__i18n()->get("chat.delete");
-        $delete_confirm_msg  = hkai__i18n()->get("chat.delete_confirm");
+        $archive_title       = hkai()->i18n()->get("chat.archive");
+        $restore_title       = hkai()->i18n()->get("chat.restore");
+        $archive_confirm_msg = hkai()->i18n()->get("chat.archive_confirm");
+        $restore_confirm_msg = hkai()->i18n()->get("chat.restore_confirm");
+        $delete_title        = hkai()->i18n()->get("chat.delete");
+        $delete_confirm_msg  = hkai()->i18n()->get("chat.delete_confirm");
 
         // 歸檔卡樣式 class（sc_chat_card--archived——琥珀標識；結構同正常卡不變）
         $archived_class = "";

@@ -16,7 +16,7 @@ class timer_class:
 
     _instance: "timer_class | None" = None
     # 目前 message 語境（型別明確——類別屬性 = 初始 None——singleton 重用不重設；setter 建立實例屬性遮蔽）
-    _daemon_conf: dict | None = None
+    _daemon_conf: dict[str, object] | None = None
     _chat_id: str | int | None = None
     _message_id: str | int | None = None
 
@@ -32,7 +32,7 @@ class timer_class:
         return cls()
 
     # 設定目前 daemon 語境（daemon_conf——之後 get_datetime 不需再傳）
-    def set_daemon_conf(self, daemon_conf: dict) -> None:
+    def set_daemon_conf(self, daemon_conf: dict[str, object]) -> None:
         self._daemon_conf = daemon_conf
 
     # 設定目前 message 語境（chat_id——之後 get_datetime 不需再傳）

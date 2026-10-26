@@ -22,7 +22,7 @@ trait project_edit
         $project_slug = trim($input_data["project_slug"] ?? "");
 
         // 判定：Home 專案（slug 空／home）→ 唔准改
-        if ($project_slug === "" || $project_slug === "home") {
+        if ($project_slug === "" || $project_slug === sc_get_config("hkai.default_project_slug")) {
             return sc_response()->json(["ok" => false, "error" => "home project cannot be modified"], 403);
         }
         $project_row  = repo_select()->get_project_row($project_slug);

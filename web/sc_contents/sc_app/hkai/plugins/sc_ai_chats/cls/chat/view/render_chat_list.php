@@ -19,10 +19,10 @@ trait render_chat_list
         $project_row = sc_ai_projects()->project()->get_project_row($selected_project_slug);
 
         // home 語境（空 slug／home 段）→ 虛擬專案列（project_id 0）
-        if ($project_row === null && ($selected_project_slug === "" || $selected_project_slug === "home")) {
+        if ($project_row === null && ($selected_project_slug === "" || $selected_project_slug === sc_get_config("hkai.default_project_slug"))) {
             $project_row = [
                 "project_id"     => 0,
-                "project_slug"   => "home",
+                "project_slug"   => sc_get_config("hkai.default_project_slug"),
                 "project_status" => "normal",
                 "project_name"   => "",
             ];

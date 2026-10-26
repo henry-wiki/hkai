@@ -2,7 +2,7 @@
 """
 process_list.py
 
-程序程序清單（append-only JSONL）——每一個被拉起的程序（bridge／openhands_api_daemon／worker／引擎）各 append 一行。
+程序程序清單（append-only JSONL）——每一個被拉起的程序（bridge／openhands_api_daemon／worker／agent）各 append 一行。
 
 檔案：storage_dir/process_status/process_list.jsonl
       檔名出自靜態 SSOT sc_config/hkai/hkai_config.json 的 filenames.process_list；
@@ -11,7 +11,7 @@ process_list.py
 一行欄位：
     ts           寫入時間（Y-m-d H:M:S）
     event        spawn／exit／kill（本階段只寫 spawn）
-    name         哪一類程序（bridge／openhands_api_daemon／worker／引擎）
+    name         哪一類程序（bridge／openhands_api_daemon／worker／agent）
     pid          該程序 PID
     ppid         拉起它的程序 PID（呼叫者＝父程序；daemon 自記時為自己的父程序）
     program      程式／模組名（如 openhands_api_daemon.main）
@@ -32,12 +32,14 @@ import psutil
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-def get_create_time(pid: int) -> float:
-    """程序建立時間（讀唔到 → 0——例如權限不足／已死）。"""
+def get_create_time(pid: int) -> int:
+    """程序建立時間（整數毫秒——讀唔到 → 0，例如權限不足／已死）。"""
     try:
-        return psutil.Process(int(pid)).create_time()
+        create_time = psutil.Process(int(pid)).create_time()
     except psutil.Error:
-        return 0.0
+        return 0
+
+    return int(create_time * 1000)
 
 
 def get_list_path(daemon_conf_data: dict) -> "Path | None":

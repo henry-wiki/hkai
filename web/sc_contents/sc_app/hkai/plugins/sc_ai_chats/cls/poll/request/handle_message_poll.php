@@ -38,6 +38,9 @@ trait handle_message_poll
         $chat_id    = (int)$chat_row["chat_id"];
         $project_id = (int)$chat_row["project_id"];
         
+        // 附件整理監視（preparing → 抽取完成即放行 queued）
+        sc_ai_chats()->poll()->promote_prepared_jobs($chat_id);
+
         // 掃描該對話進行中任務（msg_conf——有幾多出幾多）
         $polling_jobs = sc_ai_chats()->poll()->file()->get_poll_jobs($chat_id);
         

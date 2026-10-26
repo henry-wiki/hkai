@@ -26,11 +26,18 @@ trait materialize_queue_message
 
         sc_mkdir($message_dir);
 
-        // 初始狀態先寫（事件驅動——QUERY_ACCEPTED → queued）
-        sc_ai_chats()->poll()->append_msg_status_by_event($chat_id, $message_id, "QUERY_ACCEPTED");
+        // 附件清單（有附件＝要先整理——圖片抽取）
+        $conf_attachments = $conf_data["attachments"] ?? [];
 
-        // 活動列起步 log
-        sc_ai_chats()->poll()->log()->append_log($chat_id, $message_id, "query started", ["event" => "QUERY_ACCEPTED"]);
+        // 判定：有附件 → 先入 preparing（worker 跳過；整理完成才放行）
+        if (count($conf_attachments) > 0) {
+            sc_ai_chats()->poll()->append_msg_status_by_event($chat_id, $message_id, "QUERY_PREPARING");
+            sc_ai_chats()->poll()->log()->append_log($chat_id, $message_id, "attachments preparing", ["event" => "QUERY_PREPARING"]);
+        } else {
+            // 冇附件 → 直接 queued（現行行為）
+            sc_ai_chats()->poll()->append_msg_status_by_event($chat_id, $message_id, "QUERY_ACCEPTED");
+            sc_ai_chats()->poll()->log()->append_log($chat_id, $message_id, "query started", ["event" => "QUERY_ACCEPTED"]);
+        }
 
         // prompt 檔（使用者問題——worker 讀取）
         sc_ai_chats()->prompt()->set_polling_msg_user_prompt($chat_id, $message_id, $content);
@@ -47,8 +54,9 @@ trait materialize_queue_message
         // conf 檔（daemon／poll 單一讀取來源——掃描開關：最後寫，一見即齊）
         $conf_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "conf");
 
-        // daemon 引擎蓋章（agent 分流——落地嗰刻揀嘅引擎；兩 daemon 並存各自接自己嗰批）
-        $conf_data["daemon_engine"] = hkai__core()->get_daemon_engine();
+        // daemon agent蓋章（agent 分流——落地嗰刻揀嘅agent；兩 daemon 並存各自接自己嗰批）
+        $conf_data["agent"]         = hkai()->agent()->get_agent();
+        $conf_data["daemon_engine"] = hkai()->agent()->get_daemon_engine();
 
         $conf_data["message_id"] = $message_id;
 

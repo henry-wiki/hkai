@@ -23,9 +23,6 @@ $plugin->setEnabled(true);
 // 註冊 request action（server settings——獨立 handler）
 $plugin->add_request_action("fetch_server_settings", __DIR__ . "/request/server/fetch_server_settings.php");
 
-// 註冊 request action（server live logs——1s 輪詢：只回 slots.server_log）
-$plugin->add_request_action("fetch_server_log", __DIR__ . "/request/server/fetch_server_log.php");
-
 // 註冊 request action（process viewer——後端渲染分頁內容）
 $plugin->add_request_action("fetch_process_viewer", __DIR__ . "/request/process/fetch_process_viewer.php");
 $plugin->add_request_action("kill_process", __DIR__ . "/request/process/kill_process.php");
@@ -36,16 +33,10 @@ $plugin->add_request_action("settings_test_server", __DIR__ . "/request/server/s
 // 註冊 request action（instructions settings——fetch 逐 item／save／reset）
 $plugin->add_request_action("fetch_system_prompt", __DIR__ . "/request/instructions/fetch_system_prompt.php");
 $plugin->add_request_action("fetch_system_env", __DIR__ . "/request/instructions/fetch_system_env.php");
-$plugin->add_request_action("settings_save_instructions", __DIR__ . "/request/instructions/settings_save_instructions.php");
 $plugin->add_request_action("settings_reset_instructions", __DIR__ . "/request/instructions/settings_reset_instructions.php");
 
 // 註冊 request action（system env——手動更新環境檔：只准重新產生，內容不可編輯）
 $plugin->add_request_action("settings_refresh_system_env", __DIR__ . "/request/instructions/settings_refresh_system_env.php");
-
-// 註冊 request action（server start／restart／stop——獨立 handler）
-$plugin->add_request_action("settings_start_server", __DIR__ . "/request/server/settings_start_server.php");
-$plugin->add_request_action("settings_restart_server", __DIR__ . "/request/server/settings_restart_server.php");
-$plugin->add_request_action("settings_stop_server", __DIR__ . "/request/server/settings_stop_server.php");
 
 // 註冊 request action（server status——server 起咗未快查；URL /request/hkai/server_status/）
 $plugin->add_request_action("server_status", __DIR__ . "/request/server/server_status.php");

@@ -10,11 +10,11 @@ trait render_git_config_result
     public function render_git_config_result($git_config_result)
     {
         // i18n 字眼（單一來源——cls/i18n/lang/*.json）
-        $read_failed_label     = hkai__i18n()->get("git.read_failed");
-        $not_initialized_label = hkai__i18n()->get("git.row_not_initialized");
-        $status_label          = hkai__i18n()->get("git.row_status");
-        $th_key_label          = hkai__i18n()->get("diagnostics.cfg_key");
-        $th_value_label        = hkai__i18n()->get("diagnostics.cfg_value");
+        $read_failed_label     = hkai()->i18n()->get("git.read_failed");
+        $not_initialized_label = hkai()->i18n()->get("git.row_not_initialized");
+        $status_label          = hkai()->i18n()->get("git.row_status");
+        $th_key_label          = hkai()->i18n()->get("diagnostics.cfg_key");
+        $th_value_label        = hkai()->i18n()->get("diagnostics.cfg_value");
 
         $outputLines = [];
 

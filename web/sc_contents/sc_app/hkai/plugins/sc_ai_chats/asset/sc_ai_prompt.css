@@ -277,6 +277,33 @@
     border-radius: 4px;
     object-fit: cover;
 }
+/* 附件 chip 上傳狀態（div——uploading／done／failed） */
+.sc_composer__attachment[data-state="uploading"] {
+    opacity: .75;
+}
+.sc_composer__attachment_spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(200,213,233,.25);
+    border-top-color: #9fb6e8;
+    border-radius: 50%;
+    animation: sc_composer_attachment_spin .8s linear infinite;
+}
+@keyframes sc_composer_attachment_spin {
+    to { transform: rotate(360deg); }
+}
+.sc_composer__attachment_failed {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #c0392b;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+}
 /* 拖放高亮（檔案拖入輸入盒） */
 .sc_composer__editor--drag_over {
     box-shadow: 0 0 0 2px rgba(115,144,255,.55), 0 10px 30px rgba(0,0,0,.19);

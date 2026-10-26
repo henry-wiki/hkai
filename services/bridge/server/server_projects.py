@@ -7,17 +7,21 @@ server_projects.py — projects 端點。
 - git_stage_all()：POST /projects/git/stage_all/（PHP 呼叫——執行 git add -A）
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false
+# （payload 係動態 JSON——Unknown/Any 警告一律關，其餘照檢）
+
 import datetime
 import subprocess
+from typing import Any
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter
 
 from ..runtime import sc_logger
 
 router = APIRouter()
 
 
-def run_git_command(project_path, git_arguments):
+def run_git_command(project_path: str, git_arguments: list[str]):
     """在指定路徑執行 git 命令——回傳 (是否成功, 訊息)。"""
     try:
         completed = subprocess.run(
@@ -39,7 +43,7 @@ def run_git_command(project_path, git_arguments):
     return True, completed.stdout.strip()
 
 
-def run_git_init(project_path):
+def run_git_init(project_path: str):
     """初始化 git 儲存庫（已存在時 git init 亦為成功）＋套用標準 repo 設定。"""
     sc_logger.log(f"git init start: {project_path}")
 
@@ -62,7 +66,7 @@ def run_git_init(project_path):
     return True, "git init 完成"
 
 
-def run_git_init_standard_configs(project_path):
+def run_git_init_standard_configs(project_path: str):
     """套用標準 repo 設定（用戶 2026-10-03 定：每新增一項都要寫明為什麼）。"""
     standard_configs = [
         # core.longpaths=true：Windows 路徑上限 260 字元，開啟後 git 用長路徑 API（~32k）
@@ -84,7 +88,7 @@ def run_git_init_standard_configs(project_path):
     return True, "標準設定完成"
 
 
-def run_git_stage_all(project_path):
+def run_git_stage_all(project_path: str):
     """加入全部變更到準備區（git add -A）。"""
     sc_logger.log(f"git add -A start: {project_path}")
 
@@ -100,7 +104,7 @@ def run_git_stage_all(project_path):
     return True, "git add -A 完成"
 
 
-def run_git_commit(project_path):
+def run_git_commit(project_path: str):
     """提交準備區（git commit——訊息自動＝update ＋ 本機時間）。"""
     commit_message = "update " + datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     sc_logger.log(f"git commit start: {project_path} — {commit_message}")
@@ -118,7 +122,7 @@ def run_git_commit(project_path):
 
 
 @router.post("/projects/git/init/")
-def git_init(request: Request, payload: dict) -> dict:
+def git_init(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 git init。"""
     project_path = payload.get("project_path")
 
@@ -136,7 +140,7 @@ def git_init(request: Request, payload: dict) -> dict:
 
 
 @router.post("/projects/git/stage_all/")
-def git_stage_all(request: Request, payload: dict) -> dict:
+def git_stage_all(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 git add -A。"""
     project_path = payload.get("project_path")
 
@@ -154,7 +158,7 @@ def git_stage_all(request: Request, payload: dict) -> dict:
 
 
 @router.post("/projects/git/commit/")
-def git_commit(request: Request, payload: dict) -> dict:
+def git_commit(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 git commit。"""
     project_path = payload.get("project_path")
 

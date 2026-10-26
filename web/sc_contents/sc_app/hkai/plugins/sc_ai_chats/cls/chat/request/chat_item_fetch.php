@@ -36,7 +36,8 @@ trait chat_item_fetch
         $chat_row_item = sc_html_encode($chat_row);
 
         // 專案段查表用純 slug（歸檔形 archive@<project_slug> → @ 後；其餘 → 原值）
-        $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+        $project_slug = $resolved_project_slug["project_slug"];
 
         // 上下文專案列（連結第一段來源——歸檔形 archive@<project_slug> 由 build_chat_url 統一砌）
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);

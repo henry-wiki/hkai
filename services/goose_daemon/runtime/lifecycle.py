@@ -2,12 +2,12 @@
 """
 lifecycle.py — 程序生死契約（daemon 專用；只依賴標準庫＋psutil，可獨立搬走）
 
-三種殺法（其他檔案禁止直接 os._exit／terminate／kill）：
+四支（其他檔案禁止直接 os._exit／terminate／kill）：
 
 1. exit(reason)             自殺（連子孫）：殺子孫 → 走 (3) 自殺
 2. exit_children()          殺子孫（唔殺自己）：terminate 自己全部子孫 → 逾時 kill
 3. exit_self(reason)        只自殺：清心跳檔 → 記 log → os._exit（死亡出口）
-5. exit_child(pid, reason)  主動殺指定子程序（terminate → 逾時 kill；唔殺自己）
+4. exit_child(pid, reason)  主動殺指定子程序（terminate → 逾時 kill；唔殺自己）
 
 「子孫」定義＝psutil 子樹（recursive）——包括 worker／agent 程序。
 """
@@ -16,7 +16,7 @@ import os
 import threading
 import time
 from collections.abc import Callable
-from typing import NoReturn
+from typing import NoReturn, cast
 
 import psutil
 
@@ -27,10 +27,10 @@ from . import build_file, process
 TERMINATE_WAIT_SEC = 3.0
 
 # 背景監看執行緒（watch_runtime 建立；同一程序只一條）
-_watch_thread = None
+_watch_thread: "threading.Thread | None" = None
 
 # 收場處理（daemon 注入經理協議；None＝直接殺子孫自殺）
-_shutdown_handler = None
+_shutdown_handler: Callable[[str, int], None] | None = None
 
 # 心跳檔清理回呼（heartbeat／heartbeat_worker 開機時注入；None＝唔清）
 _heartbeat_cleaner: Callable[[], None] | None = None
@@ -54,7 +54,7 @@ def set_heartbeat_cleaner(heartbeat_cleaner: Callable[[], None]) -> None:
     _heartbeat_cleaner = heartbeat_cleaner
 
 
-def set_shutdown_handler(shutdown_handler) -> None:
+def set_shutdown_handler(shutdown_handler: Callable[[str, int], None]) -> None:
     """注入收場處理（daemon 經理協議——先禮後兵；未注入＝直接殺子孫自殺）。"""
     global _shutdown_handler
 
@@ -99,14 +99,17 @@ def exit_child(process_pid: int, reason: str = "") -> None:
         return
 
     try:
-        _gone_processes, alive_processes = psutil.wait_procs([child_process], timeout=TERMINATE_WAIT_SEC)
+        _gone_processes, alive_processes = cast(
+            "tuple[list[psutil.Process], list[psutil.Process]]",
+            psutil.wait_procs([child_process], timeout=TERMINATE_WAIT_SEC),  # pyright: ignore[reportUnknownMemberType]
+        )
     except psutil.Error:
         alive_processes = [child_process]
 
     # 判定：逾時未死 → 強制 kill
     for alive_process in alive_processes:
         try:
-            alive_process.kill()
+            _ = alive_process.kill()
         except psutil.Error:
             pass
 
@@ -145,30 +148,33 @@ def _watch_loop() -> None:
 
 def exit_children() -> None:
     """殺死自己全部子孫（唔殺自己）：terminate → 逾時 kill。"""
-    child_processes = []
+    child_processes: list[psutil.Process] = []
 
     # 取自己嘅全部子孫（遞歸——只向下，唔掂母親）
     try:
-        child_processes = psutil.Process(process.self_pid()).children(recursive=True)
+        child_processes = cast("list[psutil.Process]", psutil.Process(process.self_pid()).children(recursive=True))
     except psutil.Error:
         child_processes = []
 
     # 先客氣：逐個 terminate
     for child_process in child_processes:
         try:
-            child_process.terminate()
+            _ = child_process.terminate()
         except psutil.Error:
             pass
 
     # 等子孫自己收工（逾時就轉 kill；權限不足／已死等錯誤唔可以中斷死亡流程）
     try:
-        _gone_processes, alive_processes = psutil.wait_procs(child_processes, timeout=TERMINATE_WAIT_SEC)
+        _gone_processes, alive_processes = cast(
+            "tuple[list[psutil.Process], list[psutil.Process]]",
+            psutil.wait_procs(child_processes, timeout=TERMINATE_WAIT_SEC),  # pyright: ignore[reportUnknownMemberType]
+        )
     except psutil.Error:
         alive_processes = child_processes
 
     # 判定：逾時未死 → 強制 kill
     for alive_process in alive_processes:
         try:
-            alive_process.kill()
+            _ = alive_process.kill()
         except psutil.Error:
             pass

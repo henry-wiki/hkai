@@ -13,8 +13,8 @@ trait build_tab_rule_foot
         $button_lines = [];
 
         // 重設鈕（data-btn=reset_tab_rule → 交 tab_rule binder；兩道確認文案＝data-confirm_msg／data-confirm_msg_second）
-        $reset_confirm_msg        = hkai__i18n()->get("rule.reset_confirm");
-        $reset_confirm_msg_second = hkai__i18n()->get("rule.reset_confirm_again");
+        $reset_confirm_msg        = hkai()->i18n()->get("rule.reset_confirm");
+        $reset_confirm_msg_second = hkai()->i18n()->get("rule.reset_confirm_again");
 
         $reset_wrapper   = [];
         $reset_wrapper[] = "<div class='sc_btn_wrapper'>";
@@ -23,7 +23,7 @@ trait build_tab_rule_foot
         $button_lines[]  = implode("\r\n", $reset_wrapper);
 
         // 儲存鈕（data-btn=save_tab_rule → 交 tab_rule binder 送出；data-confirm_msg＝撳掣先出確認框；無取消鈕——關閉交基座 ✕）
-        $save_confirm_msg = hkai__i18n()->get("rule.save_confirm");
+        $save_confirm_msg = hkai()->i18n()->get("rule.save_confirm");
 
         $save_wrapper   = [];
         $save_wrapper[] = "<div class='sc_btn_wrapper'>";

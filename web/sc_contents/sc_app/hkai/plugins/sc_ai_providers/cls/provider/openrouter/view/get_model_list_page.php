@@ -104,6 +104,11 @@ trait get_model_list_page
         $output_lines[] = "<td class='model_selector_td_name'>";
         $output_lines[] = "<div class='model_selector_model_name'>" . $model_item["name"] . "</div>";
         $output_lines[] = "<div class='model_selector_model_mid'>" . $model_id . "</div>";
+
+        // 判定：有輸入模態資料 → 多一行（文字, 圖片…）
+        if (($model_item["input_modalities"] ?? "") !== "") {
+            $output_lines[] = "<div class='model_selector_model_mid'>" . $model_item["input_modalities"] . "</div>";
+        }
         $output_lines[] = "</td>";
         $output_lines[] = "<td class='model_selector_td_context'>" . $format_context_length . "</td>";
         $output_lines[] = "<td class='model_selector_td_price'>";

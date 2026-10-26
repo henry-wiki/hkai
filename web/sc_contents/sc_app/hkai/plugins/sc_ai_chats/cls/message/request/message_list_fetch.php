@@ -28,7 +28,8 @@ trait message_list_fetch
         $project_row = null;
 
         // 專案段查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
-        $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+        $project_slug = $resolved_project_slug["project_slug"];
 
         // 判定：有 project_slug → 查專案列
         if ($project_slug !== "") {
@@ -36,7 +37,7 @@ trait message_list_fetch
         }
 
         // home 語境（空 slug／home 段）→ 放行（對話按 chat_sid 查——project_id 0）
-        $is_home_context = ($project_slug === "" || $project_slug === "home");
+        $is_home_context = ($project_slug === "" || $project_slug === sc_get_config("hkai.default_project_slug"));
 
         // 判定：冇有效專案且唔係 home → 空狀態（窗口界照出＝count 0、無起訖）
         if ($project_row === null && $is_home_context === false) {
@@ -75,7 +76,7 @@ trait message_list_fetch
 
         // 空（$chat_sid_state＝""：空白／錯 sid——合法狀態，不是錯誤；共用空狀態元件，顯隱永遠顯示；窗口界照出＝count 0、無起訖）
         if ($chat_row === null) {
-            $empty_state_html = sc_empty_state(hkai__i18n()->get("empty.start_chat"), false);
+            $empty_state_html = sc_empty_state(hkai()->i18n()->get("empty.start_chat"), false);
 
             return sc_response()->json([
                 "ok"              => true,

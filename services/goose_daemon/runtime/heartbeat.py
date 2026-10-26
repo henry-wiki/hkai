@@ -2,7 +2,7 @@
 """
 heartbeat.py — 心跳（daemon 主程序用：狀態檔＋生存證明＋母親監視；可獨立搬走）
 
-與 heartbeat_worker.py 關係：同一契約（9 函數／11 欄），但分開兩份——daemon 用本檔，worker 用 heartbeat_worker.py。
+與 heartbeat_worker.py 關係：同一契約（11 欄），但分開兩份——daemon 用本檔，worker 用 heartbeat_worker.py。
 
 對外入口（同 bridge 一致）：
 - init()        建立自己狀態檔 → 起背景執行緒
@@ -13,10 +13,11 @@ heartbeat.py — 心跳（daemon 主程序用：狀態檔＋生存證明＋母�
 - exception_kill()  例外退出（atexit）：記 log → stop
 
 狀態檔：{PROCESS_DIR}/{PROGRAM_NAME}.{pid}.json（PHP 程序清單讀）
-身份（PROGRAM_NAME／PROGRAM_LABEL）取自 context——worker 啟動前可自行改寫。
+身份（PROGRAM_NAME／PROGRAM_LABEL）取自 context（源頭 identity.DAEMON_*——固定，不運行中改寫）。
 """
 
 import atexit
+import contextlib
 import os
 import threading
 import time
@@ -77,8 +78,6 @@ def start() -> None:
 
 def stop(reason: str = "") -> None:
     """停止心跳並結束程序：停執行緒 → lifecycle.exit(reason)（清狀態檔＋死亡）。"""
-    global _heartbeat_thread
-
     # 停心跳執行緒（唔停 → 之後收尾刪檔會被佢重寫，殘檔復活）
     _stop_heartbeat_thread()
 
@@ -160,13 +159,22 @@ def remove_heartbeat_file() -> None:
     if heartbeat_file.exists() is False:
         return
 
-    try:
-        heartbeat_file.unlink()
-    except OSError:
-        pass
+    with contextlib.suppress(OSError):
+        _ = heartbeat_file.unlink()
 
 
 # ===== 內部 =====
+
+def _exit_if_mother_gone() -> None:
+    """母親唔在 → 收場（只在本程序依賴母親時檢查）。"""
+    # 判定：本程序唔依賴母親 → 唔檢查
+    if context.NEED_MOTHER is not True:
+        return
+
+    # 判定：母親唔在 → 收場（經理協議：通知工人撤退 → 清場 → 自殺）
+    if process.mother_is_gone():
+        lifecycle.exit("mother gone")
+
 
 def _run_heartbeat() -> None:
     """背景心跳：每拍寫狀態檔；母親唔在 → 自殺。"""
@@ -175,12 +183,8 @@ def _run_heartbeat() -> None:
         # 每輪第一件事：寫心跳（生存證明——無論忙唔忙都要寫）
         update_entry()
 
-        # 母親監視：母親唔在 → 經 lifecycle.exit（經理協議：通知工人撤退 → 清場 → 自殺）
-        # 判定：本程序依賴母親
-        if context.NEED_MOTHER is True:
-            # 判定：母親唔在 → 收場
-            if process.mother_is_gone():
-                lifecycle.exit("mother gone")
+        # 母親監視：母親唔在 → 收場（helper 內先判依賴性）
+        _exit_if_mother_gone()
 
         time.sleep(context.HEARTBEAT_INTERVAL_SEC)
 

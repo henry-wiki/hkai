@@ -11,11 +11,11 @@ aider_daemon 套件——aider 熱 daemon 的模組化版本（全 class、單�
         msg_processor.py       msg_processor_class(singleton)——查詢處理：重試迴圈＋子程序執行＋連線等待
         msg_stdout.py          msg_stdout_class(singleton)——stdout 純紀錄檔讀寫
         msg_claim.py           msg_claim_class(singleton)——處理認領（原子）
-    engine/
+    agent/
         aider_entry.py         aider_entry_class(singleton)——執行入口（冷／暖；spawn aider_daemon.acp 子程序）
         acp_client.py          acp_client(singleton)——ACP 協定客戶端（stdio——拉 aider_daemon.acp）
         agent_history.py       agent_history_class(singleton)——我方 DB 對話 → agent 歷史（隨 session/new 帶入）
-    acp/                   ACP server 側（aider 引擎接駁——獨立小程序；spawn target：python -m aider_daemon.acp.main）
+    acp/                   ACP server 側（aider agent接駁——獨立小程序；spawn target：python -m aider_daemon.acp.main）
         main.py               入口（薄）：sc_logger.setup() → asyncio.run(run_agent(agent()))
         core.py               ACP agent 本體（思考／回答／用量串流＋權限卡）
         permission.py         🧩 可拆模組：等確認（aider confirm ↔ ACP request_permission）

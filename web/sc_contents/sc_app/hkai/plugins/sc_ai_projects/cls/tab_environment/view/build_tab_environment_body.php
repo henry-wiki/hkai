@@ -15,8 +15,7 @@ trait build_tab_environment_body
         }
 
         // 準確值：環境檔＝storage/hkai/environment/env.{slug}.md（app storage——唔寫專案根）
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $storage_dir     = $runtime_configs["storage_dir"];
+        $storage_dir     = sc_get_config("storage.app_dir");
         $env_file        = $storage_dir . "/environment/env." . $project_row["project_slug"] . ".md";
 
         // 檢視純讀——零寫入（生成時機＝建立專案；重新偵測另走「更新」掣）

@@ -19,6 +19,50 @@ class _prompt {
         this.composer_project_slug = project_slug || "";
     }
 
+    // 讀 composer hidden chat_sid（新 prompt 由後端配；未輸入前 URL 未換）
+    get_composer_chat_sid() {
+        var j_hidden_chat_sid = jQuery(".sc_composer__hidden_fields input[data-model_field='chat_sid']");
+
+        // 判定：hidden 未載入 → 空
+        if (j_hidden_chat_sid.length < 1) {
+            return "";
+        }
+
+        return j_hidden_chat_sid.val();
+    }
+
+    // 現行對話 sid（URL 優先；新 prompt 未換 URL → 取 composer hidden）
+    async get_active_chat_sid() {
+        const chat_instance = await registry().sc_ai_chats().chat();
+        var chat_sid = chat_instance.get_chat_sid();
+
+        // 判定：URL 有 sid → 用佢
+        if (chat_sid !== "") {
+            return chat_sid;
+        }
+
+        return this.get_composer_chat_sid();
+    }
+
+    // 首次成功寫草稿之後：URL 未帶 sid → 靜默換（重載可憑 sid 取回）
+    async sync_chat_url(project_slug) {
+        const chat_instance = await registry().sc_ai_chats().chat();
+
+        // 判定：URL 已有 sid 段 → 唔做
+        if (chat_instance.get_chat_sid() !== "") {
+            return;
+        }
+
+        var chat_sid = this.get_composer_chat_sid();
+
+        // 判定：未有 sid → 唔做
+        if (chat_sid === "") {
+            return;
+        }
+
+        sc_url.shallow_replace_url("/" + project_slug + "/" + chat_sid + "/");
+    }
+
     // 啟動域（sc_ai_chats.init 召集——事件綁定；重複呼叫只行一次）
     async init() {
         // 判定：已啟動 → 直回
@@ -71,8 +115,9 @@ class _prompt_evt_bridge {
     constructor() {}
     // 綁定召集（開域一次——逐條拎 instance 再 init）
     async init() {
-        (await this.daemon_engine_switch()).init();
+        (await this.agent_switch()).init();
         (await this.prompt_attach()).init();
+        (await this.prompt_draft_restore()).init();
         (await this.prompt_draft_save()).init();
         (await this.prompt_enter_send()).init();
         (await this.prompt_gen_random()).init();
@@ -80,8 +125,9 @@ class _prompt_evt_bridge {
         (await this.prompt_send()).init();
         (await this.prompt_stop()).init();
     }
-    async daemon_engine_switch() { return (await import("./evt/daemon_engine_switch.js")).daemon_engine_switch(); }
+    async agent_switch() { return (await import("./evt/agent_switch.js")).agent_switch(); }
     async prompt_attach()      { return (await import("./evt/prompt_attach.js")).prompt_attach(); }
+    async prompt_draft_restore() { return (await import("./evt/prompt_draft_restore.js")).prompt_draft_restore(); }
     async prompt_draft_save() { return (await import("./evt/prompt_draft_save.js")).prompt_draft_save(); }
     async prompt_enter_send() { return (await import("./evt/prompt_enter_send.js")).prompt_enter_send(); }
     async prompt_gen_random() { return (await import("./evt/prompt_gen_random.js")).prompt_gen_random(); }
@@ -109,11 +155,14 @@ class _prompt_req_bridge {
     init() {
 
     }
-    async daemon_engine_switch() { return (await import("./req/daemon_engine_switch.js")).daemon_engine_switch(); }
+    async agent_switch() { return (await import("./req/agent_switch.js")).agent_switch(); }
     async prompt_fetch() { return (await import("./req/prompt_fetch.js")).prompt_fetch(); }
     async prompt_send()  { return (await import("./req/prompt_send.js")).prompt_send(); }
     async prompt_stop()  { return (await import("./req/prompt_stop.js")).prompt_stop(); }
     async upload_attachment() { return (await import("./req/upload_attachment.js")).upload_attachment(); }
+    async draft_delete_file() { return (await import("./req/draft_delete_file.js")).draft_delete_file(); }
+    async draft_save_meta() { return (await import("./req/draft_save_meta.js")).draft_save_meta(); }
+    async draft_fetch() { return (await import("./req/draft_fetch.js")).draft_fetch(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）

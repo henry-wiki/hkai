@@ -5,7 +5,7 @@ namespace sc\app\hkai\plugins\sc_ai_settings\process;
 // == sc_ai_settings process：process 域本體（bridge 檔——singleton；呼叫形 sc_ai_settings()->process()） ==
 // == 動作（trait——一檔一動作；2026-09-27 自舊 flat main_Class＋fetch_Class 合成） ==
 // == 職責：Process Viewer 分頁（畫面語彙：Cyber——等寬字 ＋ 霓虹點綴；樣式見 asset/sc_ai_settings.css 的 .process_viewer_*） ==
-// == 程序資料一律經 hkai__python_bridge_process()（Python 側唯一入口） ==
+// == 程序資料一律經 hkai()->process()（Python 側唯一入口） ==
 
 class process_Class
 {
@@ -30,7 +30,7 @@ class process_Class
     // 這一頁的內容（template ＋ slots——插入 .modal__content；一次從頭建到尾）
     private function get_process_viewer_content()
     {
-        $process_data   = hkai__python_bridge_process()->get_process_snapshot();
+        $process_data   = hkai()->process()->get_process_snapshot();
         $live_processes = $process_data["live_processes"];
         $process_counts = $process_data["process_counts"];
         $daemon_started = $process_data["daemon_started_fmt"];
@@ -111,8 +111,8 @@ class process_Class
                 $kill_attr[] = "class='process_viewer_kill'";
                 $kill_attr[] = "data-process_kill='{$live_pid}'";
                 $kill_attr[] = "data-process_program='{$live_program}'";
-                $kill_attr[] = "data-confirm_msg='" . hkai__i18n()->get("settings.process.kill_confirm") . "'";
-                $kill_attr[] = "title='" . hkai__i18n()->get("settings.process.kill_title") . "'";
+                $kill_attr[] = "data-confirm_msg='" . hkai()->i18n()->get("settings.process.kill_confirm") . "'";
+                $kill_attr[] = "title='" . hkai()->i18n()->get("settings.process.kill_title") . "'";
 
                 $kill_attr = implode(" ", $kill_attr);
                 $rows_lines[] = "<button {$kill_attr}>KILL</button>";

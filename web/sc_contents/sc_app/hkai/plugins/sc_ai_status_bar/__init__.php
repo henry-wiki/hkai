@@ -30,7 +30,7 @@ sc_ai_status_bar()->status_bar()->add_status_item("project", function () {
 
     // Home 語境（根 URL＝未指定專案段）→ 用固定 home 查（反映現實：空 slug 本身查唔到嘢）
     if ($project_slug === null || $project_slug === "") {
-        $project_slug = "home";
+        $project_slug = sc_get_config("hkai.default_project_slug");
     }
 
     $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
@@ -52,7 +52,7 @@ sc_ai_status_bar()->status_bar()->add_status_item("chat", function () {
         $chat_sid = "";
     }
 
-    $chat_title    = hkai__i18n()->get("status_bar.no_chat");
+    $chat_title    = hkai()->i18n()->get("status_bar.no_chat");
     $bare_chat_sid = sc_ai_chats()->chat()->get_bare_chat_sid($chat_sid);
     $chat_row      = sc_ai_chats()->chat()->get_chat_row_by_sid($bare_chat_sid);
 
@@ -72,7 +72,7 @@ sc_ai_status_bar()->status_bar()->add_status_item("workspace/left", function () 
 // 外部貢獻 status item（版權——讀 sc_config/hkai/about_hkai.php 嘅 copyright（唯一來源）；擺 workspace/right 末位）
 sc_ai_status_bar()->status_bar()->add_status_item("workspace/right", function () {
     // about 資料源（唯一來源——render 時才讀，避免 plugin 註冊期依賴未載入嘅 core bridging）
-    $about_data      = require hkai__core()->get_about_file();
+    $about_data      = require sc_get_config("hkai.about_file");
     $about_copyright = $about_data["copyright"];
 
     return [
@@ -90,18 +90,19 @@ sc_ai_health()->health()->add_health_report("git", function ($request_data) {
     $project_slug = $request_data["project_slug"] ?? "";
 
     // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
-    $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+    $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+    $project_slug = $resolved_project_slug["project_slug"];
 
     // Home 語境（空 slug）→ 用固定 home 查（呼叫端自己 fallback）
     if ($project_slug === "") {
-        $project_slug = "home";
+        $project_slug = sc_get_config("hkai.default_project_slug");
     }
 
     $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
 
     // 判定：無選取專案 → 未選擇（前端顯示 —）
     if ($project_row === null) {
-        return ["ok" => false, "error" => hkai__i18n()->get("status_bar.no_project")];
+        return ["ok" => false, "error" => hkai()->i18n()->get("status_bar.no_project")];
     }
 
     return sc_ai_diagnostics()->git()->run_git_status($project_row["project_path"]);

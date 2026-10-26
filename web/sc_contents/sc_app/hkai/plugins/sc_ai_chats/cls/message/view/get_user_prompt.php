@@ -11,10 +11,10 @@ trait get_user_prompt
     public function get_user_prompt($row, $message_model_text = "")
     {
         $message_content = (isset($row["message_content"]) ? $row["message_content"] : null);
-        $user_zoom_title = hkai__i18n()->get("user.zoom_title");
-        $answer_zoom     = hkai__i18n()->get("answer.zoom");
-        $answer_copy     = hkai__i18n()->get("answer.copy");
-        $delete_confirm  = hkai__i18n()->get("message.delete_confirm");
+        $user_zoom_title = hkai()->i18n()->get("user.zoom_title");
+        $answer_zoom     = hkai()->i18n()->get("answer.zoom");
+        $answer_copy     = hkai()->i18n()->get("answer.copy");
+        $delete_confirm  = hkai()->i18n()->get("message.delete_confirm");
 
         // 模型顯示 HTML（plain——provider/model；空＝唔出）
         $message_model_html = "";

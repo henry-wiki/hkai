@@ -14,7 +14,7 @@ trait render_queue_list
     {
         $queue_lines = sc_ai_chats()->queue()->get_queue_lines($chat_id);
         
-        $cancel_label = sc_html_encode(hkai__i18n()->get("queue.cancel"));
+        $cancel_label = sc_html_encode(hkai()->i18n()->get("queue.cancel"));
         
         $output_lines = [];
         

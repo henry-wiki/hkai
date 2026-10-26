@@ -49,19 +49,20 @@ trait get_chat_options_html
         }
         
         // agents 清單（次序＝UI 次序；第一條＝預設）
-        $agents = hkai__core()->get_hkai_configs("agents");
+        $agents = hkai()->agent()->get_agents();
 
-        // 現行引擎（runtime 已選值優先）
-        $daemon_engine = hkai__core()->get_daemon_engine();
+        // 現行 agent（runtime 已選值優先）
+        $agent = hkai()->agent()->get_agent();
 
-        // 判定：唔喺引擎清單 → 用清單第一條（預設）
-        if (!in_array($daemon_engine, $agents)) {
-            $daemon_engine = $agents[0];
+        // 判定：唔喺 agent 清單 → 用清單第一條（預設）
+        if (!in_array($agent, $agents)) {
+            $agent = $agents[0];
         }
 
-        // chat mode 掣清單（現行引擎組 chat_mode——key 在＝出嗰粒掣；順序＝寫嘅順序；掣面＝mode 值、hover＝description）
-        $daemon_engine_configs = hkai__core()->get_hkai_configs($daemon_engine);
-        $chat_mode_config      = $daemon_engine_configs["chat_mode"];
+        // chat mode 掣清單（現行 agent 對應 daemon 設定組 chat_mode——key 在＝出嗰粒掣；順序＝寫嘅順序；掣面＝mode 值、hover＝description）
+        $agent_daemon     = hkai()->agent()->get_agent_daemon($agent);
+        $daemon_configs   = hkai()->get_hkai_configs($agent_daemon);
+        $chat_mode_config = $daemon_configs["chat_mode"];
 
         $output_lines = [];
         // chat mode buttons（sc_btn_group--segmented tab-like 控件）
@@ -103,6 +104,7 @@ trait get_chat_options_html
             $output_lines[] = "<input type='hidden' data-model_field='model_id'         value='" . $model_id . "' />";
             $output_lines[] = "<input type='hidden' data-model_field='reasoning_effort' value='" . $reasoning_effort . "' />";
             $output_lines[] = "<input type='hidden' data-model_field='chat_mode'        value='" . $chat_mode . "' />";
+            $output_lines[] = "<input type='hidden' data-model_field='chat_sid'         value='" . $chat_sid . "' />";
         $output_lines[] = "</div>";
         
         return implode("\r\n", $output_lines);

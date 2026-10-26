@@ -9,7 +9,7 @@ trait build_tab_diagnostics_foot
     public function build_tab_diagnostics_foot()
     {
         // 取消鈕（各 tab 皆有——關閉視窗 affordance）
-        $cancel_label = hkai__i18n()->get("common.cancel");
+        $cancel_label = hkai()->i18n()->get("common.cancel");
 
         $cancel_wrapper   = [];
         $cancel_wrapper[] = "<div class='sc_btn_wrapper'>";

@@ -84,12 +84,12 @@ trait finalize_abnormal_jobs
     private function is_msg_worker_alive($_worker_pid)
     {
         // 判定：pid 唔存在 → 死
-        if (!hkai__core()->is_process_alive($_worker_pid)) {
+        if (!hkai()->process()->is_process_alive($_worker_pid)) {
             return false;
         }
 
         // 心跳檔認名（process_status/worker.{pid}.json——擋 pid 重用誤判）
-        $_heartbeat_file = hkai__core()->get_process_status_dir() . "/worker." . (int)$_worker_pid . ".json";
+        $_heartbeat_file = sc_get_config("hkai.process_status_dir") . "/worker." . (int)$_worker_pid . ".json";
 
         // 判定：無本系統心跳檔 → 唔係本系統 worker → 死
         if (!is_file($_heartbeat_file)) {

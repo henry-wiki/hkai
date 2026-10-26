@@ -7,7 +7,7 @@ $route      = $this->get_route();
 $controller = sc_controller($route);
 
 // provider 模型資料根（storage——來源檔＋bak 統一住 providers/model_store，唔住插件目錄）
-$provider_model_store_dir = $controller->get_storage_dir() . "/providers/model_store";
+$provider_model_store_dir = sc_get_config("hkai.providers_model_store_dir");
 
 $plugin = $controller->register_plugin(__DIR__, [
     // plugin settings
@@ -51,10 +51,10 @@ $plugin->add_request_action("provider/fetch_providers", __DIR__ . "/request/fetc
 $plugin->add_request_action("provider/fetch_models", __DIR__ . "/request/fetch_models.php");
 
 // 登記 health 動作（每輪 health 檢查即時執行——回傳值丟棄、唔入回應；清舊備份：providers／benchmark model_store 逾 1 日 *.bak → 刪）
-sc_ai_health()->health()->add_health_action("sweep_old_backup_files", function () use ($controller) {
+sc_ai_health()->health()->add_health_action("sweep_old_backup_files", function () {
     $dir_list = [
-        $controller->get_storage_dir() . "/providers/model_store",
-        $controller->get_storage_dir() . "/benchmark/model_store",
+        sc_get_config("hkai.providers_model_store_dir"),
+        sc_get_config("hkai.benchmark_model_store_dir"),
     ];
 
     return sc_ai_providers()->repo()->sweep_old_backup_files($dir_list);

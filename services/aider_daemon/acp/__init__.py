@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-aider_daemon.acp 套件——aider 引擎接駁版（ACP server 側；獨立小程序——整包可移除）。
+aider_daemon.acp 套件——aider agent接駁版（ACP server 側；獨立小程序——整包可移除）。
 
     main.py               入口（薄）：sc_logger.setup() → asyncio.run(run_agent(agent()))
     context.py            統一橋接層（Service Locator）：config()（環境變數）／agent()（agent 單例）

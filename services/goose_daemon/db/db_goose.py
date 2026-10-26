@@ -9,7 +9,7 @@ goose 自己的 SQLite（`<GOOSE_PATH_ROOT>/data/sessions/sessions.db`）——�
 注意：goose 私有 schema（sessions／messages）——goose 升級可能變，改動只改此檔。
 """
 
-from ..worker.engine import engine_context
+from ..worker.agent import paths
 from . import db_context
 from .db_connection import db_connection_class
 
@@ -19,7 +19,7 @@ class goose_db_class(db_connection_class):
 
     def __init__(self, project_path: str):
         """注入該專案 sessions DB 路徑（讀寫）。"""
-        super().__init__(engine_context.resolve_sessions_db_file(project_path), read_only=False)
+        super().__init__(paths.resolve_sessions_db_file(project_path), read_only=False)
 
     def find_session_id(self, session_name: str) -> str:
         """取該對話現存 goose session id（同名最新；冇＝空字串——建立責任交返 goose）。"""
@@ -31,11 +31,11 @@ class goose_db_class(db_connection_class):
 
         return str(session_row[0])
 
-    def replace_session_messages(self, session_id: str, message_rows: list) -> int:
+    def replace_session_messages(self, session_id: str, message_rows: list[tuple[object, ...]]) -> int:
         """原地重寫該 session 全部訊息（單一交易 DELETE ＋ INSERT；回傳寫入筆數）。"""
         with self.transaction() as connection:
-            connection.execute(db_context.SQL_DELETE_SESSION_MESSAGES, (session_id,))
-            connection.executemany(db_context.SQL_INSERT_SESSION_MESSAGE, message_rows)
+            _ = connection.execute(db_context.SQL_DELETE_SESSION_MESSAGES, (session_id,))
+            _ = connection.executemany(db_context.SQL_INSERT_SESSION_MESSAGE, message_rows)
 
         return len(message_rows)
 

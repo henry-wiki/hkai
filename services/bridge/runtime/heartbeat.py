@@ -14,6 +14,9 @@ heartbeat.py — 心跳（狀態檔＋生存證明＋閒置自殺；bridge 專�
 在線時間交 runtime/presence.py（ping 時刷新）。
 """
 
+# heartbeat ↔ lifecycle 互相引用（lifecycle 內「延遲 import 免循環」係刻意）——靜態掃描會標成 import cycle，故本檔停用該規則（檔案級）。
+# pyright: reportImportCycles=false
+
 import atexit
 import threading
 import time
@@ -129,7 +132,7 @@ def entry_init() -> None:
         "updated_at_fmt":    started_at_fmt,
     }
 
-    write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
+    _ = write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
 
 
 def update_entry() -> None:
@@ -144,7 +147,7 @@ def update_entry() -> None:
     _heartbeat_entry["updated_at"]     = updated_at
     _heartbeat_entry["updated_at_fmt"] = strtotime(updated_at)
 
-    write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
+    _ = write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
 
 
 def remove_heartbeat_file() -> None:
@@ -197,4 +200,4 @@ def _get_heartbeat_file() -> Path:
     return Path(PROCESS_DIR) / (PROGRAM_NAME + "." + str(process.self_pid()) + ".json")
 
 
-atexit.register(exception_kill)
+_ = atexit.register(exception_kill)

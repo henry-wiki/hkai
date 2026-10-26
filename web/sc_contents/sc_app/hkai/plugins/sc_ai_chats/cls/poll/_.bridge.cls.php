@@ -14,6 +14,9 @@ class poll_Class
     use action\finalize_abnormal_jobs;
     use action\delete_poll_dir;
     use action\sweep_old_archived_messages;
+    use action\read_extract_state;
+    use action\derive_extract_state;
+    use action\promote_prepared_jobs;
     use status\append_msg_status;
 
     private static $instance = null;
@@ -146,10 +149,9 @@ class poll_Class
     // 歸檔訊息目錄路徑（archive/{project_slug}/{message_id}——歸檔側位置；同一個目錄名）
     public function get_archived_poll_dir($chat_id, $message_id)
     {
-        $project_slug   = $this->get_project_slug_by_chat($chat_id);
-        $daemon_configs = hkai__core()->get_daemon_config();
+        $project_slug = $this->get_project_slug_by_chat($chat_id);
 
-        return $daemon_configs["daemon_archive_dir"] . "/" . $this->get_poll_dir_name($project_slug, $message_id);
+        return sc_get_config("hkai.messages_archive_dir") . "/" . $this->get_poll_dir_name($project_slug, $message_id);
     }
 
     // 單一 type 路徑（目錄制：messages/polling/{project_slug}/{message_id}/msg_{type}.{ext}——純組裝，不依賴檔案存在）

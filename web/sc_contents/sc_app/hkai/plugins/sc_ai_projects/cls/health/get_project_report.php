@@ -16,10 +16,14 @@ trait get_project_report
         // 清單語境（request_data project_slug 原值——歸檔語境（archive）＝歸檔清單；URL 段原封照帶交後端判斷）
         $project_slug = $request_data["project_slug"] ?? "";
 
-        // 語境判定：歸檔語境 → 歸檔組；其餘 → 未歸檔組（health 一次只供一個清單；判定位喺 is_archive_project_key 唯一住處）
-        $report_project_condition = "p.project_status != 'archived'";
-        if (sc_ai_projects()->project()->is_archive_project_key($project_slug)) {
+        // 專案段解析（歸檔旗標＋純 slug——單一來源）
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+
+        // 語境判定：歸檔語境 → 歸檔組；其餘 → 未歸檔組
+        if ($resolved_project_slug["archive"] === 1) {
             $report_project_condition = "p.project_status = 'archived'";
+        } else {
+            $report_project_condition = "p.project_status != 'archived'";
         }
 
         // 專案列＋對話彙總（LEFT JOIN——冇對話嘅專案都要出行；狀態條件跟清單語境）

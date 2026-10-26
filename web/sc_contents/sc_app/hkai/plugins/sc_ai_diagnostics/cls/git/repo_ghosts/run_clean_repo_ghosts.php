@@ -10,6 +10,6 @@ trait run_clean_repo_ghosts
     // 清理該專案嘅 git 幽靈檔（HTTP bridge——Python 執行；PHP 只負責呼叫與讀 JSON）
     public function run_clean_repo_ghosts($project_path)
     {
-        return hkai__python_bridge()->request("/diagnostics/git/clean_repo_ghosts", ["project_path" => $project_path]);
+        return hkai()->process()->bridge()->request("/diagnostics/git/clean_repo_ghosts", ["project_path" => $project_path]);
     }
 }

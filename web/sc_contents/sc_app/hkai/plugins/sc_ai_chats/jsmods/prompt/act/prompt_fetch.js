@@ -24,8 +24,10 @@ class _prompt_fetch {
                 // 內裏整包換（後端砌好——前端只 insert；外層 .sc_composer 頁面長駐；事件走 document 委派）
                 jQuery(".sc_composer").html(response_data.html.composer);
 
-                // 通知 input handler（主按鈕兩態重算）
-                jQuery("#sc_input").trigger("input");
+                // 主按鈕兩態重算（直接叫 toggle——唔經 input 事件，避免排程草稿寫入）
+                prompt_instance.act().prompt_send_button_toggle().then(function (toggle_instance) {
+                    toggle_instance.prompt_send_button_toggle();
+                });
 
                 // 載入標記（data-loaded 0→1——元素「已載入」語義；用家待未來）
                 jQuery(".sc_composer").attr("data-loaded", "1");

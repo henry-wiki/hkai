@@ -70,6 +70,15 @@ trait get_chat_options
             }
         }
 
+        // 判定：provider／model 兩欄皆有（查 model 預設等級前提）
+        if (in_array("", [$provider_id, $model_id], true) === false) {
+            // reasoning_effort 兜底（chat／project 都未帶 → 用 model 預設等級——例：deepseek-flash＝high）
+            if ($reasoning_effort === "") {
+                $model_item       = sc_ai_providers()->repo()->get_model_item($provider_id, $model_id);
+                $reasoning_effort = $model_item["reasoning_default_effort"] ?? "";
+            }
+        }
+
         // --------------------------------------------------------------------------------
         
         $_chat_options = [];

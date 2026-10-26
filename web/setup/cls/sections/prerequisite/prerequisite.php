@@ -59,6 +59,7 @@ class prerequisite_Class
         $group_system["items"][] = "basic__mod_rewrite";
         $group_system["items"][] = "basic__memory_limit";
         $group_system["items"][] = "basic__max_execution_time";
+        $group_system["items"][] = "basic__fcgid_max_request_len";
         $this->check_groups[] = $group_system;
 
         // B 組：PHP 擴展

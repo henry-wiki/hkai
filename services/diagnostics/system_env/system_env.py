@@ -29,7 +29,9 @@
       單一命令逾時 5 秒自我保護；網絡檢查 best-effort 1.5 秒（唔拖慢）；結果欄位名即 JSON 契約（PHP 渲染層直接按 key 取值）。
 """
 
-import datetime
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false
+# （偵測結果係動態 dict／第三方 psutil——Unknown/Any 警告一律關，其餘照檢）
+
 import json
 import os
 import platform
@@ -38,6 +40,9 @@ import shutil
 import socket
 import subprocess
 import sys
+from typing import Any, cast
+
+from ..utils import timer
 
 # psutil（硬件／記憶體——缺＝該些欄位唔放；bridge 環境已裝）
 try:
@@ -79,7 +84,7 @@ class system_env_class:
     def __init__(self):
         pass
 
-    def run_version_command(self, binary_path, command_arguments):
+    def run_version_command(self, binary_path: str, command_arguments: list[str]) -> str:
         """執行版本命令——回傳輸出文字（失敗／逾時回空字串）。"""
         command = [binary_path, *command_arguments]
 
@@ -101,7 +106,7 @@ class system_env_class:
 
         return output_text.splitlines()[0] if output_text else ""
 
-    def collect_os_info(self):
+    def collect_os_info(self) -> dict[str, Any]:
         """收集作業系統資訊（platform 模組——跨平台結構化欄位）。"""
         os_info = {}
         os_info["name"] = platform.system()
@@ -112,7 +117,7 @@ class system_env_class:
 
         return os_info
 
-    def collect_hardware(self):
+    def collect_hardware(self) -> dict[str, Any]:
         """收集硬件事實（CPU 核心／記憶體——psutil 缺＝空 dict，欄位唔放）。"""
         hardware = {}
 
@@ -128,7 +133,7 @@ class system_env_class:
 
         return hardware
 
-    def collect_disk(self):
+    def collect_disk(self) -> dict[str, Any] | None:
         """偵測當前工作碟空間（磁碟用量——失敗 = null，欄位唔放）。"""
         # Windows：工作目錄所在碟（如 G:\\）；POSIX：根
         if platform.system() == "Windows":
@@ -148,7 +153,7 @@ class system_env_class:
 
         return disk
 
-    def collect_network(self):
+    def collect_network(self) -> dict[str, Any]:
         """偵測對外網絡（best-effort：逾時內連得上 1.1.1.1:443 當有外網）。"""
         internet_reachable = False
 
@@ -163,7 +168,7 @@ class system_env_class:
 
         return network
 
-    def collect_container(self):
+    def collect_container(self) -> bool:
         """偵測是否喺容器內（Linux：/.dockerenv 或 cgroup 含 docker／containerd——其餘 = false）。"""
         # 判定：非 Linux → 唔係容器（Windows／macOS 本機）
         if platform.system() != "Linux":
@@ -187,7 +192,7 @@ class system_env_class:
 
         return False
 
-    def collect_shell(self):
+    def collect_shell(self) -> str:
         """偵測預設 shell（Windows 依 COMSPEC／POSIX 依 SHELL 環境變數）。"""
         os_name = platform.system()
 
@@ -211,9 +216,9 @@ class system_env_class:
         # POSIX：直接讀 SHELL 環境變數
         return os.environ.get("SHELL", "unknown")
 
-    def collect_timezone(self):
+    def collect_timezone(self) -> str:
         """偵測目前時區（UTC 偏移＋顯示名）。"""
-        local_now = datetime.datetime.now().astimezone()
+        local_now = timer.get_local_datetime()
         utc_offset = local_now.strftime("%z")
         timezone_name = local_now.tzname() or ""
 
@@ -226,7 +231,7 @@ class system_env_class:
 
         return offset_label + " (" + timezone_name + ")"
 
-    def collect_runtimes(self):
+    def collect_runtimes(self) -> dict[str, Any]:
         """偵測已安裝 runtime 版本（先 which 定位，再跑版本命令擷取）。"""
         runtimes_found = {}
 
@@ -252,7 +257,7 @@ class system_env_class:
 
         return runtimes_found
 
-    def collect_tools(self):
+    def collect_tools(self) -> dict[str, Any]:
         """偵測常用工具（shutil.which 存在即列入該分類）。"""
         tools_found = {}
 
@@ -271,10 +276,10 @@ class system_env_class:
 
         return tools_found
 
-    def get_system_env(self):
+    def get_system_env(self) -> dict[str, Any]:
         result = {}
         result["ok"] = True
-        result["detected_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        result["detected_at"] = timer.get_datetime()
         result["os"] = self.collect_os_info()
         result["hardware"] = self.collect_hardware()
         result["disk"] = self.collect_disk()
@@ -288,9 +293,9 @@ class system_env_class:
 
         return result
 
-    def main(self):
+    def main(self) -> None:
         # stdout 強制 UTF-8（Windows 預設 cp950——PHP 側固定收 UTF-8 JSON）
-        sys.stdout.reconfigure(encoding="utf-8")
+        _ = cast(Any, sys.stdout).reconfigure(encoding="utf-8")
 
         result = self.get_system_env()
         print(json.dumps(result, ensure_ascii=False))

@@ -15,7 +15,7 @@ $plugin = $controller->register_plugin(__DIR__, [
 $plugin->setEnabled(true);
 
 // bench_source 資料根（storage——來源檔＋bak 統一住 benchmark/model_store，唔住插件目錄）
-$benchmark_model_store_dir = $controller->get_storage_dir() . "/benchmark/model_store";
+$benchmark_model_store_dir = sc_get_config("hkai.benchmark_model_store_dir");
 
 // 注入可用 bench_source 聲明（存在＝前台可用——bench_source id 為 key；值＝main 共用底＋navigation 逐項增量（fetch_category＋bench_source_file 各自 store 檔＋fetch_query；item 可覆寫 main 任何鍵——例 fetch_url／fetch_shape；fetch 時逐項 array_replace_recursive(main, item) 合成最終規格），將來可加）
 sc_ai_benchmark()->main()->initial([
@@ -143,7 +143,7 @@ sc_ai_benchmark()->main()->initial([
                 "bench_source_name" => "Artificial Analysis",
                 "fetch_url"         => "https://artificialanalysis.ai/api/v2/data/llms/models",
                 "fetch_method"      => "get",
-                "api_key"           => hkai__sc_oauth_keys()->get_key("BENCHMARK_SRC_AA_API_KEY"),
+                "api_key"           => sc_get_env("BENCHMARK_SRC_AA_API_KEY", ""),
             ],
             "navigation" => [
                 [
@@ -189,7 +189,7 @@ sc_ai_benchmark()->main()->initial([
                 "fetch_url"         => "https://api.llm-stats.com/stats/v1/models",
                 "fetch_method"      => "get",
                 "fetch_shape"       => "models",
-                "api_key"           => hkai__sc_oauth_keys()->get_key("BENCHMARK_SRC_LLM_STATS_API_KEY"),
+                "api_key"           => sc_get_env("BENCHMARK_SRC_LLM_STATS_API_KEY", ""),
                 "fetch_paging"      => [
                     "length_key"     => "limit",
                     "page_length"    => 200,

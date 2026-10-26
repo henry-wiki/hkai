@@ -13,6 +13,7 @@ import time
 import psutil
 
 from ..context import message_store
+from ..utils import io
 
 
 class message_claim_class:
@@ -87,7 +88,12 @@ class message_claim_class:
         if owner_pid <= 0:
             return False
 
-        return psutil.pid_exists(owner_pid)
+        try:
+            _ = psutil.Process(owner_pid)
+        except psutil.Error:
+            return False
+
+        return True
 
     # 讀當前工單主人 pid（無檔／壞檔 → 0）
     def _read_claim_owner_pid(self) -> int:
@@ -97,16 +103,13 @@ class message_claim_class:
         if not claim_path.exists():
             return 0
 
-        try:
-            claim_data = json.loads(claim_path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
+        claim_data = io.read_json(claim_path)
+
+        # 判定：讀唔到／壞檔 → 0
+        if claim_data is None:
             return 0
 
-        # 判定：壞檔 → 0
-        if not isinstance(claim_data, dict):
-            return 0
-
-        return int(claim_data.get("worker_pid", 0))
+        return int(str(claim_data.get("worker_pid", 0)))
 
 
 # 模組級實例已移除——改由 context.py 的 message_claim() bridging 函數取得單例

@@ -14,12 +14,10 @@ job_exit.py — 經理收場（daemon 自殺協議：先禮後兵）
 """
 
 import time
-
 from pathlib import Path
 
 from .. import context
-from ..runtime import lifecycle, sc_logger
-from ..worker import identity
+from ..runtime import identity, lifecycle, sc_logger
 from . import job_scheduler, roster
 
 # 先禮等待預設（秒——runtime.json `manager_exit_wait_sec` 可覆寫）
@@ -30,14 +28,18 @@ WORKER_KILL_WAIT_SEC = 2.0
 
 
 def exit_manager(reason: str = "", exit_code: int = 0) -> None:
-    """經理收場：清場（先禮後兵）→ 自殺。"""
+    """經理收場：有工人＝先清場再自殺；冇工人＝直接自殺。"""
     worker_entries = roster.get_worker_entries()
 
-    # 判定：冇工人 → 直接自殺
+    # 判定：冇工人 → 直接自殺（唔使清場）
     if len(worker_entries) == 0:
         lifecycle.exit_self(reason, exit_code)
-        return
+    else:
+        _clear_workers_then_exit(worker_entries, reason, exit_code)
 
+
+def _clear_workers_then_exit(worker_entries: dict[int, roster.WorkerEntry], reason: str, exit_code: int) -> None:
+    """清場（先禮後兵）→ 經理自殺。"""
     # 先禮：逐個通知自殺（哨兵 None——worker 收到即收工）
     for worker_pid, worker_entry in list(worker_entries.items()):
         _ask_worker_to_exit(worker_pid, worker_entry)
@@ -46,10 +48,10 @@ def exit_manager(reason: str = "", exit_code: int = 0) -> None:
 
     workers_gone = _wait_workers_gone(worker_exit_wait_sec)
 
-    # 判定：9 秒仍有人 → 後兵（直接殺）
+    # 判定：等候期內未清場 → 後兵（直接殺）
     if workers_gone is False:
         _kill_remaining_workers(reason)
-        _wait_workers_gone(WORKER_KILL_WAIT_SEC)
+        _ = _wait_workers_gone(WORKER_KILL_WAIT_SEC)
 
         # 清場後再收一次屍（殺死嘅工人：除名＋刪狀態檔）
         job_scheduler.reap_workers()
@@ -61,10 +63,10 @@ def _get_worker_exit_wait_sec() -> float:
     """先禮等待秒數（runtime.json manager_exit_wait_sec；缺席＝WORKER_EXIT_WAIT_SEC）。"""
     daemon_conf = context.daemon().get_daemon_conf_data()
 
-    return float(daemon_conf.get("manager_exit_wait_sec", WORKER_EXIT_WAIT_SEC))
+    return float(str(daemon_conf.get("manager_exit_wait_sec", WORKER_EXIT_WAIT_SEC)))
 
 
-def _ask_worker_to_exit(worker_pid: int, worker_entry: dict) -> None:
+def _ask_worker_to_exit(worker_pid: int, worker_entry: roster.WorkerEntry) -> None:
     """先禮：哨兵（空閒工人即收）＋撤退旗標檔（做單中工人 1 秒內見到）。"""
     try:
         worker_entry["job_queue"].put(None)
@@ -72,7 +74,7 @@ def _ask_worker_to_exit(worker_pid: int, worker_entry: dict) -> None:
         # 例外（queue 已關／程序已死——哨兵送唔到唔阻旗標；記一行痕）
         sc_logger.log("worker exit notify failed pid=" + str(worker_pid) + " | " + str(exc))
 
-    get_exit_flag_file(worker_pid).write_text("1", encoding="utf-8")
+    _ = get_exit_flag_file(worker_pid).write_text("1", encoding="utf-8")
 
 
 def get_exit_flag_file(worker_pid: int) -> Path:

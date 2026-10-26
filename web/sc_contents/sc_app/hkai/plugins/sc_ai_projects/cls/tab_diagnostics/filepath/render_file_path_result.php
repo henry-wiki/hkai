@@ -10,22 +10,22 @@ trait render_file_path_result
     public function render_file_path_result($file_path_result)
     {
         // i18n 列標籤（單一來源——cls/i18n/lang/*.json）
-        $scanned_label     = hkai__i18n()->get("diagnostics.scanned");
-        $warn_label        = hkai__i18n()->get("diagnostics.warn");
-        $danger_label      = hkai__i18n()->get("diagnostics.danger");
-        $critical_label    = hkai__i18n()->get("diagnostics.critical");
-        $elapsed_label     = hkai__i18n()->get("diagnostics.elapsed");
-        $unit_files        = hkai__i18n()->get("diagnostics.unit_files");
-        $unit_ms           = hkai__i18n()->get("diagnostics.unit_ms");
-        $read_failed_label = hkai__i18n()->get("git.read_failed");
-        $th_level          = hkai__i18n()->get("diagnostics.th_level");
-        $th_path           = hkai__i18n()->get("diagnostics.th_path");
-        $th_length         = hkai__i18n()->get("diagnostics.th_length");
-        $level_warn        = hkai__i18n()->get("diagnostics.lv_warn");
-        $level_danger      = hkai__i18n()->get("diagnostics.lv_danger");
-        $level_crit        = hkai__i18n()->get("diagnostics.lv_crit");
-        $advice_text       = hkai__i18n()->get("diagnostics.advice");
-        $truncated_text    = hkai__i18n()->get("diagnostics.truncated");
+        $scanned_label     = hkai()->i18n()->get("diagnostics.scanned");
+        $warn_label        = hkai()->i18n()->get("diagnostics.warn");
+        $danger_label      = hkai()->i18n()->get("diagnostics.danger");
+        $critical_label    = hkai()->i18n()->get("diagnostics.critical");
+        $elapsed_label     = hkai()->i18n()->get("diagnostics.elapsed");
+        $unit_files        = hkai()->i18n()->get("diagnostics.unit_files");
+        $unit_ms           = hkai()->i18n()->get("diagnostics.unit_ms");
+        $read_failed_label = hkai()->i18n()->get("git.read_failed");
+        $th_level          = hkai()->i18n()->get("diagnostics.th_level");
+        $th_path           = hkai()->i18n()->get("diagnostics.th_path");
+        $th_length         = hkai()->i18n()->get("diagnostics.th_length");
+        $level_warn        = hkai()->i18n()->get("diagnostics.lv_warn");
+        $level_danger      = hkai()->i18n()->get("diagnostics.lv_danger");
+        $level_crit        = hkai()->i18n()->get("diagnostics.lv_crit");
+        $advice_text       = hkai()->i18n()->get("diagnostics.advice");
+        $truncated_text    = hkai()->i18n()->get("diagnostics.truncated");
 
         $outputLines   = [];
 

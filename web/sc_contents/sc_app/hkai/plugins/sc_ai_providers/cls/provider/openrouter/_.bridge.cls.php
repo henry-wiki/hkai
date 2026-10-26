@@ -15,6 +15,7 @@ class provider_openrouter_Class
     use transform\reset_model_reasoning;
     use transform\reset_model_benchmark;
     use transform\reset_model_available_column;
+    use transform\reset_model_input_modalities;
     use transform\sort_provider_models;
     use dirty\is_dirty_model_item;
     use dirty\is_dirty_model_item_by_group;
@@ -34,6 +35,7 @@ class provider_openrouter_Class
         "reasoning_default_enabled",
         "reasoning_supported_efforts",
         "reasoning_default_effort",
+        "input_modalities",
         //"default_parameters",
         //"top_provider",
         //"architecture",

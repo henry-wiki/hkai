@@ -11,8 +11,8 @@ trait get_agent_response_thinking_toolbar
     {
         $content = [];
         $content[] = "<div class='seg__bar'>";
-            $zoom_title = hkai__i18n()->get("answer.zoom");
-            $zoom_modal_title = hkai__i18n()->get("thinking.label_done");
+            $zoom_title = hkai()->i18n()->get("answer.zoom");
+            $zoom_modal_title = hkai()->i18n()->get("thinking.label_done");
             $btn_attr = [];
             $btn_attr[] = "type='button'";
             $btn_attr[] = "class='seg__action'";
@@ -26,7 +26,7 @@ trait get_agent_response_thinking_toolbar
             $content[] = "<button {$btn_attr}>";
             $content[] = "<i class='fa-solid fa-up-right-and-down-left-from-center'></i>";
             $content[] = "</button>";
-            $copy_title = hkai__i18n()->get("answer.copy");
+            $copy_title = hkai()->i18n()->get("answer.copy");
             $btn_attr = [];
             $btn_attr[] = "type='button'";
             $btn_attr[] = "class='seg__action'";

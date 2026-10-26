@@ -12,7 +12,7 @@ trait build_tab_git_body
         // 守衛：新建語境（無專案列）→ 無路徑可查 git，回提示殼（同 setup 域模式）
         $is_new_project = empty($project_row);
         if ($is_new_project) {
-            return $this->build_notice_pane(hkai__i18n()->get("git.need_save"));
+            return $this->build_notice_pane(hkai()->i18n()->get("git.need_save"));
         }
 
         // 準確值：診斷只收 project_path

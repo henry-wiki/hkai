@@ -54,7 +54,7 @@ trait get_input_dock_html
         $btn_stop_attr = implode(" ", $btn_stop_attr);
         
         // 輸入框佔位文案（i18n——唔寫死）
-        $input_placeholder = hkai__i18n()->get("prompt.input_placeholder");
+        $input_placeholder = hkai()->i18n()->get("prompt.input_placeholder");
         
         // 草稿文字（活動 prompt_draft——有草稿回填輸入框；無＝空；轉義一次過）
         $draft_text = "";
@@ -65,9 +65,19 @@ trait get_input_dock_html
         
         $draft_text_html = sc_html_encode($draft_text);
         
+        // 草稿上傳設定（可調區——sc_config hkai.draft；前端由 data-* 讀同一份值）
+        $draft_max_images       = (int)sc_get_config("hkai.draft.max_images_per_message");
+        $draft_max_upload_size  = (int)sc_get_config("hkai.draft.max_upload_size");
+        $draft_max_image_side   = (int)sc_get_config("hkai.draft.max_image_side_px");
+        $draft_resize_image_side = (int)sc_get_config("hkai.draft.resize_image_side_px");
+
         $output_lines = [];
-        // 槽1：附件暫存區（hidden by default）
-        $output_lines[] = "<div class='sc_composer__attachments' hidden></div>";
+        // 槽1：附件暫存區（hidden by default——data-* 帶上傳限制）
+        $output_lines[] = "<div class='sc_composer__attachments' hidden"
+            . " data-max_images='{$draft_max_images}'"
+            . " data-max_upload_size='{$draft_max_upload_size}'"
+            . " data-max_image_side_px='{$draft_max_image_side}'"
+            . " data-resize_image_side_px='{$draft_resize_image_side}'></div>";
         // 隱藏檔案選擇器（附件掣觸發——prompt_attach 處理）
         $output_lines[] = "<input class='sc_composer__file_input' type='file' multiple hidden>";
         // 槽2：文字輸入主體

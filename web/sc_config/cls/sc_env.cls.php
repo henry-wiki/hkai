@@ -119,6 +119,95 @@ class sc_env_Class
         $this->env_values[$key] = $value;
     }
     
+    // 覆蓋寫入（值有則改、無則檔末補；雙引號式；temp+rename 原子；寫後更新記憶體）
+    public function replace($key, $value)
+    {
+        $env_file = sc_get_config("core.env");
+
+        $env_text = "";
+
+        // 判定：檔存在 → 讀原文（保留註釋與其他行）
+        if (is_file($env_file)) {
+            $env_text = (string)file_get_contents($env_file);
+        }
+
+        $env_eol = "\n";
+
+        // 判定：原檔用 CRLF → 跟隨原檔
+        if (strpos($env_text, "\r\n") !== false) {
+            $env_eol = "\r\n";
+        }
+
+        $env_line     = $key . "=" . $this->quote_env_value($value);
+        $source_lines = explode("\n", str_replace("\r\n", "\n", $env_text));
+        $output_lines = [];
+        $replaced     = false;
+
+        // 逐行檢查（同一 key 只處理第一行——其餘重複行略過）
+        foreach ($source_lines as $line_item) {
+            $line_key = $this->parse_env_line_key($line_item);
+
+            // 判定：命中目標 key 且已替換過 → 略過
+            if ($line_key === $key) {
+                // 判定：首次命中 → 覆蓋
+                if ($replaced === false) {
+                    $output_lines[] = $env_line;
+                    $replaced       = true;
+                }
+
+                continue;
+            }
+
+            $output_lines[] = $line_item;
+        }
+
+        // 判定：檔內無此 key → 先去尾空行，再檔末補一行
+        if ($replaced === false) {
+            while (count($output_lines) > 0) {
+                $last_output_line = trim($output_lines[count($output_lines) - 1]);
+
+                // 判定：尾行唔空 → 停
+                if ($last_output_line !== "") {
+                    break;
+                }
+
+                array_pop($output_lines);
+            }
+
+            $output_lines[] = $env_line;
+        }
+
+        // 去尾空行（重砌只留一個結尾換行）
+        while (count($output_lines) > 0) {
+            $last_output_line = trim($output_lines[count($output_lines) - 1]);
+
+            // 判定：尾行唔空 → 停
+            if ($last_output_line !== "") {
+                break;
+            }
+
+            array_pop($output_lines);
+        }
+
+        $output_text = implode($env_eol, $output_lines) . $env_eol;
+
+        // 原子寫（temp＋rename——避免寫一半損壞 .env）
+        $temp_file = $env_file . ".tmp";
+        file_put_contents($temp_file, $output_text, LOCK_EX);
+        rename($temp_file, $env_file);
+
+        $this->env_values[$key] = $value;
+    }
+
+    // 值加雙引號（內部反斜線／雙引號跳脫——與 .env 現行格式一致）
+    private function quote_env_value($value)
+    {
+        $escaped_value = str_replace("\\", "\\\\", $value);
+        $escaped_value = str_replace("\"", "\\\"", $escaped_value);
+
+        return "\"" . $escaped_value . "\"";
+    }
+
     // 讀範本行（.env.example——範本唔存在＝空）
     private function read_env_example_lines($env_example)
     {

@@ -7,9 +7,21 @@ context.py
 其他模組只需 `from .context import xxx`，無需關心底層初始化細節。
 """
 
+import os
+import sys
 import time
 
 from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+
+# services 目錄（bridge 嘅上一層——由本檔位置推導，唔靠啟動者）
+SERVICES_DIR = BASE_DIR.parent
+
+# 固定工作目錄（唔信任 PHP／任何啟動者——一律以本檔位置為準）
+os.chdir(SERVICES_DIR)
+
+# 補 sys.path（-m 模式 sys.path[0]＝啟動時 cwd；換咗 cwd 仍要搵到 diagnostics 等 top-level 套件）
+if str(SERVICES_DIR) not in sys.path:
+    sys.path.insert(0, str(SERVICES_DIR))
 
 # ===== 路徑（站台根 data/——核心路徑，唔靠 runtime.json） =====
 

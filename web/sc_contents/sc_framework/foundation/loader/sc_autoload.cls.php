@@ -165,6 +165,15 @@ class sc_autoload_Class
                         include($class_filepath);
                         return true;
                     }
+
+                    // 後備：{class}.php（新命名規則——只在 .cls.php 缺席時生效）
+                    $class_filepath = $class_dir . "/" . $class_name . ".php";
+
+                    // 判定：後備命中 → 載入
+                    if (is_file($class_filepath)) {
+                        include($class_filepath);
+                        return true;
+                    }
                 }
             }
         }

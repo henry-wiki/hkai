@@ -18,7 +18,7 @@ trait get_git_branch_text
 
         // 判定：無分支名 → 顯示佔位
         if ($git_branch === "") {
-            $git_branch = hkai__i18n()->get("git.no_branch");
+            $git_branch = hkai()->i18n()->get("git.no_branch");
         }
 
         return $git_branch;

@@ -26,14 +26,10 @@ def collect_worker_signals() -> None:
         _drain_worker_signals(worker_entry)
 
 
-def _drain_worker_signals(worker_entry: dict) -> None:
+def _drain_worker_signals(worker_entry: roster.WorkerEntry) -> None:
     """掏乾一條工人嘅訊號信箱（status_queue）；信箱空＝即刻走。"""
-    # 每條工人一條 status_queue（spawn_worker() 開工人時建立）
-    status_queue = worker_entry.get("status_queue")
-
-    # 判定：冇訊號通道 → 跳過
-    if status_queue is None:
-        return
+    # 每條工人一條 status_queue（spawn_worker() 開工人時建立——必有）
+    status_queue = worker_entry["status_queue"]
 
     while True:
         try:
@@ -46,7 +42,7 @@ def _drain_worker_signals(worker_entry: dict) -> None:
         handle_worker_signal(worker_entry, worker_signal)
 
 
-def handle_worker_signal(worker_entry: dict, worker_signal: dict) -> None:
+def handle_worker_signal(worker_entry: roster.WorkerEntry, worker_signal: dict[str, object]) -> None:
     """處理單一訊號：job_done → 清空該工人手上嘅工單（回空閒，等下張）。"""
     signal_event = str(worker_signal.get("event", ""))
 

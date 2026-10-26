@@ -9,7 +9,7 @@ trait run_python_git_init
 {
     private function run_python_git_init($project_path)
     {
-        return hkai__python_bridge()->request("/projects/git/init/", [
+        return hkai()->process()->bridge()->request("/projects/git/init/", [
             "project_path" => $project_path,
         ]);
     }

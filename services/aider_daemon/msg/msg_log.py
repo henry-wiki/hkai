@@ -179,12 +179,12 @@ class msg_log_class:
             output_file.write(text)
         self._update_poll_list(response_result_path)
 
-    # response replay 路徑（引擎 load 重播——獨立歸檔）
+    # response replay 路徑（agent load 重播——獨立歸檔）
     def _response_replay_path(self, response_index: int) -> Path:
         message_id = msg_main_class.get_instance().get_message_id()
         return msg_main_class.get_instance().get_msg_file_path(f"response.{response_index}.replay", message_id)
 
-    # response replay 純文字 append（引擎重播內容——帶 response index）
+    # response replay 純文字 append（agent重播內容——帶 response index）
     # 刻意唔入 poll（_update_poll_list）：重播唔屬本輪回應——前端唔會拉、唔會顯示；此檔＝後端紀錄
     def append_response_replay(self, response_index: int, text: str) -> None:
         if not self._stream_log_enabled:

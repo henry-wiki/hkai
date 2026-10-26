@@ -11,12 +11,12 @@ trait render_general_result
     public function render_general_result($git_status_result)
     {
         // i18n 字眼（單一來源——cls/i18n/lang/*.json）
-        $git_installed_label = hkai__i18n()->get("diagnostics.git_installed");
-        $git_installed_desc  = hkai__i18n()->get("diagnostics.git_installed_desc");
-        $path_exists_label   = hkai__i18n()->get("diagnostics.path_exists");
-        $path_exists_desc    = hkai__i18n()->get("diagnostics.path_exists_desc");
-        $has_gitignore_label = hkai__i18n()->get("diagnostics.has_gitignore");
-        $has_gitignore_desc  = hkai__i18n()->get("diagnostics.has_gitignore_desc");
+        $git_installed_label = hkai()->i18n()->get("diagnostics.git_installed");
+        $git_installed_desc  = hkai()->i18n()->get("diagnostics.git_installed_desc");
+        $path_exists_label   = hkai()->i18n()->get("diagnostics.path_exists");
+        $path_exists_desc    = hkai()->i18n()->get("diagnostics.path_exists_desc");
+        $has_gitignore_label = hkai()->i18n()->get("diagnostics.has_gitignore");
+        $has_gitignore_desc  = hkai()->i18n()->get("diagnostics.has_gitignore_desc");
 
         // 檢查項清單（label／desc／passed）
         $check_items = [];

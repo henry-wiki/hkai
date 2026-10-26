@@ -32,7 +32,7 @@ trait handle_settings_test_server
         $server_settings_update["host"]           = $server_host;
         $server_settings_update["port"]           = (int)$server_port;
         $server_settings_update["testing_result"] = $test_result;
-        hkai__core()->write_runtime_configs("server_settings", $server_settings_update);
+        hkai()->runtime()->write_runtime_configs("server_settings", $server_settings_update);
 
         return sc_response()->json($test_result);
     }

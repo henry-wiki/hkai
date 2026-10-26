@@ -1,5 +1,8 @@
-import sys
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false
+# （子模組 duck-typed dict 回傳——Unknown/Any 警告一律關，其餘照檢）
+
 import time
+from typing import Any
 
 from .files import long_paths_class
 from .git import config_list_class, git_status_class, repo_ghosts_class
@@ -11,6 +14,14 @@ from .system_env import system_env_class
 GIT_STATUS_CACHE_SECONDS = 60
 
 class diagnostics_class:
+    config_list: config_list_class
+    git_status: git_status_class
+    git_status_cache: dict[str, tuple[float, dict[str, Any]]]
+    long_paths: long_paths_class
+    project_env: project_env_class
+    repo_ghosts: repo_ghosts_class
+    system_env: system_env_class
+
     def __init__(self):
         self.config_list = config_list_class()
         self.git_status = git_status_class()
@@ -21,13 +32,13 @@ class diagnostics_class:
         # git 狀態快取（專案路徑 → (取快取時刻, 結果)）——bridge 長駐 process，快取跨請求有效
         self.git_status_cache = {}
 
-    def clean_repo_ghosts(self, project_path):
+    def clean_repo_ghosts(self, project_path: str) -> dict[str, Any]:
         return self.repo_ghosts.clean_repo_ghosts(project_path)
 
-    def get_config_list(self, project_path):
+    def get_config_list(self, project_path: str) -> dict[str, Any]:
         return self.config_list.get_config_list(project_path)
 
-    def get_git_status(self, project_path):
+    def get_git_status(self, project_path: str) -> dict[str, Any]:
         # 快取未過期 → 即回（唔再全樹掃描——health 每 13 秒一輪嘅自我保護）
         cached_entry = self.git_status_cache.get(project_path)
         if cached_entry is not None:
@@ -40,13 +51,13 @@ class diagnostics_class:
         self.git_status_cache[project_path] = (time.monotonic(), git_status_result)
         return git_status_result
 
-    def get_long_paths(self, project_path):
+    def get_long_paths(self, project_path: str) -> dict[str, Any]:
         return self.long_paths.get_long_paths(project_path)
 
-    def get_project_env(self, project_path):
+    def get_project_env(self, project_path: str) -> dict[str, Any]:
         return self.project_env.get_project_env(project_path)
 
-    def get_system_env(self):
+    def get_system_env(self) -> dict[str, Any]:
         return self.system_env.get_system_env()
 
 def main():

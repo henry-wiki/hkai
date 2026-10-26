@@ -14,24 +14,22 @@ trait handle_fetch_general
         $modal_header   = [];
         $modal_header[] = "<div class='modal__title'>General</div>";
 
-        // General 偏好清單（聲明式一檔表——加項／改選項＝只改呢份表；讀寫＝sc_config/hkai/settings.json——讀 read_effective_settings／寫 settings_save_general）
+        // General 偏好清單（聲明式一檔表——加項／改選項＝只改呢份表；讀＝hkai()->settings()->get〔出廠默認＋data/settings.json 覆蓋〕／寫 settings_save_general）
         // 有 options＝已開放（出下拉）；淨 label＝未開放（右欄暫示「努力製作中」）
         // 次序：語言／外觀（介面語言、主題）
 
-        // 設定（sc_config/hkai/settings.json——本頁＝general 組；下拉顯示存檔現值）
-        $effective_settings = hkai__core()->read_effective_settings();
-        $general_settings   = $effective_settings["general"] ?? [];
-        $language           = $general_settings["language"] ?? "zh-HK";
+        // 設定（hkai()->settings()——出廠＋data/settings.json；本頁＝general 組語言）
+        $language = hkai()->settings()->get("general.language", "zh-HK");
 
         $general_rows = [];
         $general_rows[] = [
             "key"      => "language",
-            "label"    => hkai__i18n()->get("settings.general.language_label"),
+            "label"    => hkai()->i18n()->get("settings.general.language_label"),
             "options"  => ["zh-HK" => "繁體中文", "en-US" => "English"],
             "selected" => $language,
         ];
         $general_rows[] = [
-            "label" => hkai__i18n()->get("settings.general.theme_label"),
+            "label" => hkai()->i18n()->get("settings.general.theme_label"),
         ];
 
         // === body ===
@@ -80,7 +78,7 @@ trait handle_fetch_general
                     }
                     // 未開放 → 右欄暫示純文字
                     else {
-                        $modal_body[] = hkai__i18n()->get("common.coming_soon");
+                        $modal_body[] = hkai()->i18n()->get("common.coming_soon");
                     }
 
                         $modal_body[] = "</div>";
@@ -93,7 +91,7 @@ trait handle_fetch_general
         $modal_footer   = [];
         $modal_footer[] = "<div class='modal__content-footer'>";
             $modal_footer[] = "<div class='sc_btn_wrapper'>";
-                $modal_footer[] = "<button type='button' class='button button--primary' data-btn='general_save'>" . hkai__i18n()->get("common.save") . "</button>";
+                $modal_footer[] = "<button type='button' class='button button--primary' data-btn='general_save'>" . hkai()->i18n()->get("common.save") . "</button>";
             $modal_footer[] = "</div>";
         $modal_footer[] = "</div>";
 

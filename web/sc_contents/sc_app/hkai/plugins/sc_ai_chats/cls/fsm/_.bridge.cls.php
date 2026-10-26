@@ -41,8 +41,8 @@ class fsm_Class
 
     public function __construct()
     {
-        // 載入 fsm_map（SSOT——路徑由 __init__.php 入口注入；class 零寫死）
-        $fsm_map_path = hkai__core()->get_fsm_map_file();
+        // 載入 fsm_map（SSOT——路徑由 sc_config("hkai.fsm_map_file") 提供；class 零寫死）
+        $fsm_map_path = sc_get_config("hkai.fsm_map_file");
         $fsm_map      = json_decode(@file_get_contents($fsm_map_path), true);
 
         // 事件 → status（fsm_map 對應表——event 唯一決定）

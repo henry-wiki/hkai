@@ -35,7 +35,7 @@ trait prompt_send
 
         // 判定：查唔到（空 slug／無效 slug）→ fallback 查固定 Home 專案
         if ($existing_project_row === null) {
-            $existing_project_row = sc_ai_projects()->project()->get_project_row("home");
+            $existing_project_row = sc_ai_projects()->project()->get_project_row(sc_get_config("hkai.default_project_slug"));
         }
 
         // 判定：連 Home 都查唔到（資料壞）→ 嚴重錯（唔靜默）
@@ -50,6 +50,33 @@ trait prompt_send
 
         // 附件列（只取本專案＋未綁定——無效 id 自動剔走）
         $attachment_rows = sc_ai_chats()->attachment()->get_rows_by_ids($project_id, $attachment_ids);
+
+        // ===== 草稿附件（拉入即上傳——送出時才匯入正式附件目錄並寫 DB）=====
+        $draft_key = sc_ai_chats()->draft()->get_draft_key($chat_sid);
+
+        // 判定：未帶舊附件 id（新流程）→ 匯入草稿附件
+        if (count($attachment_ids) < 1) {
+            $draft_files   = sc_ai_chats()->draft()->list_draft_files($project_slug, $draft_key);
+            $imported_count = 0;
+
+            // 逐個草稿檔匯入（失敗＝略過）
+            foreach ($draft_files as $draft_file) {
+                $imported_row = sc_ai_chats()->attachment()->import_draft_file($existing_project_row, $draft_file["path"], $draft_file["filename"]);
+
+                // 判定：匯入成功 → 加入待綁定清單
+                if ($imported_row !== null) {
+                    $attachment_rows[] = $imported_row;
+                    $attachment_ids[]  = (int)$imported_row["attachment_id"];
+                    $imported_count    = $imported_count + 1;
+                }
+            }
+
+            // 判定：有檔案匯入 → 標記交收＋清空清單（冇匯入＝上傳未完成——保留草稿等重試）
+            if ($imported_count > 0) {
+                sc_ai_chats()->draft()->mark_status($project_slug, $draft_key, "submitted");
+                sc_ai_chats()->draft()->clear_draft_attachments($project_slug, $draft_key);
+            }
+        }
 
         $valid_attachment_ids = [];
 
@@ -85,9 +112,18 @@ trait prompt_send
         }
 
         // ===== 第二關：伺服器就緒（FATAL——不通過就停，唔建對話、不記錄）=====
-        $server_result = hkai__python_bridge_check()->validate_server_running();
-        if ($server_result["ok"] === false) {
-            return sc_response()->json($server_result);
+        $server_status = hkai()->process()->server()->get_server_status();
+
+        // 判定：bridge 唔活 → 回統一錯誤結構（E_SERVER_DOWN）
+        if ($server_status["is_alive"] !== true) {
+            $server_down_result = [];
+            $server_down_result["ok"]      = false;
+            $server_down_result["code"]    = "E_SERVER_DOWN";
+            $server_down_result["title"]   = hkai()->i18n()->get("error.E_SERVER_DOWN.title");
+            $server_down_result["message"] = "無法連接本機伺服器，訊息未送出。";
+            $server_down_result["hint"]    = "請先啟動伺服器（Settings → Server →「啟用」）再重新發送。";
+
+            return sc_response()->json($server_down_result);
         }
 
         // ===== 第三關：可處理性（不通過就停——唔建對話、不記錄）=====
@@ -109,18 +145,18 @@ trait prompt_send
             return sc_response()->json([
                 "ok"      => false,
                 "code"    => "E_QUEUE_LIMIT",
-                "title"   => hkai__i18n()->get("queue.limit_title"),
-                "message" => hkai__i18n()->get("queue.limit_message"),
+                "title"   => hkai()->i18n()->get("queue.limit_title"),
+                "message" => hkai()->i18n()->get("queue.limit_message"),
             ]);
         }
 
         // ===== 新對話（chat_sid==='' 100% 確定）——驗證全過才建立 =====
         $chat_created_this_request = false;
 
-        // 判定：未指定對話 → 建立新對話列
-        if ($chat_sid === "") {
+        // 判定：未指定對話／指定咗但 DB 未有（新 prompt 預配 sid）→ 建立新對話列
+        if ($existing_chat_row === null) {
             $chat_data                     = [];
-            $chat_data["chat_sid"]         = sc_generate_uuid();
+            $chat_data["chat_sid"]         = ($chat_sid !== "") ? $chat_sid : sc_generate_uuid();
             // 標題：有文字用文字；純圖片用第一個附件原檔名
             $chat_title_text = $content;
 
@@ -146,20 +182,25 @@ trait prompt_send
         
         $chat_sid = $existing_chat_row["chat_sid"];
         $chat_id  = $existing_chat_row["chat_id"];
+
+        // 新對話落地：草稿存在 → 標記轉「非新」（DB 已有 chat row；冇草稿唔建空 meta）
+        $final_draft_key = sc_ai_chats()->draft()->get_draft_key($chat_sid);
+        $final_draft_dir = sc_ai_chats()->draft()->get_draft_item_dir($project_slug, $final_draft_key);
+
+        // 判定：草稿目錄存在 → 更新標記
+        if (is_dir($final_draft_dir)) {
+            sc_ai_chats()->draft()->update_meta($project_slug, $final_draft_key, ["is_new_chat" => 0]);
+        }
+
+        // 新對話落地：草稿目錄由 "new" 搬去真 chat_sid（一對話一目錄）
+        if ($chat_created_this_request === true) {
+            sc_ai_chats()->draft()->claim_new_draft($project_slug, $chat_sid);
+        }
         
         // 環境初始化（生成時機＝發問——與訊息入庫同刻；檢視／建立都唔再觸發）
         // 缺檔先寫（已有＝唔動）；偵測失敗＝零寫入（唔阻發送）
         sc_ai_projects()->tab_environment()->write_project_environment_file($existing_project_row, false);
 
-        // 系統指示防線（發問前保證 root 兩檔可得：system_prompt／system_env；缺＝由 manifest 默認補；皆缺＝錯誤）
-        $instructions_result = sc_ai_settings()->instructions()->ensure_system_instructions();
-
-        // 判定：系統指示檔攞唔到（連默認都無）→ 回滾新對話＋返回錯誤（訊息不送出）
-        if ($instructions_result === false) {
-            sc_ai_chats()->prompt()->rollback_created_chat($existing_chat_row, $chat_created_this_request);
-            return sc_response()->json(["ok" => false, "error" => "system instructions unavailable"], 500);
-        }
-        
         // chat mode 正規化（DB 與 conf 同一值——單一事實來源）
         $conf_chat_mode = sc_ai_chats()->chat_option()->get_chat_mode($chat_mode);
         
@@ -226,6 +267,45 @@ trait prompt_send
             $message_row    = $shift_result["message_row"];
             $new_message    = sc_ai_chats()->message()->view()->get_chat_message_slot($message_row, [], true);
             $new_message_id = (int)$message_row["message_id"];
+
+            // 圖片抽取（非阻塞——status 已由 materialize 寫成 preparing）
+            $extract_files    = [];
+            $attachment_index = 0;
+
+            // 逐個附件砌抽取清單（只收圖片——文件暫時跳過）
+            foreach ($attachment_rows as $attachment_row_item) {
+                $attachment_index++;
+                $attachment_mime = (string)$attachment_row_item["mime_type"];
+
+                // 判定：非圖片 → 跳過
+                if (strpos($attachment_mime, "image/") !== 0) {
+                    continue;
+                }
+
+                $extract_file = [];
+                $extract_file["idx"]  = $attachment_index;
+                $extract_file["path"] = $storage_dir . "/" . $attachment_row_item["filepath"];
+                $extract_file["mime"] = $attachment_mime;
+                $extract_files[] = $extract_file;
+            }
+
+            // 判定：有圖片 → 交 bridge 拉起 image_extractor（PHP 唔等結果）
+            if (count($extract_files) > 0) {
+                $extract_payload = [];
+                $extract_payload["message_id"]   = $new_message_id;
+                $extract_payload["chat_id"]      = $chat_id;
+                $extract_payload["chat_sid"]     = $chat_sid;
+                $extract_payload["project_slug"] = $project_slug;
+                $extract_payload["files"]        = $extract_files;
+
+                $extract_result = hkai()->process()->bridge()->request("/image_extract/start/", $extract_payload, 10);
+
+                // 判定：派發失敗 → 記錄＋標 failed（避免卡 preparing）
+                if (($extract_result["ok"] ?? false) !== true) {
+                    hkai()->runtime()->logger()->error("image_extract start failed: message_id=" . $new_message_id . " error=" . (string)($extract_result["error"] ?? "unknown"));
+                    sc_ai_chats()->poll()->append_msg_status_by_event($chat_id, $new_message_id, "FAILED");
+                }
+            }
         }
         
         // 完整隊列 UI（共用 builder——傳 chat_id 即掃＋砌整排；前端只 bind）

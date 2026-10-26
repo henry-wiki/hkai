@@ -17,6 +17,7 @@ worker 監護人——子程序記憶體守衛（memory_guard singleton——get
 
 import threading
 import time
+from typing import cast
 
 import psutil
 
@@ -30,6 +31,9 @@ class memory_guard:
     """子程序記憶體守衛（singleton——worker 程序內共享）。"""
 
     _instance: "memory_guard | None" = None
+    _abort_fired: bool
+    _warn_active: bool
+    _samples: list[tuple[float, float]]
 
     def __init__(self) -> None:
         # 本次工作已開火旗標（防重複中止——冇子程序時自動復位）
@@ -39,7 +43,7 @@ class memory_guard:
         self._warn_active = False
 
         # 記憶體取樣（(時間, MB)——窗口內判斷增長率）
-        self._samples: list[tuple[float, float]] = []
+        self._samples = []
 
     @classmethod
     def get_instance(cls) -> "memory_guard":
@@ -120,24 +124,24 @@ class memory_guard:
         return newest_rss_mb - oldest_rss_mb
 
     # 中止：① 收終態 ② 記 audit ③ 殺子樹
-    def _abort(self, reason: str, descendant_processes: list, total_rss_mb: float, limit_mb: int) -> None:
+    def _abort(self, reason: str, descendant_processes: list[psutil.Process], total_rss_mb: float, limit_mb: int) -> None:
         self._abort_fired = True
         total_rss_gb = total_rss_mb / 1024.0
         abort_message = "abort: %s — rss %.2fGB (limit %dMB; subtree killed)" % (reason, total_rss_gb, limit_mb)
 
         # 判定：訊息仍未完結（故事未收）→ 走單一出口收終態（message_log＋error_log 一併記）
         if not message_status().is_terminal_status(message_store().get_msg_status()):
-            job_executor()._transition_status(EVENT_MEMORY_GUARD_ABORT, abort_message)
+            _ = job_executor().transition_status(EVENT_MEMORY_GUARD_ABORT, abort_message)
 
         # audit.log（系統級足跡——殺樹必記：原因＋值＋全部 pids）
-        descendant_pids = [child_process.pid for child_process in descendant_processes]
+        descendant_pids = [cast("int", child_process.pid) for child_process in descendant_processes]
         sc_logger.log("memory guard: %s — rss %.2fGB, pids=%s killed" % (reason, total_rss_gb, descendant_pids))
 
         # 殺子樹（記憶體即刻釋放——交返主流程（join 返回）行正常收尾）
         self._kill_descendant_tree(descendant_processes)
 
     # 殺整個子樹（直接 kill——記憶體即時釋放；只落子孫、唔掂自己）
-    def _kill_descendant_tree(self, descendant_processes: list) -> None:
+    def _kill_descendant_tree(self, descendant_processes: list[psutil.Process]) -> None:
         for child_process in descendant_processes:
             try:
                 child_process.kill()
@@ -147,21 +151,25 @@ class memory_guard:
         sc_logger.log("memory guard: subtree killed (pids=%d)" % len(descendant_processes))
 
     # worker 全部子孫程序（遞歸——只向下；查唔到＝空清單）
-    def _get_descendant_processes(self) -> list:
+    def _get_descendant_processes(self) -> list[psutil.Process]:
         try:
-            return psutil.Process(process.self_pid()).children(recursive=True)
+            return cast("list[psutil.Process]", psutil.Process(process.self_pid()).children(recursive=True))
         except psutil.Error:
             return []
 
     # 子孫記憶體總量（RSS 累加——MB；讀唔到（已死）當 0）
-    def _sum_rss_mb(self, descendant_processes: list) -> float:
-        total_rss_mb = 0.0
+    def _sum_rss_mb(self, descendant_processes: list[psutil.Process]) -> float:
+        total_rss_mb: float = 0.0
 
         for child_process in descendant_processes:
             try:
-                total_rss_mb = total_rss_mb + child_process.memory_info().rss / (1024 * 1024)
+                memory_info = child_process.memory_info()
             except psutil.Error:
                 continue
+
+            rss_bytes = cast("int", memory_info.rss)
+
+            total_rss_mb = total_rss_mb + rss_bytes / (1024 * 1024)
 
         return total_rss_mb
 

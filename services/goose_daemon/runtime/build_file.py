@@ -6,9 +6,11 @@ build_file.py — BUILD 檔讀取＋變更監視（goose_daemon 專用；只依�
 - initialize()  記住基準值（daemon 啟動時一次）
 - changed()     對比基準（有變即更新基準；BUILD 唔存在＝當冇變）
 
-上游：daemon_manager 主迴圈（首次啟動記基準、之後每輪對比）
+上游：lifecycle.watch_runtime()（daemon_manager:169 呼叫；執行緒內首次記基準、之後每拍對比）
 下游：context.BUILD_FILE
 """
+
+from typing import TypedDict
 
 from ..context import BUILD_FILE
 
@@ -30,7 +32,15 @@ def initialize() -> None:
     _baseline = read()
 
 
-def changed() -> dict:
+class BuildChange(TypedDict):
+    """BUILD 變更結果（changed／previous／current——三欄固定）。"""
+
+    changed: bool
+    previous: str
+    current: str
+
+
+def changed() -> BuildChange:
     """回傳 {changed, previous, current}；有變即更新基準。"""
     global _baseline
     current_build_id = read()

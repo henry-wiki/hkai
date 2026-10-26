@@ -22,9 +22,9 @@ trait get_modal_content
 
         // 判定：Environment 頁（自動偵測——唯讀）→ 副題講明唯讀同更新方式
         if ($instructions_name === "system_env") {
-            $modal_header[] = "<div class='modal__subtitle'>" . hkai__i18n()->get("settings.instructions.subtitle_env_readonly") . "</div>";
+            $modal_header[] = "<div class='modal__subtitle'>" . hkai()->i18n()->get("settings.instructions.subtitle_env_readonly") . "</div>";
         } else {
-            $modal_header[] = "<div class='modal__subtitle'>" . hkai__i18n()->get("settings.instructions.subtitle_prompt") . "</div>";
+            $modal_header[] = "<div class='modal__subtitle'>" . hkai()->i18n()->get("settings.instructions.subtitle_prompt") . "</div>";
         }
 
         // === footer ===
@@ -33,12 +33,11 @@ trait get_modal_content
 
         // 判定：Environment 頁 → Cancel＋Update（唯讀——無 Save／Restore）
         if ($instructions_name === "system_env") {
-            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>" . hkai__i18n()->get("common.cancel") . "</button>";
-            $modal_footer[] = "<button type='button' class='button button--primary' data-btn='refresh_system_env'>" . hkai__i18n()->get("common.update") . "</button>";
+            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>" . hkai()->i18n()->get("common.cancel") . "</button>";
+            $modal_footer[] = "<button type='button' class='button button--primary' data-btn='refresh_system_env'>" . hkai()->i18n()->get("common.update") . "</button>";
         } else {
-            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>" . hkai__i18n()->get("common.cancel") . "</button>";
-            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='restore_instructions'>" . hkai__i18n()->get("settings.instructions.btn_restore") . "</button>";
-            $modal_footer[] = "<button type='button' class='button button--primary' data-btn='save_instructions'>" . hkai__i18n()->get("common.save") . "</button>";
+            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>" . hkai()->i18n()->get("common.cancel") . "</button>";
+            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='restore_instructions'>" . hkai()->i18n()->get("settings.instructions.btn_restore") . "</button>";
         }
 
         $modal_footer[] = "</div>";

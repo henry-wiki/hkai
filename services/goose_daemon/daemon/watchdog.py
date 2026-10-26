@@ -15,6 +15,7 @@ watchdog.py — 工人看門狗（巡邏：取消／逾時 → 殺；死亡收�
 
 import time
 from pathlib import Path
+from typing import cast
 
 from ..context import job_executor, message_store
 from ..runtime import lifecycle, sc_logger
@@ -43,10 +44,11 @@ def supervise_workers() -> None:
         stop_worker(worker_entry, kill_reason)
 
 
-def detect_stall(worker_entry: dict) -> str:
+def detect_stall(worker_entry: roster.WorkerEntry) -> str:
     """依訊息現狀＋經過秒數判定是否異常（回原因；正常＝空字串）。"""
-    current_status = message_store().get_msg_status(Path(worker_entry["msg_conf_path"]))
-    elapsed_sec = int(time.time()) - int(worker_entry["dispatched_at"])
+    msg_conf_path = Path(worker_entry.get("msg_conf_path", ""))
+    current_status = message_store().get_msg_status(msg_conf_path)
+    elapsed_sec = int(time.time()) - int(worker_entry.get("dispatched_at", 0))
 
     # 判定：使用者已取消 → 立即終止
     if current_status == "cancelled":
@@ -54,7 +56,7 @@ def detect_stall(worker_entry: dict) -> str:
 
     # 判定：未取單（queued）→ 寬限＝啟動＋連線逾時
     if current_status == "queued":
-        queued_deadline = int(worker_entry["job_startup_timeout"]) + int(worker_entry["job_connection_timeout"])
+        queued_deadline = int(worker_entry.get("job_startup_timeout", 0)) + int(worker_entry.get("job_connection_timeout", 0))
 
         # 判定：超出寬限 → 逾時
         if elapsed_sec > queued_deadline:
@@ -64,7 +66,7 @@ def detect_stall(worker_entry: dict) -> str:
 
     # 判定：已開跑未見首個回應（connecting）→ 寬限＝連線逾時
     if current_status == "connecting":
-        connection_deadline = int(worker_entry["job_connection_timeout"])
+        connection_deadline = int(worker_entry.get("job_connection_timeout", 0))
 
         # 判定：超出寬限 → 逾時
         if elapsed_sec > connection_deadline:
@@ -75,10 +77,12 @@ def detect_stall(worker_entry: dict) -> str:
     return ""
 
 
-def stop_worker(worker_entry: dict, reason: str) -> None:
+def stop_worker(worker_entry: roster.WorkerEntry, reason: str) -> None:
     """安全終止 worker＋收尾＋登出。"""
     worker_proc = worker_entry["proc"]
-    worker_pid = worker_proc.pid
+
+    # 存活程序必有 pid（supervise 已判 is_alive）——型別收窄
+    worker_pid = cast("int", worker_proc.pid)
 
     lifecycle.exit_child(worker_pid, reason)
     worker_proc.join()
@@ -89,10 +93,10 @@ def stop_worker(worker_entry: dict, reason: str) -> None:
     sc_logger.log("warm worker stopped pid=" + str(worker_pid) + " reason=" + reason)
 
 
-def cleanup_dead_worker(worker_entry: dict) -> None:
+def cleanup_dead_worker(worker_entry: roster.WorkerEntry) -> None:
     """工單在身死亡 → 幫該訊息收終態（防卡 connecting）。"""
     # 判定：死時無工單 → 唔使收尾
-    if worker_entry["chat_id"] == "":
+    if worker_entry.get("chat_id", "") == "":
         return
 
-    job_executor().finalize_abandoned_message(Path(worker_entry["msg_conf_path"]))
+    job_executor().finalize_abandoned_message(Path(worker_entry.get("msg_conf_path", "")))

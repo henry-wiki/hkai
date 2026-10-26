@@ -23,6 +23,7 @@ import logging
 import logging.config
 import sys
 from pathlib import Path
+from types import TracebackType
 
 from .. import DATA_DIR
 
@@ -109,7 +110,7 @@ class sc_logger_class:
         return logging.getLogger(logger_name)
 
     # 全域未捕捉例外 → error.log（KeyboardInterrupt 交回預設行為）
-    def _global_exception_handler(self, exc_type, exc_value, exc_traceback) -> None:
+    def _global_exception_handler(self, exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
         # Ctrl+C 等中斷 → 走 Python 預設（不視為崩潰）
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -138,7 +139,7 @@ class sc_logger_class:
 
         # 全域攔截：未捕捉例外 → error.log；程序退出 → audit.log；print → audit.log
         sys.excepthook = self._global_exception_handler
-        atexit.register(self._exit_handler)
+        _ = atexit.register(self._exit_handler)
         sys.stdout = _print_logger_class()
 
         # 啟動足跡（第一個記錄點——此刻起任何崩潰都會留下痕跡）
@@ -156,7 +157,7 @@ class sc_logger_class:
 class _print_logger_class:
     """sys.stdout 重定向 → audit.log（print 不漏）。"""
 
-    def write(self, message) -> None:
+    def write(self, message: str) -> None:
         # 空行不記（只留有意義的輸出）
         if message.strip():
             sc_logger_class.get_instance().log(f"[print] {message.strip()}")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-process.py — 程序身份（每個程序自己一份；啟動即記自己同母親）
+process.py — 程序身份＋程序台帳（每個程序自己一份；啟動即記自己同母親）
 
 責任：只做記錄同感應，唔殺程序（殺交 lifecycle.exit／exit_children）
 
@@ -12,10 +12,16 @@ process.py — 程序身份（每個程序自己一份；啟動即記自己同�
 - mother_is_gone()  母親唔在／被重用 → True
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# （psutil 冇 type stub——「類型部分未知」一律關，其餘照檢）
+
+import json
 import os
+from pathlib import Path
 
 import psutil
 
+from ..context import PROCESS_FILE_LIST, PROGRAM_LABEL, PROGRAM_NAME, get_datetime
 from . import sc_logger
 
 # 本程序 pid（init 時記錄）
@@ -112,3 +118,54 @@ def mother_is_gone() -> bool:
         return True
 
     return current_create_time != _mother_create_time
+
+# ===== 程序台帳（append-only JSONL——bridge 只有一條常駐程序；只 append、唔清潔）=====
+
+def get_list_path() -> Path:
+    """取得程序清單檔案路徑（固定：context.PROCESS_FILE_LIST）。"""
+    return PROCESS_FILE_LIST
+
+
+def get_create_time(pid: int) -> int:
+    """程序建立時間（epoch 毫秒 int；讀唔到 → 0）。"""
+    try:
+        return int(psutil.Process(int(pid)).create_time() * 1000)
+    except psutil.Error:
+        return 0
+
+
+def append_event(event: str, pid: int, ppid: int, chat_id: str | None = "", message_id: str | None = "") -> None:
+    """append 一行程序清單（永不改寫、永不刪行；失敗只記 log）。"""
+    try:
+        list_path = get_list_path()
+
+        record = {}
+        record["ts"]            = get_datetime()
+        record["create_time"]   = get_create_time(pid)
+        record["event"]         = event
+        record["pid"]           = int(pid)
+        record["ppid"]          = int(ppid)
+        record["program"]       = PROGRAM_NAME
+        record["program_label"] = PROGRAM_LABEL
+        record["chat_id"]       = "" if chat_id is None else str(chat_id)
+        record["message_id"]    = "" if message_id is None else str(message_id)
+
+        # 目錄不存在先建立（首次啟動——檔案尚不存在）
+        list_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(list_path, "a", encoding="utf-8", newline="\n") as list_file:
+            _ = list_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    except Exception as exc:  # noqa: BLE001
+        sc_logger.log(f"process list write failed: {exc}")
+
+
+def append_spawn(pid: int, ppid: "int | None" = None, chat_id: str = "", message_id: str = "") -> None:
+    """append 一筆 spawn（ppid 預設＝本程序——呼叫者就是父程序）。"""
+    append_event(
+        event="spawn",
+        pid=pid,
+        ppid=self_pid() if ppid is None else ppid,
+        chat_id=chat_id,
+        message_id=message_id,
+    )

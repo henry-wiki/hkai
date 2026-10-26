@@ -14,11 +14,11 @@ server_cors.py — CORS 允許清單（server 層政策；兩個 SSE router 共�
 from ..context import DATA_DIR, PROGRAM_NAME
 
 
-def read_origin_allowlist() -> list:
+def read_origin_allowlist() -> list[str]:
     """讀 CORS 允許清單（data/{PROGRAM_NAME}/origin.whitelist；缺檔／空檔 → 空清單）。"""
     whitelist_path = DATA_DIR / PROGRAM_NAME / "origin.whitelist"
 
-    whitelist = []
+    whitelist: list[str] = []
 
     # 判定：白名單檔存在 → 逐行讀（# 開頭＝註釋；空白行跳）
     if whitelist_path.is_file():
@@ -36,7 +36,7 @@ def read_origin_allowlist() -> list:
     return whitelist
 
 
-def origin_is_allowed(origin: str, allowed_origins: list) -> bool:
+def origin_is_allowed(origin: str, allowed_origins: list[str]) -> bool:
     """判斷 origin 是否獲准（支援 "*"＝全開；萬用埠：http://127.0.0.1:*）。"""
     # 判定：清單有 "*" → 全部放行
     if "*" in allowed_origins:

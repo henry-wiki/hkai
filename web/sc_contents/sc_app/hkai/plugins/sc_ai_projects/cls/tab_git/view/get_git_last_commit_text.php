@@ -9,7 +9,7 @@ trait get_git_last_commit_text
 {
     private function get_git_last_commit_text($git_status)
     {
-        $commit_text = hkai__i18n()->get("git.no_commits");
+        $commit_text = hkai()->i18n()->get("git.no_commits");
 
         // 判定：有提交 → 組顯示文字
         if ($git_status["last_commit"] !== null) {

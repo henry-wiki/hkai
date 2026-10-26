@@ -40,7 +40,7 @@ trait reset_tab_rule
 
         // 判定：開啟版本更新時間 ≠ 現行 → 409（版本唔配對——防誤刪；前端彈錯）
         if ($opened_update_time !== $current_update_time) {
-            return sc_response()->json(["ok" => false, "error" => hkai__i18n()->get("rule.conflict_error")], 409);
+            return sc_response()->json(["ok" => false, "error" => hkai()->i18n()->get("rule.conflict_error")], 409);
         }
 
         // 判定：規則檔存在 → 先備份、後清除（備份＝storage/hkai/bak——保留一日）
@@ -55,8 +55,7 @@ trait reset_tab_rule
     // 備份規則檔入 storage/hkai/bak（檔名＝{slug}_AGENTS_{Ymd_His}.md；順手清一日前舊份）
     private function backup_rule_file($project_slug, $rule_file)
     {
-        $runtime_configs = hkai__core()->get_runtime_configs();
-        $storage_dir     = $runtime_configs["storage_dir"];
+        $storage_dir     = sc_get_config("storage.app_dir");
         $bak_dir         = $storage_dir . "/bak";
 
         // 判定：bak 目錄不存在 → 遞迴建立

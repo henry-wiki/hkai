@@ -7,4 +7,4 @@ $route      = $this->get_route();
 $controller = sc_controller($route);
 
 // 整頁輸出（page builder——唯一出口）
-return hkai__sc_page_builder_view()->render_page_index($controller);
+return hkai()->web_page()->builder()->render_page_index($controller);

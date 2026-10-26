@@ -46,6 +46,7 @@ trait redownload_provider_models
         // 轉換（每 model 依白名單複製欄位 + 衍生 is_free）——id 為 key、剔除無 id 項
         $model_list = provider()->reset_model_pricing($model_list);
         $model_list = provider()->reset_model_reasoning($model_list);
+        $model_list = provider()->reset_model_input_modalities($model_list);
         $model_list = provider()->reset_model_benchmark($model_list);
 
         // 過濾 + 分 tier（dirty 收集不產檔；free / paid_with_coding_index / paid_without_coding_index）

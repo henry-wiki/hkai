@@ -10,12 +10,8 @@ class server_Class
 {
     use view\handle_fetch_server_settings;
     use view\get_modal_content;
-    use view\handle_fetch_server_log;
     use action\get_host_port_test_result;
     use action\handle_settings_test_server;
-    use action\handle_settings_start_server;
-    use action\handle_settings_restart_server;
-    use action\handle_settings_stop_server;
 
     private static $instance = null;
 
@@ -31,7 +27,7 @@ class server_Class
     public function __construct()
     {}
 
-    // 驗證 host／port（回 errors 陣列——test 與 save 共用；空陣列＝通過）
+    // 驗證 host／port（回 errors 陣列——test 用；空陣列＝通過）
     private function validate_host_port($server_host, $server_port)
     {
         $errors          = [];
@@ -39,30 +35,32 @@ class server_Class
 
         // 判定：host 為空 → 錯誤
         if ($server_host === "") {
-            $errors["host"] = hkai__i18n()->get("settings.server.error_host_empty");
+            $errors["host"] = hkai()->i18n()->get("settings.server.error_host_empty");
         }
 
         // 判定：port 為空 → 錯誤
         if ($server_port === "") {
-            $errors["port"] = hkai__i18n()->get("settings.server.error_port_empty");
+            $errors["port"] = hkai()->i18n()->get("settings.server.error_port_empty");
         }
 
-        // 判定：port 非空但非純數字 → 錯誤
+        // 判定：port 非空 → 檢查純數字
         if ($server_port !== "") {
+            // 判定：非純數字 → 錯誤
             if (!ctype_digit($server_port)) {
-                $errors["port"] = hkai__i18n()->get("settings.server.error_port_not_number");
+                $errors["port"] = hkai()->i18n()->get("settings.server.error_port_not_number");
             }
         }
 
-        // 判定：port 為純數字 → 檢查範圍
+        // 判定：port 為純數字 → 檢查範圍（1–65535）
         if (ctype_digit($server_port)) {
             // 判定：小於 1 → 錯誤
             if ($server_port_int < 1) {
-                $errors["port"] = hkai__i18n()->get("settings.server.error_port_range");
+                $errors["port"] = hkai()->i18n()->get("settings.server.error_port_range");
             }
+
             // 判定：大於 65535 → 錯誤
             if ($server_port_int > 65535) {
-                $errors["port"] = hkai__i18n()->get("settings.server.error_port_range");
+                $errors["port"] = hkai()->i18n()->get("settings.server.error_port_range");
             }
         }
 

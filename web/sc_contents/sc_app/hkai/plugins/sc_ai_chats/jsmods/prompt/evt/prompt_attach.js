@@ -3,11 +3,23 @@
 // 檔名＝DevTools Event Listeners 面板顯示嘅字（一檔一事——一眼知位置）
 // 範圍：只做 UI chips（選檔／貼上／拖放／移除）；上傳與送模型屬下一部分
 
+// fallback 設定（實際值由 .sc_composer__attachments data-* 覆寫——後端 sc_config hkai.draft）
+var DEFAULT_MAX_IMAGES = 13;
+var DEFAULT_MAX_IMAGE_SIDE_PX = 4096;
+var DEFAULT_RESIZE_IMAGE_SIDE_PX = 2048;
+var RESIZE_JPEG_QUALITY = 0.92;
+
 class _prompt_attach {
     constructor() {
-        // 已選附件（{uid, file, preview_url}——暫存記憶體；未上傳）
+        // 已選附件（{uid, file, origin, name, size, preview_url, thumb_data_url, draft_filename, state}）
         this.attachments = [];
         this.next_uid = 1;
+
+        // 上傳設定（load_settings 由容器 data-* 讀；未讀到用 fallback）
+        this.settings = {};
+        this.settings.max_images = DEFAULT_MAX_IMAGES;
+        this.settings.max_image_side_px = DEFAULT_MAX_IMAGE_SIDE_PX;
+        this.settings.resize_image_side_px = DEFAULT_RESIZE_IMAGE_SIDE_PX;
     }
 
     // 綁定註冊（由 prompt evt init 呼叫——一次；selector 委派）
@@ -39,6 +51,63 @@ class _prompt_attach {
         jQuery(document)
             .off("drop.sc_ai_chats_prompt_attach")
             .on("drop.sc_ai_chats_prompt_attach", ".sc_composer__editor", this.attach_files_drop.bind(this));
+
+        this.load_settings();
+    }
+
+    // 讀上傳設定（容器 data-*——後端 sc_config 單一來源）
+    load_settings() {
+        var j_container = jQuery(".sc_composer__attachments");
+
+        // 判定：頁面冇容器 → 用 fallback
+        if (j_container.length < 1) {
+            return;
+        }
+
+        var max_images = parseInt(j_container.attr("data-max_images"), 10);
+        var max_image_side_px = parseInt(j_container.attr("data-max_image_side_px"), 10);
+        var resize_image_side_px = parseInt(j_container.attr("data-resize_image_side_px"), 10);
+
+        // 判定：有值 → 覆寫
+        if (!isNaN(max_images) && max_images > 0) {
+            this.settings.max_images = max_images;
+        }
+
+        // 判定：有值 → 覆寫
+        if (!isNaN(max_image_side_px) && max_image_side_px > 0) {
+            this.settings.max_image_side_px = max_image_side_px;
+        }
+
+        // 判定：有值 → 覆寫
+        if (!isNaN(resize_image_side_px) && resize_image_side_px > 0) {
+            this.settings.resize_image_side_px = resize_image_side_px;
+        }
+    }
+
+    // 還原草稿附件（重載後由 draft_fetch 帶入——state＝done）
+    restore_from_draft(attachment_list) {
+        this.attachments = [];
+        this.next_uid = 1;
+
+        // 逐項還原（伺服器檔名＋原檔名＋縮圖）
+        for (var index = 0; index < attachment_list.length; index++) {
+            var attachment_item = attachment_list[index];
+            var restored = {};
+            restored.uid = this.next_uid;
+            restored.file = null;
+            restored.origin = null;
+            restored.name = attachment_item.original_filename || attachment_item.filename;
+            restored.size = parseInt(attachment_item.file_size, 10) || 0;
+            restored.preview_url = "";
+            restored.thumb_data_url = attachment_item.thumb_data_url || "";
+            restored.draft_filename = attachment_item.filename;
+            restored.state = "done";
+
+            this.next_uid = this.next_uid + 1;
+            this.attachments.push(restored);
+        }
+
+        this.render_attachments();
     }
 
     // 取已選檔案（送問前上傳用——回傳 File 陣列副本）
@@ -51,6 +120,19 @@ class _prompt_attach {
         }
 
         return file_list;
+    }
+
+    // 有冇仍在上傳中嘅附件（送出閘用——上傳中送會漏圖）
+    has_uploading() {
+        // 逐項檢查狀態
+        for (var index = 0; index < this.attachments.length; index++) {
+            // 判定：uploading → 有
+            if (this.attachments[index].state === "uploading") {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // 清空已選附件（送出成功後——釋放縮圖＋收容器）
@@ -165,9 +247,173 @@ class _prompt_attach {
         this.add_files(drag_data.files);
     }
 
+    // 背景上傳一張（完成／失敗都更新 chip 狀態）
+    async start_upload(attachment, project_slug, chat_sid) {
+        var upload_result = await this.upload_file(attachment, project_slug, chat_sid);
+
+        // 判定：失敗 → 標記 failed（後端零寫入）
+        if (upload_result === null) {
+            attachment.state = "failed";
+            this.render_attachments();
+
+            return;
+        }
+
+        attachment.state = "done";
+        attachment.draft_filename = upload_result.filename;
+        attachment.thumb_data_url = upload_result.thumb_data_url || "";
+        this.render_attachments();
+
+        // 首次有附件落地 → URL 未帶 sid 就靜默換（重載可憑 sid 取回草稿）
+        const prompt_instance = await registry().sc_ai_chats().prompt();
+        await prompt_instance.sync_chat_url(project_slug);
+    }
+
+    // 單次 multipart 上傳（XHR——原生二進位＋upload progress；跨裝置同一條路）
+    upload_file(attachment, project_slug, chat_sid) {
+        return new Promise(function (resolve) {
+            var form_data = new FormData();
+            form_data.append("project_slug", project_slug);
+            form_data.append("chat_sid", chat_sid);
+            form_data.append("file", attachment.file, attachment.name);
+
+            var csrf_token = jQuery("meta[name='csrf-token']").attr("content") || "";
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/request/hkai/draft_upload/");
+            xhr.setRequestHeader("X-CSRF-Token", csrf_token);
+
+            // 進度（真百分比——記入 attachment；畫面交 chip CSS）
+            xhr.upload.onprogress = function (event) {
+                // 判定：長度未知 → 唔記
+                if (event.lengthComputable === false) {
+                    return;
+                }
+
+                attachment.progress = event.loaded / event.total;
+            };
+
+            xhr.onload = function () {
+                var result = null;
+
+                // 判定：回應唔係 JSON → 當失敗
+                try {
+                    result = JSON.parse(xhr.responseText);
+                }
+                catch (parse_error) {
+                    result = null;
+                }
+
+                // 判定：HTTP 非 200／冇結果／ok 唔係 true → 失敗
+                if (xhr.status !== 200 || result === null || result.ok !== true) {
+                    resolve(null);
+
+                    return;
+                }
+
+                resolve(result);
+            };
+
+            xhr.onerror = function () {
+                resolve(null);
+            };
+
+            xhr.send(form_data);
+        });
+    }
+
+    // 圖片尺寸處理（≤2048 原樣；2049–4096 縮到 2048；>4096 警告＋拒收）
+    resize_image_file(file_item) {
+        var thisObject = this;
+
+        return new Promise(function (resolve) {
+            // 判定：非圖片 → 原樣
+            if (file_item.type.indexOf("image/") !== 0) {
+                resolve(file_item);
+                return;
+            }
+
+            createImageBitmap(file_item).then(function (bitmap) {
+                var max_side_px = Math.max(bitmap.width, bitmap.height);
+
+                // 判定：超過硬上限 → 警告＋拒收
+                if (max_side_px > thisObject.settings.max_image_side_px) {
+                    bitmap.close();
+
+                    var shared = registry().shared();
+                    shared.sc_alert().warning(
+                        "圖片過大",
+                        "長邊超過 " + thisObject.settings.max_image_side_px + " px，已略過：" + file_item.name
+                    );
+
+                    resolve(null);
+                    return;
+                }
+
+                // 判定：未超過目標尺寸 → 原樣
+                if (max_side_px <= thisObject.settings.resize_image_side_px) {
+                    bitmap.close();
+                    resolve(file_item);
+                    return;
+                }
+
+                var scale_ratio = thisObject.settings.resize_image_side_px / max_side_px;
+                var target_width = Math.round(bitmap.width * scale_ratio);
+                var target_height = Math.round(bitmap.height * scale_ratio);
+
+                var canvas = document.createElement("canvas");
+                canvas.width = target_width;
+                canvas.height = target_height;
+
+                var canvas_context = canvas.getContext("2d");
+                canvas_context.drawImage(bitmap, 0, 0, target_width, target_height);
+                bitmap.close();
+
+                var output_mime = "image/jpeg";
+
+                // 判定：PNG（可能有透明）→ 保持 PNG
+                if (file_item.type === "image/png") {
+                    output_mime = "image/png";
+                }
+
+                canvas.toBlob(function (blob) {
+                    // 判定：轉換失敗 → 原樣（後端仍會處理）
+                    if (!blob) {
+                        resolve(file_item);
+                        return;
+                    }
+
+                    var resized_file = new File([blob], file_item.name, {
+                        type: output_mime,
+                        lastModified: file_item.lastModified
+                    });
+
+                    resolve(resized_file);
+                }, output_mime, RESIZE_JPEG_QUALITY);
+            }).catch(function () {
+                // 判定：解碼失敗 → 原樣（後端驗真實格式）
+                resolve(file_item);
+            });
+        });
+    }
+
     // 加入檔案（選檔／貼上／拖放共用——同名同大小同時間＝重複跳過）
-    add_files(file_list) {
+    async add_files(file_list) {
         var added_count = 0;
+
+        // 草稿位置（SSOT：projects／chats 域；home 用 composer 專案）
+        const projects = registry().sc_ai_projects();
+        const project_instance = await projects.project();
+        var project_slug = project_instance.get_project_slug();
+
+        const chats = registry().sc_ai_chats();
+        const prompt_instance = await chats.prompt();
+        var chat_sid = await prompt_instance.get_active_chat_sid();
+
+        // 判定：URL 冇專案（home）→ 用 composer 專案
+        if (project_slug === "") {
+            project_slug = prompt_instance.get_composer_project_slug();
+        }
 
         // 逐個檔加入暫存清單
         for (var index = 0; index < file_list.length; index++) {
@@ -183,19 +429,41 @@ class _prompt_attach {
                 continue;
             }
 
+            // 判定：已達張數上限 → 警告並停
+            if (this.attachments.length >= this.settings.max_images) {
+                const shared = registry().shared();
+                shared.sc_alert().warning("附件數量上限", "每條訊息最多 " + this.settings.max_images + " 張圖片");
+                break;
+            }
+
+            // 尺寸處理（超上限＝null；縮圖後＝新 File）
+            var resized_file = await this.resize_image_file(file_item);
+
+            // 判定：尺寸超限已拒收 → 跳過
+            if (resized_file === null) {
+                continue;
+            }
+
             var attachment = {};
             attachment.uid = this.next_uid;
-            attachment.file = file_item;
-            attachment.preview_url = "";
+            attachment.file = resized_file;
+            attachment.origin = {};
+            attachment.origin.name = file_item.name;
+            attachment.origin.size = file_item.size;
+            attachment.origin.lastModified = file_item.lastModified;
+            attachment.name = file_item.name;
+            attachment.size = resized_file.size;
+            attachment.preview_url = URL.createObjectURL(resized_file);
+            attachment.thumb_data_url = "";
+            attachment.draft_filename = "";
+            attachment.state = "uploading";
             this.next_uid = this.next_uid + 1;
-
-            // 判定：圖片 → 產生縮圖網址
-            if (file_item.type.indexOf("image/") === 0) {
-                attachment.preview_url = URL.createObjectURL(file_item);
-            }
 
             this.attachments.push(attachment);
             added_count = added_count + 1;
+
+            // 即時上傳（唔等——chip 已顯示 loading）
+            this.start_upload(attachment, project_slug, chat_sid);
         }
 
         // 判定：有新增 → 重畫
@@ -204,25 +472,35 @@ class _prompt_attach {
         }
     }
 
-    // 判定是否已有同一份檔（檔名＋大小＋修改時間）
+    // 判定是否已有同一份檔（原檔名＋大小＋修改時間）
     has_attachment(file_item) {
-        // 逐項比對
         for (var index = 0; index < this.attachments.length; index++) {
             var attachment_item = this.attachments[index];
-            var existing_file = attachment_item.file;
+
+            // 判定：還原附件（冇原檔）→ 用顯示名比對
+            if (attachment_item.origin === null) {
+                // 判定：同名 → 當重複
+                if (attachment_item.name === file_item.name) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            var origin_item = attachment_item.origin;
 
             // 判定：檔名唔同 → 未重複
-            if (existing_file.name !== file_item.name) {
+            if (origin_item.name !== file_item.name) {
                 continue;
             }
 
             // 判定：大小唔同 → 未重複
-            if (existing_file.size !== file_item.size) {
+            if (origin_item.size !== file_item.size) {
                 continue;
             }
 
             // 判定：修改時間唔同 → 未重複
-            if (existing_file.lastModified !== file_item.lastModified) {
+            if (origin_item.lastModified !== file_item.lastModified) {
                 continue;
             }
 
@@ -232,19 +510,21 @@ class _prompt_attach {
         return false;
     }
 
-    // 移除一項（chip 上 ×）
-    attach_remove(event) {
+    // 移除一項（chip 上 ×——同步刪後端）
+    async attach_remove(event) {
         event.preventDefault();
 
         var uid = parseInt(jQuery(event.currentTarget).attr("data-attach_uid"), 10);
+        var removed_attachment = null;
         var kept_attachments = [];
 
         // 逐項保留（uid 唔同＝留下）
         for (var index = 0; index < this.attachments.length; index++) {
             var attachment_item = this.attachments[index];
 
-            // 判定：要移除呢項 → 釋放縮圖網址
+            // 判定：要移除呢項 → 記住＋釋放縮圖
             if (attachment_item.uid === uid) {
+                removed_attachment = attachment_item;
                 this.release_preview_url(attachment_item);
                 continue;
             }
@@ -254,6 +534,55 @@ class _prompt_attach {
 
         this.attachments = kept_attachments;
         this.render_attachments();
+
+        // 判定：未上傳過 → 唔使通知後端
+        if (removed_attachment === null || removed_attachment.draft_filename === "") {
+            return;
+        }
+
+        await this.delete_draft_file(removed_attachment.draft_filename);
+    }
+
+    // 通知後端刪草稿檔（同時 meta 移除）
+    async delete_draft_file(draft_filename) {
+        const projects = registry().sc_ai_projects();
+        const project_instance = await projects.project();
+        var project_slug = project_instance.get_project_slug();
+
+        // 判定：URL 冇專案（home）→ 用 composer 專案
+        if (project_slug === "") {
+            const prompt_instance_home = await registry().sc_ai_chats().prompt();
+            project_slug = prompt_instance_home.get_composer_project_slug();
+        }
+
+        const prompt_instance = await registry().sc_ai_chats().prompt();
+        const delete_instance = await prompt_instance.req().draft_delete_file();
+
+        var delete_payload = {};
+        delete_payload.project_slug = project_slug;
+        delete_payload.chat_sid = await prompt_instance.get_active_chat_sid();
+        delete_payload.filename = draft_filename;
+
+        var delete_result = null;
+
+        await new Promise(function (resolve) {
+            delete_instance.draft_delete_file(delete_payload, {
+                success: function (result) {
+                    delete_result = result;
+                    resolve();
+                },
+                error: function (result) {
+                    delete_result = result;
+                    resolve();
+                }
+            });
+        });
+
+        // 判定：失敗 → 警告（檔案可能仍存在）
+        if (delete_result === null || delete_result.ok !== true) {
+            const shared = registry().shared();
+            shared.sc_alert().warning("刪除失敗", "草稿檔案未能刪除，請重試");
+        }
     }
 
     // 釋放縮圖網址（避免記憶體漏）
@@ -292,26 +621,45 @@ class _prompt_attach {
         }
     }
 
-    // 砌一個 chip（檔名／大小／移除掣——text() 防 HTML 注入）
+    // 砌一個 chip（div——縮圖／loading／失敗感嘆號／檔名／大小／移除）
     build_attachment_chip(attachment_item) {
-        var j_chip = jQuery("<span class='sc_composer__attachment'></span>");
+        var j_chip = jQuery("<div class='sc_composer__attachment'></div>");
         j_chip.attr("data-attach_uid", attachment_item.uid);
+        j_chip.attr("data-state", attachment_item.state);
 
-        // 判定：有縮圖 → 用圖片；否則用 icon
-        if (attachment_item.preview_url !== "") {
+        var thumb_src = attachment_item.preview_url;
+
+        // 判定：冇本地縮圖 → 用後端縮圖
+        if (thumb_src === "") {
+            thumb_src = attachment_item.thumb_data_url;
+        }
+
+        // 判定：有縮圖 → 圖片；否則 icon
+        if (thumb_src !== "") {
             var j_thumb = jQuery("<img class='sc_composer__attachment_thumb'>");
-            j_thumb.attr("src", attachment_item.preview_url);
-            j_thumb.attr("alt", attachment_item.file.name);
+            j_thumb.attr("src", thumb_src);
+            j_thumb.attr("alt", attachment_item.name);
             j_chip.append(j_thumb);
         } else {
             j_chip.append(jQuery("<i class='fa-solid fa-paperclip'></i>"));
         }
 
+        // 上傳中：CSS 轉圈
+        if (attachment_item.state === "uploading") {
+            j_chip.append(jQuery("<span class='sc_composer__attachment_spinner'></span>"));
+        }
+
+        // 失敗：紅色感嘆號（唔彈警告）
+        if (attachment_item.state === "failed") {
+            var j_failed = jQuery("<span class='sc_composer__attachment_failed' title='upload failed'>!</span>");
+            j_chip.append(j_failed);
+        }
+
         var j_name = jQuery("<span class='sc_composer__attachment_name'></span>");
-        j_name.text(attachment_item.file.name);
+        j_name.text(attachment_item.name);
 
         var j_size = jQuery("<span class='sc_composer__attachment_size'></span>");
-        j_size.text(this.format_file_size(attachment_item.file.size));
+        j_size.text(this.format_file_size(attachment_item.size));
 
         var j_remove = jQuery("<button class='sc_composer__attachment_remove' type='button' data-action='attach_remove'>×</button>");
         j_remove.attr("data-attach_uid", attachment_item.uid);

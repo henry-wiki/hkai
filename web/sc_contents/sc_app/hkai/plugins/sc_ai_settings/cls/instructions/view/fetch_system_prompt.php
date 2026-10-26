@@ -9,20 +9,10 @@ trait fetch_system_prompt
     // GET fetch_system_prompt handler（storage 自訂版優先；無＝讀 manifest 出廠默認（default 狀態——唔 copy）→ 出頁面）
     public function fetch_system_prompt()
     {
-        $paths           = $this->get_instructions_paths("system_prompt");
-        $file_content    = "";
-        $file_updated_at = "";
-
-        // 判定：storage 自訂版存在 → 讀現值＋記最後更新時間；否則 → 讀 manifest 出廠默認
-        if (is_file($paths["storage_file"])) {
-            $file_content    = (string)@file_get_contents($paths["storage_file"]);
-            $file_updated_at = date("Y-m-d H:i:s", (int)@filemtime($paths["storage_file"]));
-        } else {
-            // 判定：manifest 存在 → 讀出廠默認內容
-            if (is_file($paths["manifest_file"])) {
-                $file_content = (string)@file_get_contents($paths["manifest_file"]);
-            }
-        }
+        // 讀現值（storage 優先、無＝manifest 出廠默認——交 instruction 域）
+        $read_result     = hkai()->process()->instruction()->read_instructions("system_prompt");
+        $file_content    = $read_result["content"];
+        $file_updated_at = $read_result["updated_at"];
 
         // 外部旗標：item 可否編輯（config editable——頁面據此決定出唔出編輯介面）
         $is_editable = $this->instructions_is_editable("system_prompt");

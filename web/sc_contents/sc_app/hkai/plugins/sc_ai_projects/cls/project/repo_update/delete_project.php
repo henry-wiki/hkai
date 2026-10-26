@@ -13,9 +13,12 @@ trait delete_project
         $target_project_row = sc_db()->selectOne("SELECT project_slug FROM projects WHERE project_id = ?", [(int)$project_id]);
 
         // 判定：Home → 唔准改
-        if ($target_project_row !== null && $target_project_row["project_slug"] === "home") {
+        if ($target_project_row !== null && $target_project_row["project_slug"] === sc_get_config("hkai.default_project_slug")) {
             return false;
         }
+
+        // 專案附件（DB 列＋磁盤檔——不等 message row 存在）
+        sc_ai_chats()->attachment()->delete_by_project($project_id);
 
         $db = sc_db()->connection("sqlite");
 

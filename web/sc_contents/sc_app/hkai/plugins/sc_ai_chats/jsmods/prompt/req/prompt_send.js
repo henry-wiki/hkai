@@ -39,9 +39,7 @@ class _prompt_send {
             Object.assign(payload, prompt_instance.get_model_info_data());
         // URL 有專案 → 用 URL；home（冇）→ 用 composer 專案（playground）
         payload.project_slug = project_slug !== "" ? project_slug : prompt_instance.get_composer_project_slug();
-        const chat_instance = await chats.chat();
-
-        payload.chat_sid     = chat_instance.get_chat_sid();
+        payload.chat_sid     = await prompt_instance.get_active_chat_sid();
 
 
         // before 程序（經 before_send callback——send 流程傳入手柄呼叫 prompt_before_send）
@@ -52,52 +50,9 @@ class _prompt_send {
             callbacks.before_send();
         }
 
-        // ===== 附件上傳（先逐個上傳——成功才送問；後端只存檔）=====
-        const attachment_files = request_data.attachment_files || [];
-
+        // 附件已於選檔時上傳入草稿（後端送出時匯入；唔再逐張上傳）
         delete payload.attachment_files;
-
         payload.attachment_ids = [];
-
-        // 判定：有附件 → 逐個上傳（任何一個失敗 → 整條唔送）
-        if (attachment_files.length > 0) {
-            const upload_instance = await prompt_instance.req().upload_attachment();
-
-            // 逐個檔上傳
-            for (let file_index = 0; file_index < attachment_files.length; file_index++) {
-                const file_item = attachment_files[file_index];
-
-                let upload_result = null;
-
-                // 等單檔結果（成功／失敗都 resolve——由下面判斷）
-                await new Promise(function (resolve) {
-                    upload_instance.upload_attachment(file_item, payload.project_slug, {
-                        success: function (result) {
-                            upload_result = result;
-                            resolve();
-                        },
-                        error: function (result) {
-                            upload_result = result;
-                            resolve();
-                        }
-                    });
-                });
-
-                // 判定：上傳失敗 → 回 error（輸入內容保留）
-                if (upload_result === null || upload_result.ok !== true) {
-                    // 判定：完全冇結果 → 補網路錯誤
-                    if (upload_result === null) {
-                        upload_result = { ok: false, code: "E_NETWORK", message: "attachment upload failed" };
-                    }
-
-                    callbacks.error(upload_result);
-
-                    return;
-                }
-
-                payload.attachment_ids.push(upload_result.attachment_id);
-            }
-        }
 
         // 等待後端返回完整 HTML（後端渲染——前端只做 insert；成敗一律由後端判定）
         const result = await shared.sc_request().post_json("/request/hkai/prompt_send/", payload, undefined, request_abort_controller);

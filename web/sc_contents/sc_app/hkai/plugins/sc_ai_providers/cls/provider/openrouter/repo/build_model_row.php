@@ -29,6 +29,7 @@ trait build_model_row
         $_model_row["agentic_index"] = isset($model_item["agentic_index"]) ? $model_item["agentic_index"] : null;
         $_model_row["reasoning_supported_efforts"] = $_reasoning_supported_efforts;
         $_model_row["reasoning_default_effort"] = isset($model_item["reasoning_default_effort"]) ? $model_item["reasoning_default_effort"] : "";
+        $_model_row["input_modalities"] = isset($model_item["input_modalities"]) ? $model_item["input_modalities"] : "";
         
         return $_model_row;
     }

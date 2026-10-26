@@ -13,8 +13,7 @@ trait cleanup_old_logs
     // 回傳：有刪 = ["last_run" => …, "deleted_count" => N]；無刪／跳過 = null
     public function cleanup_old_logs()
     {
-        $daemon_config = hkai__core()->get_daemon_config();
-        $archive_dir   = $daemon_config["daemon_archive_dir"];
+        $archive_dir = sc_get_config("hkai.messages_archive_dir");
 
         // archive 目錄不存在 → 直接返回
         if (!is_dir($archive_dir)) {

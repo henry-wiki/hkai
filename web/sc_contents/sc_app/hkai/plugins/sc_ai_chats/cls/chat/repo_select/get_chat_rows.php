@@ -26,6 +26,15 @@ trait get_chat_rows
         );
     }
 
+    // 讀取單一對話列（依 chat_sid——只取未歸檔：歸檔對話當唔存在）
+    public function get_normal_chat_row_by_sid($chat_sid)
+    {
+        return sc_db()->connection("sqlite")->selectOne(
+            "SELECT * FROM chats WHERE chat_sid = ? AND chat_status = 'normal'",
+            [$chat_sid]
+        );
+    }
+
     // 讀取對話列（依 project_id——該專案下未歸檔嘅對話；更新時間新到舊＝顯示順序；同時間以 chat_id DESC 決勝）
     public function get_chat_rows($project_id)
     {

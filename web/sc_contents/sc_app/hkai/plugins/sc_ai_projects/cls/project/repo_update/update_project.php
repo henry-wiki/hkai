@@ -13,7 +13,7 @@ trait update_project
         $target_project_row = sc_db()->selectOne("SELECT project_slug FROM projects WHERE project_id = ?", [(int)$project_id]);
 
         // 判定：Home → 唔准改
-        if ($target_project_row !== null && $target_project_row["project_slug"] === "home") {
+        if ($target_project_row !== null && $target_project_row["project_slug"] === sc_get_config("hkai.default_project_slug")) {
             return false;
         }
 

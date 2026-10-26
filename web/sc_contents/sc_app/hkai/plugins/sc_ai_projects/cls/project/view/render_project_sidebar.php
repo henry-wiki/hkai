@@ -10,7 +10,7 @@ trait render_project_sidebar
     public function render_project_sidebar()
     {
         // 側欄寬（活動 sidebar_state 讀——隨 SSR 落 CSS var；未存過＝唔落〔食 CSS 預設 220px〕）
-        $sidebar_state      = hkai__sc_page_activity()->get_activity("sidebar_state");
+        $sidebar_state      = hkai()->web_page()->activity()->get_activity("sidebar_state");
         $projects_width     = $sidebar_state["projects_width"] ?? "";
 
         $sidebar_width_attr = "";

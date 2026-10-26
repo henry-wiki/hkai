@@ -8,6 +8,7 @@
   "status": {
     "note": "狀態機（單一詞彙——值一律叫 status）",
     "order": [
+      "preparing",
       "queued",
       "connecting",
       "summarizing",
@@ -19,6 +20,7 @@
       "cancelled"
     ],
     "boundary": {
+      "preparing": "訊息落地至附件（圖片）整理完成（未放行——worker 跳過）",
       "queued": "派工至子程序 spawn 完成（短窗）",
       "connecting": "spawn 至首個 chunk 到達（含摘要前等待）",
       "summarizing": "摘要首 chunk 至主回答首輸出",
@@ -52,9 +54,21 @@
     "FAILED": "failed",
     "FAILURE_RECORDED": "failed",
     "MEMORY_GUARD_ABORT": "failed",
-    "CANCELLATION_REQUESTED": "cancelled"
+    "CANCELLATION_REQUESTED": "cancelled",
+    "QUERY_PREPARING": "preparing",
+    "ATTACHMENTS_PREPARED": "queued"
   },
   "transitions": [
+    {
+      "from": "*",
+      "event": "QUERY_PREPARING",
+      "to": "preparing"
+    },
+    {
+      "from": "preparing",
+      "event": "ATTACHMENTS_PREPARED",
+      "to": "queued"
+    },
     {
       "from": "*",
       "event": "QUERY_ACCEPTED",
@@ -165,7 +179,9 @@
     "SUMMARY_STREAM_CLOSED": "summarizing",
     "CONNECTION_ESTABLISHED": "replying",
     "REPLY_STREAM_STARTED": "replying",
-    "CANCELLATION_REQUESTED": "cancelled"
+    "CANCELLATION_REQUESTED": "cancelled",
+    "QUERY_PREPARING": "initiating",
+    "ATTACHMENTS_PREPARED": "initiating"
   },
   "domains": {
     "lifecycle": "訊息生命週期（UI 狀態機契約——多數不可改名）",
@@ -563,12 +579,36 @@
       "description": "aider 工具警告",
       "renamed_from": "TOOL_WARN",
       "event_class": "INFO"
+    },
+    {
+      "name": "QUERY_PREPARING",
+      "domain": "lifecycle",
+      "writer": "php:plugins/sc_ai_chats/cls/queue/action/materialize_queue_message.php",
+      "level": "INFO",
+      "frequency": "每 message 最多一次（有附件）",
+      "contract": false,
+      "description": "訊息落地、附件整理中（worker 必須跳過）",
+      "event_class": "TRANSITION"
+    },
+    {
+      "name": "ATTACHMENTS_PREPARED",
+      "domain": "lifecycle",
+      "writer": "php:plugins/sc_ai_chats/cls/poll/action/promote_prepared_jobs.php",
+      "level": "INFO",
+      "frequency": "每 message 最多一次（有附件）",
+      "contract": false,
+      "description": "附件整理完成 → 放行（queued）",
+      "event_class": "TRANSITION"
     }
   ],
   "event_map": {
+    "preparing": [
+      "QUERY_PREPARING"
+    ],
     "queued": [
       "QUERY_ACCEPTED",
-      "QUERY_DISPATCHED"
+      "QUERY_DISPATCHED",
+      "ATTACHMENTS_PREPARED"
     ],
     "connecting": [
       "SUBPROCESS_SPAWN_REQUESTED",

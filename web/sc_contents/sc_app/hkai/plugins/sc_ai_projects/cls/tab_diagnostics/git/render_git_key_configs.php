@@ -12,9 +12,9 @@ trait render_git_key_configs
     public function render_git_key_configs($git_configs)
     {
         // i18n 字眼（單一來源——cls/i18n/lang/*.json）
-        $longpaths_desc = hkai__i18n()->get("diagnostics.cfg_longpaths_desc");
-        $identity_desc  = hkai__i18n()->get("diagnostics.cfg_identity_desc");
-        $autocrlf_desc  = hkai__i18n()->get("diagnostics.cfg_autocrlf_desc");
+        $longpaths_desc = hkai()->i18n()->get("diagnostics.cfg_longpaths_desc");
+        $identity_desc  = hkai()->i18n()->get("diagnostics.cfg_identity_desc");
+        $autocrlf_desc  = hkai()->i18n()->get("diagnostics.cfg_autocrlf_desc");
 
         // 各 key 生效值（後出現者為準——行序＝override 次序；缺席＝null）
         $longpaths_value  = $this->get_git_config_last_value($git_configs, "core.longpaths");

@@ -12,6 +12,9 @@ trait check_has_longpaths
         $command_output = [];
         $command_result = 0;
 
+        // 邊界正規化（舊資料可能帶 //./——git -C 會靜默失敗）
+        $project_path = sc_normalize_path($project_path);
+
         // 讀 core.longpaths 生效值（repo＋global 合併後嘅實際值；未設定時 git 以非零退出）
         @exec("git -C " . escapeshellarg($project_path) . " config core.longpaths 2>&1", $command_output, $command_result);
 

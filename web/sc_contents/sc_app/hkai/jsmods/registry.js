@@ -96,10 +96,10 @@ class _registry {
         return sc_editor();
     }
 
-    // sc_page_activity（動態載入——用先載）
-    async sc_page_activity() {
-        const { sc_page_activity } = await import("./sc_page_activity/sc_page_activity.js");
-        return sc_page_activity();
+    // sc_activity（動態載入——用先載）
+    async sc_activity() {
+        const { sc_activity } = await import("./sc_activity/sc_activity.js");
+        return sc_activity();
     }
 
     // sc_ai_providers（動態載入——用先載）

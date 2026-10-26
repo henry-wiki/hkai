@@ -20,7 +20,7 @@ trait get_git_status_item
         }
 
         // 判定：Home 專案（slug＝home）→ 唔顯示 git 狀態（Home 冇 repo 概念）
-        if ($project_row["project_slug"] === "home") {
+        if ($project_row["project_slug"] === sc_get_config("hkai.default_project_slug")) {
             return null;
         }
         

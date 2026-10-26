@@ -9,11 +9,6 @@ $controller = sc_controller($route);
 $plugin = $controller->register_plugin(__DIR__, []);
 $plugin->setEnabled(true);
 
-// 心跳設定注入（bridging——class 只收值）
-sc_ai_health()->heartbeat()->initial([
-    "stale_threshold_seconds" => 15,
-]);
-
 // health 輪詢設定注入（bridging——後台集中調節）
 // is_enabled：是否允許輪詢（false → 前端收到後停止下一輪）
 // interval_seconds：每輪間隔秒數（9 秒——細 interval 對 PHP／curl 成本高）
@@ -26,7 +21,7 @@ sc_ai_health()->health()->initial([
 // 登記 health 報告（name＝輸出 JSON key；conn＝bridge 連線快查——讀本機心跳檔，零 HTTP）
 // 2026-10-02：舊 bridge 報告（HTTP /process/scan/，42–226ms 太重）改為本機快查版——status bar 的連線狀態（sb_conn）來源
 sc_ai_health()->health()->add_health_report("conn", function () {
-    return hkai__python_bridge_check()->check_is_python_bridge_running();
+    return hkai()->process()->server()->get_server_status();
 });
 
 // 註冊 request action（health——GET 健康狀態端點；URL /request/hkai/fetch_health/）

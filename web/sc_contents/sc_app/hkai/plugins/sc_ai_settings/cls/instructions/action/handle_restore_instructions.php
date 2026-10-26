@@ -17,14 +17,13 @@ trait handle_restore_instructions
             return sc_response()->json(["ok" => false, "error" => "invalid instructions name"], 400);
         }
 
-        $paths = $this->get_instructions_paths($instructions_name);
+        // 由 manifest 覆寫 storage（交 instruction 域）
+        $is_synced = hkai()->process()->instruction()->sync_instructions($instructions_name);
 
-        // 判定：manifest 出廠默認不存在 → 500（無法還原）
-        if (!is_file($paths["manifest_file"])) {
+        // 判定：manifest 出廠默認不存在／copy 失敗 → 500（無法還原）
+        if ($is_synced !== true) {
             return sc_response()->json(["ok" => false, "error" => "manifest default not found"], 500);
         }
-
-        @copy($paths["manifest_file"], $paths["storage_file"]);
 
         return sc_response()->json(["ok" => true]);
     }

@@ -20,7 +20,7 @@ trait delete_message
         $message_id   = (int)$message_row["message_id"];
 
         // 診斷 log：開始
-        hkai__sc_runtime_io()->info("delete_message start: chat_id=" . $chat_id . " message_id=" . $message_id);
+        hkai()->runtime()->logger()->info("delete_message start: chat_id=" . $chat_id . " message_id=" . $message_id);
 
         // DB 硬刪（message_response 列＋messages 列＋重算 chat count——repo_update 單一入口）
         sc_ai_chats()->message()->repo_update()->delete_db_message($message_id, $chat_id);
@@ -29,13 +29,13 @@ trait delete_message
         sc_ai_chats()->message()->card()->delete_message_card($message_id);
 
         // 診斷 log：DB 列完成
-        hkai__sc_runtime_io()->info("delete_message db rows removed");
+        hkai()->runtime()->logger()->info("delete_message db rows removed");
 
         // msg 檔案硬刪（現行位置 ＋ 歸檔位置）
         sc_ai_chats()->poll()->delete_msg_files($chat_id, $message_id);
 
         // 診斷 log：msg 檔案完成
-        hkai__sc_runtime_io()->info("delete_message msg files removed");
+        hkai()->runtime()->logger()->info("delete_message msg files removed");
 
         $remove_result = [];
         $remove_result["chat_deleted"] = false;
@@ -52,7 +52,7 @@ trait delete_message
             sc_ai_chats()->chat()->delete_db_chat($chat_id);
 
             // 診斷 log：對話已空 → 連帶清咗
-            hkai__sc_runtime_io()->info("delete_message chat emptied -> chat removed: chat_id=" . $chat_id);
+            hkai()->runtime()->logger()->info("delete_message chat emptied -> chat removed: chat_id=" . $chat_id);
 
             // 對話已清 → 前端無痕導向專案根（/{project_slug}/——前端用自身 project_slug SSOT 砌網址，後端唔回導向目標）
             $remove_result["chat_deleted"] = true;

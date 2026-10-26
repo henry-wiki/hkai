@@ -19,7 +19,7 @@ import queue
 import time
 from pathlib import Path
 
-from ..engine.auth_setup import api_key_loader_class
+from ..agent.auth_setup import api_key_loader_class
 from ..context import *
 from ..runtime import process_list
 from ..runtime import lifecycle
@@ -146,29 +146,9 @@ class daemon_manager_class:
             sc_logger.log(f"cannot load oauth keys: {exc}")
             lifecycle.exit("cannot load oauth keys", 1)
 
-    # 依 runtime.json 自帶嘅 filenames／folders／引擎組展開完整路徑（storage_dir ＋ 外部路徑）
+    # 依 runtime.json 自帶嘅 agent 組展開設定（路徑絕對值由 PHP 注入）
     def _apply_static_configs(self, runtime_spec: dict) -> dict:
-        filenames      = runtime_spec["filenames"]
-        folders        = runtime_spec["folders"]
         openhands_api_daemon   = runtime_spec["openhands_api_daemon"]
-        storage_dir    = Path(runtime_spec["storage_dir"])
-
-        # 檔名（靜態 SSOT）＋ storage 基準路徑 → 完整路徑
-        # 程序台帳（append-only JSONL——每拉起一個程序 append 一行）
-        runtime_spec["process_list_path"]   = str(storage_dir / filenames["process_list"])
-
-        # 程序狀態目錄（每程序每秒寫一份自我心跳——存在＝在跑）
-        runtime_spec["process_status_dir"]    = str(storage_dir / folders["process_status"])
-
-        # messages 目錄（runtime 提供的 full path 優先——PHP 寫入；缺省回靜態 SSOT 推導）
-        messages_dir = runtime_spec.get("daemon_messages_dir", "")
-        if messages_dir == "":
-            messages_dir = str(storage_dir / folders["messages"])
-        runtime_spec["daemon_messages_dir"] = messages_dir
-
-        # 資料夾（靜態 SSOT）＋ storage 基準路徑 → 完整路徑
-        runtime_spec["daemon_archive_dir"] = str(storage_dir / folders["archive"])
-        runtime_spec["daemon_history_dir"] = str(storage_dir / folders["history"])
 
         # daemon 行為設定（靜態 SSOT——openhands_api_daemon group）
         runtime_spec["daemon_heartbeat_check_interval"] = openhands_api_daemon["heartbeat_check_interval"]
@@ -183,7 +163,7 @@ class daemon_manager_class:
         # 傳輸模式（acp＝協定互動路徑／cli＝stream-json——openhands_api_entry 判定用）
         runtime_spec["daemon_transport"] = str(openhands_api_daemon.get("transport", "acp"))
 
-        # chat_mode 對映（本組 UI 模條目——抽 mode 欄入表；缺＝空表＝引擎自身默認）
+        # chat_mode 對映（本組 UI 模條目——抽 mode 欄入表；缺＝空表＝agent自身默認）
         chat_mode_config = openhands_api_daemon.get("chat_mode", {})
         chat_mode_map = {}
         # 逐個 UI 模條目抽原生模式（value 有 mode 欄＝UI 模）
@@ -214,7 +194,7 @@ class daemon_manager_class:
 
         sc_logger.log(f"daemon started (model={self._daemon_conf_data.get('model_name', '')})")
 
-        # 判定：暖池模式 → 開機預熱（背景拉引擎——不阻塞主迴圈）
+        # 判定：暖池模式 → 開機預熱（背景拉agent——不阻塞主迴圈）
         if self._daemon_conf_data.get("daemon_warm_workers", False):
             self._prewarm_warm_workers()
 
@@ -401,7 +381,7 @@ class daemon_manager_class:
 
             self._spawn_worker(msg_conf_path, worker_identity)
 
-    # 讀取 msg_conf 身分（chat_id／message_id）；不可解析、唔係本引擎、已終態、已有活主人 → None
+    # 讀取 msg_conf 身分（chat_id／message_id）；不可解析、唔係本agent、已終態、已有活主人 → None
     def _read_worker_identity(self, msg_conf_path: Path) -> dict | None:
         try:
             conf_data = json.loads(msg_conf_path.read_text(encoding="utf-8"))
@@ -412,10 +392,10 @@ class daemon_manager_class:
         if not isinstance(conf_data, dict):
             return None
 
-        # 判定：訊息蓋章唔係本引擎 → 唔接（agent 分流——兩 daemon 並存各自接自己嗰批）
+        # 判定：訊息蓋章唔係本agent → 唔接（agent 分流——兩 daemon 並存各自接自己嗰批）
         target_daemon_engine = str(conf_data.get("daemon_engine", ""))
 
-        # 判定：缺章（舊訊息）→ 現行引擎接手（runtime 動態值）
+        # 判定：缺章（舊訊息）→ 現行agent接手（runtime 動態值）
         if target_daemon_engine == "":
             target_daemon_engine = str(self._daemon_conf_data.get("daemon_engine", ""))
 
@@ -465,7 +445,7 @@ class daemon_manager_class:
         from .worker import run_worker
 
         daemon_conf_path = str(self._daemon_conf_data_path)
-        # 注意：worker 不可設 daemon=True——worker 內還要再 spawn 引擎子程序
+        # 注意：worker 不可設 daemon=True——worker 內還要再 spawn agent子程序
         #       （Python 限制：daemonic process 不能再有 children）
         worker_proc = multiprocessing.Process(
             target=run_worker,
@@ -570,7 +550,7 @@ class daemon_manager_class:
 
             self._dispatch_warm_job(worker_entry, msg_conf_path, worker_identity)
 
-    # 開機預熱（背景拉引擎——未就緒前的訊息排隊等，行為同冷啟動）
+    # 開機預熱（背景拉agent——未就緒前的訊息排隊等，行為同冷啟動）
     def _prewarm_warm_workers(self) -> None:
         """預熱 warm_prewarm_workers 條暖 worker（daemon 開機一次）。"""
         prewarm_count = int(self._daemon_conf_data.get("daemon_warm_prewarm_workers", 1))
@@ -579,7 +559,7 @@ class daemon_manager_class:
         for _warm_index in range(prewarm_count):
             self._spawn_warm_worker()
 
-    # spawn 一條暖 worker（一次性載入引擎——往後工單零開機成本）
+    # spawn 一條暖 worker（一次性載入agent——往後工單零開機成本）
     def _spawn_warm_worker(self):
         """建立暖 worker（job_queue／status_queue 隨 spawn 傳入）→ 回傳登錄項（失敗＝None）。"""
         from .worker import run_warm_worker
@@ -683,7 +663,7 @@ class daemon_manager_class:
         """依訊號事件更新 worker 登錄（ready／job_done 兩種）。"""
         signal_event = str(worker_signal.get("event", ""))
 
-        # 判定：引擎預載完成 → 標記就緒（可派工單）
+        # 判定：agent預載完成 → 標記就緒（可派工單）
         if signal_event == "ready":
             worker_entry["warm_ready"] = True
             worker_entry["idle_since"] = int(time.time())
@@ -745,7 +725,7 @@ class daemon_manager_class:
                 return "connect timeout"
             return ""
 
-        # 其餘（summarizing／replying／空）→ 工作中——不干預（引擎自身重試接手）
+        # 其餘（summarizing／replying／空）→ 工作中——不干預（agent自身重試接手）
         return ""
 
     # 回收閒置暖 worker（釋放記憶體——下次需要時重新預熱）

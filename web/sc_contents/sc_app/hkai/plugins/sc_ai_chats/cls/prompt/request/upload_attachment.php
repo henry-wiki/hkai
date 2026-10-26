@@ -28,7 +28,7 @@ trait upload_attachment
 
         // 判定：查唔到 → fallback 固定 Home 專案
         if ($project_row === null) {
-            $project_row = sc_ai_projects()->project()->get_project_row("home");
+            $project_row = sc_ai_projects()->project()->get_project_row(sc_get_config("hkai.default_project_slug"));
         }
 
         // 判定：連 Home 都冇 → 資料壞
@@ -47,12 +47,11 @@ trait upload_attachment
 
         // 判定：落地失敗（類型／大小）→ 拒絕
         if ($attachment_row === null) {
-            $attachment_configs = hkai__core()->get_hkai_configs("attachments");
-            $max_file_size_mb   = (int)$attachment_configs["max_file_size_mb"];
+            $max_upload_size_kb = (int)sc_get_config("hkai.attachments.max_upload_size");
 
             return sc_response()->json([
                 "ok"    => false,
-                "error" => "只支援 PNG／JPG／GIF／WEBP，單檔上限 " . $max_file_size_mb . " MB",
+                "error" => "只支援 PNG／JPG／GIF／WEBP，單檔上限 " . $max_upload_size_kb . " KB",
             ], 400);
         }
 

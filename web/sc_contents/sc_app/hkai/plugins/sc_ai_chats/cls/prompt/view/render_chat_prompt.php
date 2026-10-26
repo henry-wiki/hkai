@@ -11,13 +11,13 @@ trait render_chat_prompt
     // prompt 區塊內裏整包（三格——外層 .sc_composer 頁面長駐；本包交前端換入（prompt_fetch 回應））
     public function render_chat_prompt($project_slug, $chat_sid)
     {
-        // 草稿活動讀取（prompt_draft——單一讀取、帶落兩個子視圖）
-        $prompt_draft = sc_ai_chats()->prompt()->get_prompt_draft($chat_sid);
+        // 草稿來源＝draft 目錄（meta.json——前端 restore 讀）；舊 activity prompt_draft 已暫停
+        $prompt_draft = null;
 
-        $input_stack_html  = sc_ai_chats()->prompt()->render_input_stack($chat_sid);
-        $prompt_toolbar_html = sc_ai_chats()->prompt()->get_prompt_toolbar_html();
-        $input_dock_html   = sc_ai_chats()->prompt()->get_input_dock_html($chat_sid, $prompt_draft);
-        $chat_options_html = sc_ai_chats()->prompt()->get_chat_options_html($project_slug, $chat_sid, $prompt_draft);
+        $input_stack_html       = sc_ai_chats()->prompt()->render_input_stack($chat_sid);
+        $prompt_toolbar_html    = sc_ai_chats()->prompt()->get_prompt_toolbar_html();
+        $input_dock_html        = sc_ai_chats()->prompt()->get_input_dock_html($chat_sid, $prompt_draft);
+        $chat_options_html      = sc_ai_chats()->prompt()->get_chat_options_html($project_slug, $chat_sid, $prompt_draft);
 
         $composer_parts   = [];
         // 格1：緊急槽（等待列——自帶外框）

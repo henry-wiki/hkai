@@ -240,6 +240,9 @@ class sections_Class
             elseif ($check_item_code === "basic__max_execution_time") {
                 return prerequisite\basic()->max_execution_time();
             }
+            elseif ($check_item_code === "basic__fcgid_max_request_len") {
+                return prerequisite\basic()->fcgid_max_request_len();
+            }
             elseif ($check_item_code === "php_extension__pdo_sqlite") {
                 return prerequisite\php_extension()->pdo_sqlite();
             }

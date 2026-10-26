@@ -18,6 +18,14 @@ class _prompt_send {
 
         // 已選附件（File 陣列——交 req 上傳後才送問）
         const prompt_attach_instance = await prompt_instance.evt().prompt_attach();
+
+        // 判定：有附件仍在上傳中 → 警告＋中止（唔清輸入、唔送）
+        if (prompt_attach_instance.has_uploading()) {
+            registry().shared().sc_alert().warning("圖片仍在上傳中", "請等圖片上傳完成再送出。");
+
+            return;
+        }
+
         request_data.attachment_files = prompt_attach_instance.get_files();
 
         const thisObject = this;

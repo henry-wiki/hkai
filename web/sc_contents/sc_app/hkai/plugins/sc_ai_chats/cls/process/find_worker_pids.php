@@ -10,7 +10,7 @@ trait find_worker_pids
     // 純查詢零格筛（最快速）——死活／防誤殺交殺方（kill_process）處理
     public function find_worker_pids($chat_id, $message_id)
     {
-        $process_list_path = hkai__core()->get_process_list_path();
+        $process_list_path = sc_get_config("hkai.public.process_status.process_list");
         $chat_id_str       = strval($chat_id);
         $message_id_str    = strval($message_id);
 

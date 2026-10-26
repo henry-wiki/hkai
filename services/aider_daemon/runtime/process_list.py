@@ -32,12 +32,14 @@ import psutil
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-def get_create_time(pid: int) -> float:
-    """程序建立時間（讀唔到 → 0——例如權限不足／已死）。"""
+def get_create_time(pid: int) -> int:
+    """程序建立時間（整數毫秒——讀唔到 → 0，例如權限不足／已死）。"""
     try:
-        return psutil.Process(int(pid)).create_time()
+        create_time = psutil.Process(int(pid)).create_time()
     except psutil.Error:
-        return 0.0
+        return 0
+
+    return int(create_time * 1000)
 
 
 def get_list_path(daemon_conf_data: dict) -> "Path | None":

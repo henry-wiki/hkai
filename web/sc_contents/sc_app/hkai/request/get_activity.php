@@ -12,7 +12,7 @@ if ($activity_name === "") {
     return sc_response()->json(["ok" => false, "error" => "empty activity_name"], 400);
 }
 
-$activity_bundle = hkai__sc_page_activity()->get_activity($activity_name, $activity_scope);
+$activity_bundle = hkai()->web_page()->activity()->get_activity($activity_name, $activity_scope);
 
 return sc_response()->json([
     "ok"              => true,

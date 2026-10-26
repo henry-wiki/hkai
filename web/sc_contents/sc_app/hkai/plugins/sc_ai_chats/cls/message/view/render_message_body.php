@@ -89,7 +89,7 @@ trait render_message_body
                 // 「係唔係最底」初始聲明（開對話預設跟底——1；行起來之後只准 user 捲動／跳轉改）
                 $outputLines[] = "<div class='sc_thread__viewport' data-chat_sid='' data-update_time='' data-message_count='0' data-has_more='0' data-load_status='ready' data-is_at_bottom='1' data-mermaid='idle'>";
                     // 未選對話空狀態（長駐窗口——未選顯示／有對話隱藏；前端只切 hidden 屬性）
-                    $outputLines[] = sc_empty_state(hkai__i18n()->get("empty.start_chat"), true, "sc_thread__empty_state");
+                    $outputLines[] = sc_empty_state(hkai()->i18n()->get("empty.start_chat"), true, "sc_thread__empty_state");
                     $outputLines[] = "<div id='sc_scroll_anchor'></div>";
                 $outputLines[] = "</div>";
                 // 導航點 rail（右側固定——骨架喺後端；前端只建點／亮燈）

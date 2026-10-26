@@ -91,11 +91,11 @@ trait build_permission_prompt
             "request_id"       => $request_id,
             "tool_title"       => $tool_title,
             "tool_input_text"  => $tool_input_text,
-            "title_label"      => hkai__i18n()->get("permission.title"),
-            "allow_label"      => hkai__i18n()->get("permission.allow"),
-            "deny_label"       => hkai__i18n()->get("permission.deny"),
-            "apply_all_label"  => hkai__i18n()->get("permission.apply_all"),
-            "auto_deny_suffix" => hkai__i18n()->get("permission.auto_deny_suffix"),
+            "title_label"      => hkai()->i18n()->get("permission.title"),
+            "allow_label"      => hkai()->i18n()->get("permission.allow"),
+            "deny_label"       => hkai()->i18n()->get("permission.deny"),
+            "apply_all_label"  => hkai()->i18n()->get("permission.apply_all"),
+            "auto_deny_suffix" => hkai()->i18n()->get("permission.auto_deny_suffix"),
         ]);
 
         // 從轉義後結構取值（同名變數）

@@ -23,7 +23,8 @@ trait project_item_fetch
         }
 
         // 查表用純 slug（卡片身份＝段形——歸檔項會帶 archive@ 前綴；同一解析規則）
-        $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+        $project_slug = $resolved_project_slug["project_slug"];
 
         // 判定：專案要真係存在（slug 查得到先算）
         $project_row = sc_ai_projects()->project()->get_project_row($project_slug);
@@ -36,7 +37,8 @@ trait project_item_fetch
         $project_item = sc_html_encode($project_row);
 
         // active 比對用純值（語境形 archive@<slug> → 剝語境——URL 原始值交入、查表／比對用純 slug；同一解析規則）
-        $selected_project_slug = sc_ai_projects()->project()->get_bare_project_slug($selected_project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($selected_project_slug);
+        $selected_project_slug = $resolved_project_slug["project_slug"];
 
         // active 判定用「目前選取」——project_slug 只係目標（傳 project_slug ≠ 佢係 selected_project_slug）
         $project_item_html = sc_ai_projects()->project()->render_project_item($project_item, $selected_project_slug);

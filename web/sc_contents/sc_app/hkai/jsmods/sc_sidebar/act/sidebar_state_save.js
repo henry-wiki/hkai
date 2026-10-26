@@ -23,9 +23,9 @@ class _sidebar_state_save {
         }
 
         // 動態載入（registry——用先載）
-        const sc_page_activity_instance = await registry().sc_page_activity();
+        const sc_activity_instance = await registry().sc_activity();
 
-        await sc_page_activity_instance.set_activity("sidebar_state", activity_bundle);
+        await sc_activity_instance.set_activity("sidebar_state", activity_bundle);
     }
 }
 

@@ -84,7 +84,7 @@ trait get_chat_message_slot
         }
 
         // 總用時列（回答底——左右分隔線＋中央用時；caption 靜態、時間動態——tick 只更新 .total_elapsed_time；常駐跟隨訊息）
-        $total_elapsed_caption = sc_html_encode(hkai__i18n()->get("message.total_elapsed"));
+        $total_elapsed_caption = sc_html_encode(hkai()->i18n()->get("message.total_elapsed"));
         // 判定：即時訊息 → 以現時起算（poll 每輪更新、前端每秒遞增）
         if ($is_live_message === true) {
             $message_elapsed_sec  = max(0, time() - (int)strtotime((string)(isset($message_row["message_created_at"]) ? $message_row["message_created_at"] : null)));

@@ -4,13 +4,13 @@ job_executor.py
 
 查詢四檔（msg_*）的流程處理（job_executor_class singleton——get_instance() 取得）。
 
-    messages/polling/{project_slug}/{message_id}/msg_conf.json   找到 → 處理（子程序寫 job_stdout）
+    data/messages/polling/{project_slug}/{message_id}/msg_conf.json   找到 → 處理（raw 行經 session 寫 job_stdout）
     → 完成/失敗 → status 寫入 msg_status（留 polling——PHP poll 收尾移 archive）
 
 任何情況（成功/錯誤/例外）都要標記終態，避免卡檔；archive 目錄為純歸檔（PHP 收尾移入），本模組永不讀取。
 
 連線狀態機（status 寫入 msg_status().txt 單行字串——poll 讀取；msg_conf 純設定永不修改；message_log 記錄完整事件）：
-    queued（建檔獲派工）→ connecting（子程序啟動＋等待首 chunk）→ summarizing（摘要串流）→ replying（主回答）→ completed / failed（留 polling 待 PHP 收尾）
+    queued（建檔獲派工）→ connecting（子程序啟動＋等待首 chunk）→ summarizing（摘要串流——契約保留，本agent唔產生）→ replying（主回答）→ completed / failed（留 polling 待 PHP 收尾）
 
 執行模式（只有暖路徑）：暖 worker 同程序執行 execute_job（取消／逾時由 daemon 監督兜底）
 """
@@ -18,7 +18,7 @@ job_executor.py
 from pathlib import Path
 
 from ..context import (
-    engine_entry,
+    entry,
     job_stdout,
     message_claim,
     message_log,
@@ -86,7 +86,7 @@ class job_executor_class:
         # 判定：空內容 → 標記完成＋記 log＋即刻停（留 polling，PHP poll 收尾移 archive）
         if not content.strip():
             sc_logger.log("initialize: job skipped (empty prompt) path=" + str(msg_conf_path))
-            message_status().apply(EVENT_COMPLETED)
+            _ = message_status().apply(EVENT_COMPLETED)
             return False
 
         return True
@@ -111,35 +111,35 @@ class job_executor_class:
             return True
 
         # 狀態轉換：派工（→ queued）
-        self._transition_status(EVENT_QUERY_DISPATCHED, "Dispatching to warm worker...")
+        _ = self.transition_status(EVENT_QUERY_DISPATCHED, "Dispatching to warm worker...")
 
         # worker 已就緒（暖 worker 常駐）——同一事件照發（→ connecting）
-        self._transition_status(EVENT_SUBPROCESS_SPAWNED, "Warm worker running")
+        _ = self.transition_status(EVENT_SUBPROCESS_SPAWNED, "Warm worker running")
 
         # 執行單次查詢（同程序——阻塞至完成；例外已由 execute_job 內部記錄）
-        job_ok = engine_entry().execute_job()
+        job_ok = entry().execute_job()
 
         # 收尾（依現時狀態決定終態）
         self._finalize_warm()
 
         return job_ok
 
-    def _transition_status(self, event: str, message: str = "") -> str:
+    def transition_status(self, event: str, message: str = "") -> str:
         """狀態轉換單一出口：經 FSM 轉移（唯一 msg_status 寫入者）＋記對應 level 的 message_log。"""
         # 經 FSM（依 transitions 決定新狀態；未定義＝不改狀態）
         _next_state = message_status().apply(event)
 
         # 成功終態
         if _next_state == "completed":
-            message_log().append_success_log(event, message)
+            _ = message_log().append_success_log(event, message)
             message_log().complete_all_poll_files()
         # 失敗終態
         elif _next_state == "failed":
-            message_log().append_error_log(event, message)
+            _ = message_log().append_error_log(event, message)
             message_log().abort_all_poll_files()
         # 進行中（connecting／replying／summarizing…）
         else:
-            message_log().append_info_log(event, message)
+            _ = message_log().append_info_log(event, message)
 
         return _next_state
 
@@ -159,13 +159,13 @@ class job_executor_class:
         if current_state == "replying":
             # 判定：answer 檔有字＝回覆完成
             if self._has_response_result():
-                self._transition_status(EVENT_COMPLETED, "Completed")
+                _ = self.transition_status(EVENT_COMPLETED, "Completed")
             # answer 空 → 失敗
             else:
-                self._transition_status(EVENT_FAILURE_RECORDED, "Stream completed but result is empty")
+                _ = self.transition_status(EVENT_FAILURE_RECORDED, "Stream completed but result is empty")
         # 判定：未進入回覆階段（connecting／summarizing）→ 失敗（原因已於偵測點記錄）
         else:
-            self._transition_status(EVENT_FAILED, "Failed before reply")
+            _ = self.transition_status(EVENT_FAILED, "Failed before reply")
 
     # result 檔有無字（收尾判準——語義答案；索引制——任一段有字即完成）
     def _has_response_result(self) -> bool:
@@ -179,7 +179,7 @@ class job_executor_class:
 
     def finalize_abandoned_message(self, msg_conf_path: Path) -> None:
         """被遺棄訊息收終態（daemon 用——暖 worker 死於工單中時，防條訊息卡死等人救）。"""
-        self.initialize(msg_conf_path)
+        _ = self.initialize(msg_conf_path)
 
         # 判定：status 檔不存在（PHP 已歸檔移走）→ 直接返回
         if not message_store().get_msg_status_path().exists():
@@ -190,4 +190,4 @@ class job_executor_class:
             return
 
         # 失敗收尾（worker 不在了——錯誤記入該訊息 message_log）
-        self._transition_status(EVENT_FAILED, "Warm worker died mid-job")
+        _ = self.transition_status(EVENT_FAILED, "Warm worker died mid-job")

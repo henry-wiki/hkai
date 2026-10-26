@@ -10,6 +10,6 @@ trait run_project_env_fetch
     // 向 bridge 索要專案級環境（回傳統一結果：ok=true 時自同一份 data 帶環境欄位／ok=false 帶 error）
     public function run_project_env_fetch($project_path)
     {
-        return hkai__python_bridge()->request("/diagnostics/project_env/get", ["project_path" => $project_path]);
+        return hkai()->process()->bridge()->request("/diagnostics/project_env/get", ["project_path" => $project_path]);
     }
 }

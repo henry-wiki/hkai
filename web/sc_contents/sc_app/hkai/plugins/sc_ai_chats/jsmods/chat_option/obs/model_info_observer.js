@@ -6,6 +6,9 @@ class _model_info_observer {
     constructor() {
         // 觀察器（重掛先斷——唔殘留）
         this.mutation_observer = null;
+
+        // 暫停旗標（還原／程式寫值期間——唔派發）
+        this.is_paused = false;
     }
 
     // 建立＋觀察（可重複呼叫——重掛先斷；只建立，唔即刻派）
@@ -40,6 +43,11 @@ class _model_info_observer {
 
     // 變化回呼（見 [data-model_field] 欄位變 → 交單一提交點；去重喺提交點做）
     async on_model_info_changed(mutation_records) {
+        // 判定：暫停中（還原／程式寫值）→ 唔派發
+        if (this.is_paused === true) {
+            return;
+        }
+
         // 判定：呢批紀錄有冇 [data-model_field] 欄位變
         let has_model_field_change = false;
 
@@ -62,6 +70,21 @@ class _model_info_observer {
         const chat_option_domain = await registry().sc_ai_chats().chat_option();
         const submit_chat_options_instance = await chat_option_domain.act().submit_chat_options();
         await submit_chat_options_instance.submit_chat_options();
+    }
+
+    // 暫停派發（還原／程式寫值前叫）
+    pause() {
+        this.is_paused = true;
+    }
+
+    // 恢復派發（丟棄暫停期間已排隊嘅 mutation）
+    resume() {
+        this.is_paused = false;
+
+        // 判定：有觀察器 → 清走排隊紀錄
+        if (this.mutation_observer) {
+            this.mutation_observer.takeRecords();
+        }
     }
 }
 

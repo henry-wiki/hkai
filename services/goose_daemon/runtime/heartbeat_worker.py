@@ -2,32 +2,32 @@
 """
 heartbeat_worker.py — 心跳（worker 專用：狀態檔＋生存證明＋母親監視；可獨立搬走）
 
-與 heartbeat.py 關係：同一契約（9 函數／11 欄），但分開兩份——daemon 用 heartbeat.py，worker 用本檔；
+與 heartbeat.py 關係：同一契約（11 欄），但分開兩份——daemon 用 heartbeat.py，worker 用本檔；
 兩者唔共享模組狀態（各自進程內一條執行緒、各自寫自己 pid 嘅狀態檔）。
 
 對外入口（同 bridge 一致）：
 - init()        台帳一行 → 建立自己狀態檔 → 起背景執行緒
                   每 HEARTBEAT_INTERVAL_SEC 寫一次狀態檔（唔會停）
-                  每拍檢查母親（bridge）——唔在＝交 abort handler（收工→寫狀態→自殺）
+                  每拍檢查母親（daemon）——唔在＝交 abort handler（收工→寫狀態→自殺）
 - start()       起背景心跳執行緒（已喺跑 → 唔重複開）
 - stop(reason)  停執行緒 → lifecycle.exit(reason)
 - exception_kill()  例外退出（atexit）：記 log → stop
 
 狀態檔：{PROCESS_DIR}/worker.{pid}.json（PHP 程序清單讀）
-身份（WORKER_PROGRAM_NAME／WORKER_PROGRAM_LABEL）取自 worker/identity.py（唔改 context）。
+身份（WORKER_PROGRAM_NAME／WORKER_PROGRAM_LABEL）取自 runtime/identity.py（唔改 context）。
 """
 
 import atexit
+import contextlib
 import os
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from .. import context
 from ..utils.io import write_json_atomic
-from ..worker import identity
-from . import heartbeat_engine, lifecycle, process
+from . import heartbeat_agent, identity, lifecycle, process
 
 # 本程序狀態（entry_init 建立；update_entry 只更新時間欄）
 _heartbeat_entry: dict[str, object] | None = None
@@ -93,8 +93,6 @@ def set_abort_handler(abort_handler: Callable[[], None] | None) -> None:
 
 def stop(reason: str = "") -> None:
     """停止心跳並結束程序：刪撤退旗標 → 停執行緒 → lifecycle.exit(reason)（清狀態檔＋死亡）。"""
-    global _heartbeat_thread
-
     _remove_exit_flag()
 
     # 停心跳執行緒（唔停 → 之後收尾刪檔會被佢重寫，殘檔復活）
@@ -178,13 +176,20 @@ def remove_heartbeat_file() -> None:
     if heartbeat_file.exists() is False:
         return
 
-    try:
-        heartbeat_file.unlink()
-    except OSError:
-        pass
+    with contextlib.suppress(OSError):
+        _ = heartbeat_file.unlink()
 
 
 # ===== 內部 =====
+
+def _mother_is_gone() -> bool:
+    """本程序依賴母親且母親已消失 → True。"""
+    # 判定：本程序唔依賴母親 → 唔算
+    if context.NEED_MOTHER is not True:
+        return False
+
+    return process.mother_is_gone()
+
 
 def _run_heartbeat() -> None:
     """背景心跳：每拍寫狀態檔；母親唔在 → 自殺。"""
@@ -193,8 +198,8 @@ def _run_heartbeat() -> None:
         # 每輪第一件事：寫心跳（生存證明——無論忙唔忙都要寫）
         update_entry()
 
-        # 引擎心跳（有引擎才寫；冇引擎＝即返）
-        heartbeat_engine.update_entry()
+        # agent心跳（有agent才寫；冇agent＝即返）
+        heartbeat_agent.update_entry()
 
         # 經理撤退旗標（檔案式跨平台通知——做單中都收到）
         if _exit_flag_exists():
@@ -203,12 +208,9 @@ def _run_heartbeat() -> None:
             return
 
         # 母親監視：母親唔在 → 交 abort handler 收尾（未注入＝直接自殺）
-        # 判定：本程序依賴母親
-        if context.NEED_MOTHER is True:
-            # 判定：母親唔在 → 收尾
-            if process.mother_is_gone():
-                _abort_before_exit()
-                return
+        if _mother_is_gone() is True:
+            _abort_before_exit()
+            return
 
         time.sleep(context.HEARTBEAT_INTERVAL_SEC)
 

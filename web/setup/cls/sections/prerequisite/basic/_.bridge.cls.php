@@ -88,4 +88,16 @@ class prerequisite_basic_Class
 
         return \sc\setup\sections\prerequisite\basic__max_execution_time_Class::getInstance();
     }
+
+    /**
+     * FastCGI 上傳請求上限（basic 單元——單例·按需 require 單元檔）
+     *
+     * @return \sc\setup\sections\prerequisite\basic__fcgid_max_request_len_Class
+     */
+    public function fcgid_max_request_len()
+    {
+        require_once __DIR__ . "/basic__fcgid_max_request_len.php";
+
+        return \sc\setup\sections\prerequisite\basic__fcgid_max_request_len_Class::getInstance();
+    }
 }

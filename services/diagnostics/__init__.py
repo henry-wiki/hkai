@@ -1,4 +1,5 @@
-from pathlib import Path
+"""diagnostics 套件（路徑常數集中 context.py）。"""
 
-BASE_DIR = Path(__file__).resolve().parent
-RUNTIME_DIR = BASE_DIR / "runtime"
+from .context import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+
+__all__ = ["BASE_DIR", "DATA_DIR", "ROOT_DIR", "RUNTIME_DIR"]

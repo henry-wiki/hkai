@@ -18,7 +18,7 @@ trait render_project_list
         // 逐專案輸出列表項目（Home 列用專屬卡——冇編輯掣／冇時間；其餘照常）
         foreach ($projects as $project_item) {
             // 判定：Home 專案列（slug＝home）→ Home 卡
-            if (($project_item["project_slug"] ?? "") === "home") {
+            if (($project_item["project_slug"] ?? "") === sc_get_config("hkai.default_project_slug")) {
                 $content[] = sc_ai_projects()->project()->render_home_project_item($project_item, $selected_project_slug);
                 continue;
             }
@@ -28,7 +28,7 @@ trait render_project_list
 
         // 判定：完全冇專案列（連 Home 都冇）→ 才顯示空狀態（有 Home 就唔叫用戶建立）
         if (count($projects) < 1) {
-            $content[] = sc_empty_state(hkai__i18n()->get("empty.create_project"), false);
+            $content[] = sc_empty_state(hkai()->i18n()->get("empty.create_project"), false);
         }
 
         return implode("\r\n", $content);
@@ -41,7 +41,7 @@ trait render_project_list
 
         // 判定：未選任何專案（空／null）→ 當選中 home（高亮）
         if ($home_selected_slug === "" || $home_selected_slug === null) {
-            $home_selected_slug = "home";
+            $home_selected_slug = sc_get_config("hkai.default_project_slug");
         }
 
         return sc_ai_projects()->project()->render_project_item($project_item, $home_selected_slug, true);

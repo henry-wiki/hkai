@@ -5,8 +5,8 @@ worker.py
 openhands_api_daemon worker 子程序入口（由 daemon 調度器 spawn；承載 msg_conf 的處理語境）。
 
 兩種入口：
-    run_worker       冷路徑——一個 worker 跑一條（daemon 每訊息 spawn；內含引擎子程序）
-    run_warm_worker  暖路徑——常駐（載入引擎一次；迴圈收工單；同程序執行、無子程序）
+    run_worker       冷路徑——一個 worker 跑一條（daemon 每訊息 spawn；內含agent子程序）
+    run_warm_worker  暖路徑——常駐（載入agent一次；迴圈收工單；同程序執行、無子程序）
 
 職責：在獨立程序內重新載入 daemon 設定 → 交給 msg_processor 完成查詢（阻塞的是 worker，不是 daemon）。
 
@@ -48,7 +48,7 @@ def run_worker(daemon_conf_path: str, msg_conf_path: str) -> None:
 
 
 def run_warm_worker(daemon_conf_path: str, job_queue, status_queue) -> None:
-    """暖 worker 入口（常駐：預載引擎一次 → 迴圈收工單；生死全由 daemon 裁決）。"""
+    """暖 worker 入口（常駐：預載agent一次 → 迴圈收工單；生死全由 daemon 裁決）。"""
     from ..context import daemon, openhands_api_entry, msg_processor
     from ..runtime import process, process_status
 

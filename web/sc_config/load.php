@@ -44,8 +44,63 @@ sc_set_configs([
         "sc_contents_dir" => SC_WEB_ROOT . "/sc_contents",
         "plugin_hkai_dir" => SC_WEB_ROOT . "/sc_contents/sc_app/hkai",
     ],
-    "config"          => [
-        "hkai_settings" => SC_WEB_ROOT . "/sc_config/hkai/settings.json",
+    "hkai"            => [
+        // 預設專案 slug（Home——建立／fallback／禁改禁刪一律讀呢個，唔再散落字面值）
+        "default_project_slug" => "home",
+        "config_file"          => SC_WEB_ROOT . "/sc_config/hkai/hkai_config.json",
+        // 出廠默認（唯讀——setup／安裝流程只讀寫呢份）
+        "settings"             => SC_WEB_ROOT . "/sc_config/hkai/settings.json",
+        "fsm_map_file"         => SC_WEB_ROOT . "/sc_config/hkai/fsm_map.json",
+        "about_file"           => SC_WEB_ROOT . "/sc_config/hkai/about_hkai.php",
+        "sample_question_file" => SC_WEB_ROOT . "/sc_config/hkai/sample_question.php",
+        "runtime_config_file"  => dirname(SC_WEB_ROOT) . "/data/runtime.json",
+
+        // 資料目錄（站台 data/——PHP／Python 共用；絕對路徑單一來源）
+        "messages_dir"             => dirname(SC_WEB_ROOT) . "/data/messages",
+        "messages_archive_dir"     => dirname(SC_WEB_ROOT) . "/data/messages/archive",
+        "messages_polling_dir"     => dirname(SC_WEB_ROOT) . "/data/messages/polling",
+        "messages_attachments_dir" => dirname(SC_WEB_ROOT) . "/data/messages/attachments",
+        "messages_draft_dir"       => dirname(SC_WEB_ROOT) . "/data/messages/draft",
+        // 附件上傳上限（單位 KB——PHP 同前端共用嘅單一來源）
+        "attachments" => [
+            "max_upload_size" => 20000,
+        ],
+        // 草稿（draft）設定——可調區（前端由 DOM data-* 讀同一份值）
+        "draft" => [
+            "max_upload_size"        => 20000, // KB
+            "max_image_side_px"      => 4096,
+            "resize_image_side_px"   => 2048,
+            "max_images_per_message" => 13,
+        ],
+        "image_extract_dir"        => dirname(SC_WEB_ROOT) . "/data/_tmp/image_extract",
+        "process_status_dir"       => dirname(SC_WEB_ROOT) . "/data/process_status",
+        "localdb_dir"              => dirname(SC_WEB_ROOT) . "/data/localdb",
+        "log_dir"                  => dirname(SC_WEB_ROOT) . "/data/logs",
+        "instructions_dir"         => dirname(SC_WEB_ROOT) . "/data/instructions",
+        "history_dir"              => dirname(SC_WEB_ROOT) . "/data/localdb/history",
+        "bridge_dir"               => dirname(SC_WEB_ROOT) . "/data/bridge",
+        "activity_dir"             => dirname(SC_WEB_ROOT) . "/data/activity",
+
+        // Home 專案沙盒目錄（project_slug＝home 的工作路徑；沒有 repo、供零設定試用）
+        "playground_dir"            => dirname(SC_WEB_ROOT) . "/data/playground",
+        "providers_dir"             => dirname(SC_WEB_ROOT) . "/data/providers",
+        "providers_model_store_dir" => dirname(SC_WEB_ROOT) . "/data/providers/model_store",
+        "benchmark_model_store_dir" => dirname(SC_WEB_ROOT) . "/data/benchmark/model_store",
+
+        // 出廠默認指示檔（唯讀源——每次 ensure 覆寫入 data/instructions；用戶唔可以改）
+        "instructions" => [
+            "system_env"    => SC_WEB_ROOT . "/sc_config/hkai/instructions/system_env.md",
+            "system_prompt" => SC_WEB_ROOT . "/sc_config/hkai/instructions/system_prompt.md",
+        ],
+
+        // 出廠默認文本（public＝可公開、唯讀源——唔會俾用戶改）
+        "public" => [
+            "process_status" => [
+                "process_list" => dirname(SC_WEB_ROOT) . "/data/process_status/process_list.jsonl",
+            ],
+            // 用戶覆蓋（可寫——用戶改設定只寫呢份）
+            "settings" => dirname(SC_WEB_ROOT) . "/data/settings.json",
+        ],
     ],
     "view"            => [
         "logo"  => SC_WEB_ROOT . "/setup/assets/hkai-logo.png",

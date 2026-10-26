@@ -8,38 +8,25 @@ goose_daemon 入口（薄——冷啟動與主迴圈調度集中於 daemon_manag
 
     python -m goose_daemon.main（固定讀 <站台>/data/runtime.json）
 
-啟動順序（兩階段）：
-    Phase 1  日誌（sc_logger.setup——主程序尚未載入）
-    Phase 2  主程序（context 載入 → daemon 冷啟動 → 主迴圈）
+啟動順序：
+    import     context／runtime（其餘模組之根）
+    logger     sc_logger.setup()（失敗 → write_early_error_log() 再 raise）
+    main()     daemon 冷啟動 → 主迴圈
 
 安全機制分工：
 - PHP 端：escapeshellarg() 防注入；cmd /c start /B 脫離 PHP process tree
-- sc_logger.py：sys.excepthook（崩潰不漏）／sys.stdout 重定向（print 不漏）／RotatingFileHandler 5MB×3（硬碟防爆）
+- sc_logger.py：sys.excepthook（崩潰不漏）／sys.stdout 重定向（print 不漏）／RotatingFileHandler 5MiB×3 備份（硬碟防爆）
 """
 
-# ===== Phase 1：日誌（最頂部——主程序尚未載入，不碰 context）=====
+from . import context
+from .runtime import heartbeat, lifecycle, process, sc_logger
+
+# ===== 日誌（sc_logger 接手 stdout／excepthook）=====
 try:
-    from .runtime import sc_logger
     sc_logger.setup()
 except BaseException:
-    # 最早期失敗（sc_logger 未接管）→ stdlib 直寫 goose_daemon/runtime/error.log（路徑由 __file__ 自推——不依賴任何設定）
-    try:
-        import pathlib
-        import traceback
-
-        _site_root      = pathlib.Path(__file__).resolve().parents[2]
-        _error_log_path = _site_root / "data" / "logs" / "goose_daemon.error.log"
-        _error_log_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(_error_log_path, "a", encoding="utf-8") as _error_log_handle:
-            _error_log_handle.write(traceback.format_exc())
-    except Exception:  # noqa: BLE001, S110
-        pass  # 最後防線：記錄失敗不可蓋過原始錯誤（下方 raise 保留原 traceback）
-
+    sc_logger.write_early_error_log()
     raise
-
-# ===== Phase 2：主程序（日誌已就緒）=====
-from . import context
-from .runtime import heartbeat, lifecycle, process
 
 
 # ==========================================
@@ -59,5 +46,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # 未捕捉例外由 runtime.py 的 sys.excepthook 寫入 error.log（含完整 traceback）
+    # 未捕捉例外由 sc_logger.py 的 sys.excepthook 寫入 error.log（含完整 traceback）
     main()

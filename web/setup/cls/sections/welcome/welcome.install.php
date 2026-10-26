@@ -74,7 +74,7 @@ trait welcome_install
         return $settings_decoded;
     }
 
-    // 寫應用設定（settings.json——同 app hkai_core 同一格式；回成功唔成功）
+    // 寫應用設定（settings.json——同 app hkai() 同一格式；回成功唔成功）
     private function write_app_settings($settings_data)
     {
         $app_settings_file = $this->get_app_settings_file();
@@ -90,8 +90,6 @@ trait welcome_install
     // 應用設定檔路徑（sc_config/hkai/settings.json——單一來源＝sc_config/load.php）
     private function get_app_settings_file()
     {
-        $config = sc_get_config("config");
-
-        return $config["hkai_settings"];
+        return sc_get_config("hkai.settings");
     }
 }

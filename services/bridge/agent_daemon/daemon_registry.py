@@ -3,9 +3,12 @@
 daemon_registry.py — PID 登記＋跨平台存活檢查。
 
 職責：
-- is_daemon_alive(agent_daemon)：供 daemon_wake 呼叫（agent_daemon＝現行引擎；掃 process_status 心跳）
+- is_daemon_alive(agent_daemon)：供 daemon_wake 呼叫（agent_daemon＝現行agent；掃 process_status 心跳）
 - _is_process_alive(pid)：跨平台 PID 檢查（私有）
 """
+
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# （psutil 冇 type stub——「類型部分未知」一律關，其餘照檢）
 
 import psutil
 

@@ -16,11 +16,12 @@ job_scheduler.py — 工單排程（分派／建立／查詢／回收；goose_da
 import contextlib
 import multiprocessing
 import time
+from multiprocessing.queues import Queue
 
 from .. import context
-from ..runtime import sc_logger
-from ..worker import identity, runner
-from ..worker.engine import engine_context
+from ..runtime import identity, sc_logger
+from ..worker import runner
+from ..worker.agent import paths
 from . import job_scanner, roster, watchdog
 
 
@@ -34,7 +35,7 @@ def dispatch() -> None:
         if roster.has_worker(pending_job["chat_id"]):
             continue
 
-        worker_entry = roster.find_idle_worker()
+        worker_entry: roster.WorkerEntry | None = roster.find_idle_worker()
 
         # 判定：冇閒置 worker → 即場開一條（建立即有單；queue 會緩衝）
         if worker_entry is None:
@@ -50,18 +51,18 @@ def dispatch() -> None:
         job_scanner.update_job(pending_job["job_key"], assigned=True)
 
 
-def spawn_worker(pending_job: dict):
+def spawn_worker(pending_job: job_scanner.JobEntry) -> roster.WorkerEntry | None:
     """開一條 worker 並即刻交派工單（建立即有單——工人只因工單而存在）。"""
     # 前置檢查：goose 執行檔唔可用 → 唔開工人（工單留 pending，下拍再試）
-    if engine_context.resolve_executable() == "":
+    if paths.resolve_executable() == "":
         sc_logger.log("spawn skipped: goose executable not found (config/PATH)")
         return None
 
     # 派單管道（daemon → worker）：put 工單路徑，worker get 到即執行
-    job_queue = multiprocessing.Queue()
+    job_queue: "Queue[str | None]" = multiprocessing.Queue()
 
     # 回報管道（worker → daemon）：worker 做完 put job_done，daemon 清空該工人當前對話
-    status_queue = multiprocessing.Queue()
+    status_queue: "Queue[dict[str, object]]" = multiprocessing.Queue()
 
     # 注意：worker 不可設 daemon=True——worker 內 goose 仍需建立子程序
     worker_proc = multiprocessing.Process(
@@ -78,7 +79,7 @@ def spawn_worker(pending_job: dict):
 
     now_sec = int(time.time())
 
-    worker_entry = {
+    worker_entry: roster.WorkerEntry = {
         # 身份／管道
         "proc"                 : worker_proc,
         "job_queue"            : job_queue,
@@ -100,7 +101,7 @@ def spawn_worker(pending_job: dict):
     return worker_entry
 
 
-def dispatch_job(worker_entry: dict, pending_job: dict) -> None:
+def dispatch_job(worker_entry: roster.WorkerEntry, pending_job: job_scanner.JobEntry) -> None:
     """工單入隊＋登記 worker 忙碌（同對話一次一條據此判定）。"""
 
     # 同一刻只計一次時間（三個時間欄位共用）
@@ -173,7 +174,7 @@ def reap_workers() -> None:
 
             sc_logger.log(
                 "worker exited pid=" + str(worker_pid)
-                + " chat=" + worker_entry["chat_id"]
-                + " message=" + worker_entry["message_id"]
+                + " chat=" + worker_entry.get("chat_id", "")
+                + " message=" + worker_entry.get("message_id", "")
                 + " elapsed=" + str(elapsed_sec) + "s"
                 + " exitcode=" + str(worker_proc.exitcode))

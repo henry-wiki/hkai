@@ -15,7 +15,7 @@ trait get_prompt_draft
         $chat_id  = $chat_row ? (int)$chat_row["chat_id"] : 0;
 
         // 讀活動（scope 篩選——只有當前對話嗰條；無／唔屬＝null）
-        $prompt_draft_bundle = hkai__sc_page_activity()->get_activity("prompt_draft", ["chat_id" => $chat_id]);
+        $prompt_draft_bundle = hkai()->web_page()->activity()->get_activity("prompt_draft", ["chat_id" => $chat_id]);
 
         return $prompt_draft_bundle;
     }

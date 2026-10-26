@@ -17,15 +17,12 @@ trait handle_fetch_instructions
             return sc_response()->json(["ok" => false, "error" => "invalid instructions name"], 400);
         }
 
-        $this->ensure_instructions_file($instructions_name);
+        // 保證指示檔就位（交 instruction 域——system_prompt 覆寫、system_env 只補缺）
+        hkai()->process()->instruction()->sync_instructions($instructions_name);
 
-        $paths        = $this->get_instructions_paths($instructions_name);
-        $file_content = "";
-
-        // 判定：storage 工作檔存在 → 讀現值
-        if (is_file($paths["storage_file"])) {
-            $file_content = (string)@file_get_contents($paths["storage_file"]);
-        }
+        // 讀現值（storage 優先、無＝manifest 出廠默認——交 instruction 域）
+        $read_result  = hkai()->process()->instruction()->read_instructions($instructions_name);
+        $file_content = $read_result["content"];
 
         $html = $this->get_modal_content($instructions_name, $file_content);
 

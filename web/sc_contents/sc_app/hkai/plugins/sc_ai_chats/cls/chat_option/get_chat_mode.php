@@ -7,13 +7,14 @@ namespace sc\app\hkai\plugins\sc_ai_chats\chat_option;
 
 trait get_chat_mode
 {
-    // chat_mode 驗證（傳入值係現行引擎組 UI 模條目 → 回傳；唔係／空 → 回第一條）
+    // chat_mode 驗證（傳入值係現行agent組 UI 模條目 → 回傳；唔係／空 → 回第一條）
     public function get_chat_mode($chat_mode)
     {
-        // 合法值集＝現行引擎組 chat_mode UI 模條目（有 mode 欄嗰啲 key）
-        $daemon_engine         = hkai__core()->get_daemon_engine();
-        $daemon_engine_configs = hkai__core()->get_hkai_configs($daemon_engine);
-        $chat_mode_config      = $daemon_engine_configs["chat_mode"];
+        // 合法值集＝現行agent組 chat_mode UI 模條目（有 mode 欄嗰啲 key）
+        $agent           = hkai()->agent()->get_agent();
+        $agent_daemon    = hkai()->agent()->get_agent_daemon($agent);
+        $daemon_configs  = hkai()->get_hkai_configs($agent_daemon);
+        $chat_mode_config = $daemon_configs["chat_mode"];
 
         $valid_chat_modes = [];
         // 逐個 UI 模條目收集 key（value 有 mode 欄＝UI 模）

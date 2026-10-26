@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
 
@@ -26,7 +26,6 @@ from ..runtime import (
     heartbeat,
     lifecycle,
     process,
-    process_list,
     sc_config,
     sc_logger,
 )
@@ -39,6 +38,9 @@ class server_class:
     """
 
     _instance: "server_class | None" = None
+
+    # 初始化旗標（__init__ 只跑一次）
+    _initialized: bool = False
 
     def __new__(cls):
         """單例：整個程序只建立一次。"""
@@ -62,13 +64,13 @@ class server_class:
 
     def start(self) -> None:
         """啟動 uvicorn（阻塞直到伺服器停止）。"""
-        server_host = str(sc_config.get_config("server_settings", "host"))
-        server_port = int(sc_config.get_config("server_settings", "port"))
+        server_host = str(sc_config.get_config("server_settings", "host") or "")
+        server_port = int(str(sc_config.get_config("server_settings", "port") or ""))
 
         sc_logger.log(f"server starting (host={server_host} port={server_port})")
 
         # 台帳（append-only JSONL）：server 自身啟動——本程序即 uvicorn 伺服器（非子程序）
-        process_list.append_spawn(
+        process.append_spawn(
             pid=process.self_pid(),
             ppid=os.getppid(),
         )
@@ -101,7 +103,7 @@ class server_class:
         heartbeat.stop(reason)
 
     @asynccontextmanager
-    async def _lifespan(self, app: FastAPI):
+    async def _lifespan(self, app: FastAPI):  # pyright: ignore[reportUnusedParameter]
         """啟動／關閉掛載點（背景監控任務＋心跳：就緒先開始跳）。"""
         # 背景監控 task（runtime 檔／BUILD）——程式結束時整個 event loop 一齊消失，唔需要 cancel
         lifecycle.watch_runtime()
@@ -119,6 +121,7 @@ class server_class:
         """掛載所有 router。"""
         from .server_daemon import router as daemon_router
         from .server_diagnostics import router as diagnostics_router
+        from .server_image_extract import router as image_extract_router
         from .server_presence import router as presence_router
         from .server_process import router as process_router
         from .server_projects import router as projects_router
@@ -126,6 +129,7 @@ class server_class:
 
         app.include_router(daemon_router)
         app.include_router(diagnostics_router)
+        app.include_router(image_extract_router)
         app.include_router(presence_router)
         app.include_router(process_router)
         app.include_router(projects_router)

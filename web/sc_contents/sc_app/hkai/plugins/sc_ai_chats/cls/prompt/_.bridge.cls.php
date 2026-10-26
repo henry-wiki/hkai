@@ -27,7 +27,7 @@ class prompt_Class
     use request\record_failed_message;
     use request\rollback_created_chat;
     use request\handle_prompt_stop;
-    use request\daemon_engine_switch;
+    use request\agent_switch;
     use file\get_empty_prompt_data;
     use file\parse_polling_prompt_file;
     use file\set_polling_msg_user_prompt;

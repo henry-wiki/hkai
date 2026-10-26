@@ -16,7 +16,13 @@ class _prompt_input_height_observer {
 
     // 高度重算（先 auto 再按內容高（上限 160px）——長／縮／清空同一支）
     refresh_height(event) {
-        const input_element = event.currentTarget;
+        // 事件來源（打字）→ 用事件目標；程式呼叫（無 event）→ 預設輸入框
+        var input_element = document.getElementById("sc_input");
+
+        // 判定：有事件目標 → 用事件目標
+        if (event !== undefined && event !== null) {
+            input_element = event.currentTarget;
+        }
 
         input_element.style.height = "auto";
         input_element.style.height = Math.min(input_element.scrollHeight, 160) + "px";

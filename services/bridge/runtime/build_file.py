@@ -30,7 +30,7 @@ def initialize() -> None:
     _baseline = read()
 
 
-def changed() -> dict:
+def changed() -> dict[str, object]:
     """回傳 {changed, previous, current}；有變即更新基準。"""
     global _baseline
     current_build_id = read()

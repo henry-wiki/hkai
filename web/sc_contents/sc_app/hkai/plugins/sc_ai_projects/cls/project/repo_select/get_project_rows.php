@@ -20,11 +20,6 @@ trait get_project_rows
             return null;
         }
 
-        // home 段 → 查 Home 專案列（slug 固定 "home"；唔經快取）
-        if ($needle === "home") {
-            return sc_db()->selectOne("SELECT * FROM projects WHERE project_slug = 'home'");
-        }
-
         // 判定：純數字 → 按 id 查
         if (ctype_digit($needle)) {
             $project_rows_by_id = init()->get_initial_data("project_rows_by_id");
@@ -41,14 +36,15 @@ trait get_project_rows
     public function get_project_rows()
     {
         // 第一支：Home（project_slug＝home）
-        $home_project_rows = sc_db()->select("SELECT * FROM projects WHERE project_slug = 'home'");
+        $home_project_rows = sc_db()->select("SELECT * FROM projects WHERE project_slug = ?", [sc_get_config("hkai.default_project_slug")]);
 
         // 第二支：其餘專案（project_status＝active；home 排除；最近對話更新優先）
         $active_project_rows = sc_db()->select(
             "SELECT * FROM projects "
             . "WHERE project_status = 'active' "
-            . "AND project_slug != 'home' "
-            . "ORDER BY chat_updated_at DESC, project_updated_at DESC"
+            . "AND project_slug != ? "
+            . "ORDER BY chat_updated_at DESC, project_updated_at DESC",
+            [sc_get_config("hkai.default_project_slug")]
         );
 
         // Home 第一，其餘接住

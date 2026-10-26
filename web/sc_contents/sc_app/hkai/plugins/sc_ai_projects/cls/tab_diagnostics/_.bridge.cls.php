@@ -45,15 +45,15 @@ class tab_diagnostics_Class
         $diagnostics_sections = [];
         $diagnostics_sections["general"] = [
             "id"   => "general",
-            "name" => hkai__i18n()->get("diagnostics.tab_general"),
+            "name" => hkai()->i18n()->get("diagnostics.tab_general"),
         ];
         $diagnostics_sections["file_path"] = [
             "id"   => "file_path",
-            "name" => hkai__i18n()->get("diagnostics.tab_path"),
+            "name" => hkai()->i18n()->get("diagnostics.tab_path"),
         ];
         $diagnostics_sections["git"] = [
             "id"   => "git",
-            "name" => hkai__i18n()->get("diagnostics.tab_git"),
+            "name" => hkai()->i18n()->get("diagnostics.tab_git"),
         ];
 
         $initial_data = [];

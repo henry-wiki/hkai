@@ -10,7 +10,7 @@ db_context.py
 改 schema 或 SQL＝只改此檔（呼叫端簽名不變）。
 """
 
-# 我們 DB 檔名（位於 storage/localdb/）
+# 我們 DB 檔名（位於 data/localdb/）
 CHAT_DB_FILENAME = "hkai_chat_data.sqlite"
 
 # goose session DB 檔名（位於 GOOSE_PATH_ROOT/data/sessions/）

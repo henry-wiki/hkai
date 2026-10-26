@@ -10,7 +10,7 @@ trait handle_fetch_server_settings
     // GET fetch_server_settings handler（讀 runtime.json 動態層——未存時由靜態預設為底；按鈕與狀態文字依實測）
     public function handle_fetch_server_settings()
     {
-        $runtime_configs = hkai__core()->get_runtime_configs();
+        $runtime_configs = hkai()->runtime()->get_runtime_configs();
         $server_settings = $runtime_configs["server_settings"] ?? [];
 
         // 已知狀態（runtime 已存的 testing_result——未測試＝空；測試與否由獨立程序發起）
@@ -20,10 +20,10 @@ trait handle_fetch_server_settings
         // 實測狀態（完整檢查為準——檔＋pid 二重核實；開 server tab 即校正）
         $server_status = "stopped";
 
-        $bridge_check = hkai__python_bridge_check()->check_is_python_bridge_running_full();
+        $server_status_result = hkai()->process()->server()->get_server_status();
 
         // 判定：完整檢查報 alive → running
-        if ($bridge_check["is_alive"]) {
+        if ($server_status_result["is_alive"]) {
             $server_status = "running";
         }
 

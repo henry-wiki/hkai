@@ -37,12 +37,17 @@
       單一 git 命令逾時 5 秒自我保護；結果欄位名即 JSON 契約（PHP 渲染層直接按 key 取值）。
 """
 
-import datetime
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false, reportUnknownLambdaType=false
+# （偵測結果係動態 dict／git 輸出——Unknown/Any 警告一律關，其餘照檢）
+
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any, cast
+
+from ..utils import timer
 
 # 單一 git 命令逾時（秒）——慢碟／大 repo 自我保護
 GIT_TIMEOUT_SECONDS = 5
@@ -211,7 +216,7 @@ class project_env_class:
     def __init__(self):
         pass
 
-    def run_git_command(self, project_path, git_arguments):
+    def run_git_command(self, project_path: str, git_arguments: list[str]) -> str:
         """在專案路徑執行只讀 git 命令——回傳 stdout（失敗／非 repo 回空字串）。"""
         command = ["git", "-C", project_path, "--no-optional-locks", *git_arguments]
 
@@ -233,7 +238,7 @@ class project_env_class:
 
         return completed.stdout.strip()
 
-    def collect_vcs(self, root_path):
+    def collect_vcs(self, root_path: Path) -> dict[str, Any] | None:
         """偵測版本控制（.git 存在先當 git——branch／dirty 兩條輕量命令）。"""
         # 判定：唔係 git repo → None（專案無版本控制）
         if not (root_path / ".git").exists():
@@ -250,14 +255,14 @@ class project_env_class:
 
         return vcs_found
 
-    def collect_languages(self, root_path):
+    def collect_languages(self, root_path: Path) -> list[dict[str, Any]]:
         """統計主要語言（副檔名計數——跳過依賴／產物目錄；20000 檔上限自我保護）。"""
         extension_counts = {}
         scanned_files = 0
         scan_truncated = False
 
         # 逐目錄走訪（就地修剪跳過目錄——唔入依賴／產物）
-        for (directory_path, directory_names, file_names) in os.walk(root_path):
+        for (_directory_path, directory_names, file_names) in os.walk(root_path):
             directory_names[:] = [name for name in directory_names if name not in LANGUAGE_SKIP_DIRECTORIES]
 
             # 逐檔數語言副檔名
@@ -308,7 +313,7 @@ class project_env_class:
 
         return languages_top
 
-    def collect_frameworks(self, root_path):
+    def collect_frameworks(self, root_path: Path) -> list[str]:
         """偵測框架（讀 manifest 內容標記——小寫子串比對；每檔讀入上限 512KB）。"""
         frameworks_found = []
 
@@ -332,7 +337,7 @@ class project_env_class:
 
         return frameworks_found
 
-    def collect_marker_names(self, root_path, marker_rows):
+    def collect_marker_names(self, root_path: Path, marker_rows: list[tuple[str, str]]) -> list[str]:
         """通用標記表偵測（(標記檔名, 名稱)——存在即列入；去重保序）。"""
         names_found = []
 
@@ -344,7 +349,7 @@ class project_env_class:
 
         return names_found
 
-    def collect_required_runtimes(self, root_path):
+    def collect_required_runtimes(self, root_path: Path) -> dict[str, str]:
         """偵測專案要求嘅 runtime 版本（版本檔內容——存在即讀第一行）。"""
         required_found = {}
 
@@ -367,7 +372,7 @@ class project_env_class:
 
         return required_found
 
-    def collect_ci(self, root_path):
+    def collect_ci(self, root_path: Path) -> list[str]:
         """偵測 CI/CD 標記（存在即列入——表序＝輸出序）。"""
         ci_found = []
 
@@ -386,7 +391,7 @@ class project_env_class:
 
         return ci_found
 
-    def collect_manifests(self, root_path):
+    def collect_manifests(self, root_path: Path) -> list[str]:
         """偵測語言／生態 manifest 標記（存在即列入——表序＝輸出序）。"""
         manifests_found = []
 
@@ -397,7 +402,7 @@ class project_env_class:
 
         return manifests_found
 
-    def get_project_env(self, project_path):
+    def get_project_env(self, project_path: str) -> dict[str, Any]:
         # 判定：路徑不存在／唔係目錄 → 失敗（PHP 端據此零寫入）
         root_path = Path(project_path)
         if not root_path.is_dir():
@@ -407,7 +412,7 @@ class project_env_class:
 
         result = {}
         result["ok"] = True
-        result["detected_at"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        result["detected_at"] = timer.get_datetime()
         result["root"] = str(resolved_root)
         result["name"] = resolved_root.name
         result["vcs"] = self.collect_vcs(resolved_root)
@@ -431,7 +436,7 @@ class project_env_class:
 
     def main(self):
         # stdout 強制 UTF-8（Windows 預設 cp950——PHP 側固定收 UTF-8 JSON）
-        sys.stdout.reconfigure(encoding="utf-8")
+        _ = cast(Any, sys.stdout).reconfigure(encoding="utf-8")
 
         # 參數：project_path（缺＝用法錯誤——回失敗 JSON）
         if len(sys.argv) < 2:

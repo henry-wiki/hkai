@@ -1,5 +1,6 @@
-// jsmods/prompt/act/prompt_draft_save.js —— 輸入草稿活動寫入（act 層——一檔一事）
-// 職責：prompt_draft_save（#sc_input 內容有變／chat options 提交 → 寫入活動 prompt_draft——防突然關掉失稿；節流／即寫兩式）
+// jsmods/prompt/act/prompt_draft_save.js —— 草稿即時保存（act 層——一檔一事）
+// 職責：prompt_draft_save（#sc_input 內容有變／chat options 提交 → 寫 draft meta——文字＋model＋reasoning＋chat_mode）
+// 舊 activity prompt_draft 已停用（本檔改為唯一草稿寫入點）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _prompt_draft_save {
@@ -25,39 +26,54 @@ class _prompt_draft_save {
         this.throttle_timer = setTimeout(this.write_prompt_draft.bind(this), this.throttle_delay_ms);
     }
 
-    // 實際寫入（bundle：model info／chat mode／文字；scope：語境字串〔chat_sid／project_slug——後端解析 id〕——活動名 prompt_draft）
+    // 實際寫入（文字＋provider／model／reasoning／chat_mode → draft meta；agent 由後端補）
     async write_prompt_draft() {
-        // 輸入內容（#sc_input 現值——傳咩寫咩）
-        const prompt_text = jQuery("#sc_input").val();
+        // 輸入框未載入時 val() 係 undefined → 一律當空字串（否則空草稿都會寫入）
+        const prompt_text = String(jQuery("#sc_input").val() || "");
 
-        // 對話 sid／專案 slug（URL 語境——本機側唯一取法）
         const chats = registry().sc_ai_chats();
-        const chat_instance = await chats.chat();
         const projects = registry().sc_ai_projects();
         const project_instance = await projects.project();
+        var project_slug = project_instance.get_project_slug();
+
+        const prompt_instance = await chats.prompt();
+
+        // 判定：URL 冇專案（home）→ 用 composer 專案
+        if (project_slug === "") {
+            project_slug = prompt_instance.get_composer_project_slug();
+        }
+
+        const attach_instance = await prompt_instance.evt().prompt_attach();
+
+        // 判定：冇文字又冇附件 → 唔寫（唔建草稿目錄）
+        if (prompt_text === "" && attach_instance.get_files().length < 1) {
+            return;
+        }
 
         // model info（composer hidden fields——現行選取；model_context 讀）
         const providers_instance = await registry().sc_ai_providers();
         const model_selector_instance = await providers_instance.model_selector();
         const model_context_instance = await model_selector_instance.act().model_context();
 
-        // 活動內容（草稿整包——provider_id／model_id／reasoning_effort／chat_mode＋text）
-        const activity_bundle = {};
-        activity_bundle.provider_id      = model_context_instance.get_context_provider_id();
-        activity_bundle.model_id         = model_context_instance.get_context_model_id();
-        activity_bundle.reasoning_effort = model_context_instance.get_context_reasoning_effort();
-        activity_bundle.chat_mode        = model_context_instance.get_context_chat_mode();
-        activity_bundle.text             = prompt_text;
+        const payload = {};
+        payload.project_slug = project_slug;
+        payload.chat_sid = await prompt_instance.get_active_chat_sid();
+        payload.prompt_text = prompt_text;
+        payload.provider_id = model_context_instance.get_context_provider_id();
+        payload.model_id = model_context_instance.get_context_model_id();
+        payload.reasoning_effort = model_context_instance.get_context_reasoning_effort();
+        payload.chat_mode = model_context_instance.get_context_chat_mode();
 
-        // 活動 scope（語境字串——chat_sid／project_slug；project_id／chat_id 由後端解析）
-        const activity_scope = {};
-        activity_scope.chat_sid     = chat_instance.get_chat_sid();
-        activity_scope.project_slug = project_instance.get_project_slug();
+        const save_instance = await prompt_instance.req().draft_save_meta();
 
-        // 動態載入（registry——用先載）
-        const sc_page_activity_instance = await registry().sc_page_activity();
-
-        await sc_page_activity_instance.set_activity("prompt_draft", activity_bundle, activity_scope);
+        save_instance.draft_save_meta(payload, {
+            success: async function () {
+                // 首次寫入成功 → URL 未帶 sid 就靜默換（重載可憑 sid 取回草稿）
+                await prompt_instance.sync_chat_url(project_slug);
+            },
+            error: function () {
+            }
+        });
     }
 }
 

@@ -48,17 +48,17 @@ def process_helper():
 
 def aider_entry():
     """取得 aider_entry_class 單例。"""
-    from .engine.aider_entry import aider_entry_class  # 延遲——避免循環 import
+    from .agent.aider_entry import aider_entry_class  # 延遲——避免循環 import
     return aider_entry_class.get_instance()
 
 def acp_client():
     """取得 acp_client 單例。"""
-    from .engine.acp_client import acp_client  # 延遲——避免循環 import
+    from .agent.acp_client import acp_client  # 延遲——避免循環 import
     return acp_client.get_instance()
 
 def agent_history():
     """取得 agent_history_class 單例。"""
-    from .engine.agent_history import agent_history_class  # 延遲——避免循環 import
+    from .agent.agent_history import agent_history_class  # 延遲——避免循環 import
     return agent_history_class.get_instance()
 
 

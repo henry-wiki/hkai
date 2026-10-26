@@ -9,8 +9,8 @@ worker 監護人——子程序記憶體守衛（child_memory_guard_class single
     2. 記 audit.log（sc_logger——系統級足跡；含全部 pids）
     3. 殺子樹（terminate → 逾時 kill——同 runtime/lifecycle.exit_children 同一手法；worker 自己唔死）
 
-動機：引擎子程序喺「等卡死請求」路徑可能記憶體狂泄（2026-10-08 實錄：12→20GB／12 分鐘）；
-本衛士＝我方兜底——唔改引擎本體，只喺失控時及早中止（上限＝manifest openhands_api_daemon.child_memory_limit_mb——缺＝默認 CHILD_MEMORY_LIMIT_MB）。
+動機：agent子程序喺「等卡死請求」路徑可能記憶體狂泄（2026-10-08 實錄：12→20GB／12 分鐘）；
+本衛士＝我方兜底——唔改agent本體，只喺失控時及早中止（上限＝manifest openhands_api_daemon.child_memory_limit_mb——缺＝默認 CHILD_MEMORY_LIMIT_MB）。
 """
 
 import os

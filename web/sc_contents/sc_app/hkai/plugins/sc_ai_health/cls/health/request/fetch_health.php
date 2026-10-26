@@ -41,13 +41,13 @@ trait fetch_health
         // 有待辦工作 → 啟動 daemon（已暫停：喚醒改由 python bridge 負責——待測試完成後刪除）
         // if (count($health_data["message_poll"]) > 0)
         // {
-        //     hkai__core()->wake_daemon();
+        //     hkai()->wake_daemon();
         // }
 
         // 無待辦工作（message_poll 空）且 daemon 進程存在 → 停止 daemon（暫停——本機進程查詢已停用；daemon 靠 idle_timeout 自殺）
         // if (count($health_data["message_poll"]) < 1 && !empty($health_data["processes"]))
         // {
-        //     hkai__core()->stop_daemons();
+        //     hkai()->stop_daemons();
         // }
 
         return $health_data;

@@ -18,12 +18,8 @@ trait handle_reset_instructions
             return sc_response()->json(["ok" => false, "error" => "invalid instructions name"], 400);
         }
 
-        $paths = $this->get_instructions_paths($instructions_name);
-
-        // 判定：storage 自訂版存在 → 刪走（重載讀 manifest 出廠默認）
-        if (is_file($paths["storage_file"])) {
-            @unlink($paths["storage_file"]);
-        }
+        // 刪走 storage（重載讀 manifest 出廠默認——交 instruction 域）
+        hkai()->process()->instruction()->remove_instructions($instructions_name);
 
         return sc_response()->json(["ok" => true]);
     }

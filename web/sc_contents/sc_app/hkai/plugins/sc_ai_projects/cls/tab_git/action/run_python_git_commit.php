@@ -9,7 +9,7 @@ trait run_python_git_commit
     private function run_python_git_commit($project_path)
     {
         // 大批量 commit 可以慢——總時限放寬到 180 秒
-        return hkai__python_bridge()->request("/projects/git/commit/", [
+        return hkai()->process()->bridge()->request("/projects/git/commit/", [
             "project_path" => $project_path,
         ], 180);
     }

@@ -10,6 +10,6 @@ trait run_git_status
     // 執行 Git 狀態診斷（HTTP bridge——Python 診斷程式；PHP 只負責呼叫與讀 JSON）
     public function run_git_status($project_path)
     {
-        return hkai__python_bridge()->request("/diagnostics/git/get_status", ["project_path" => $project_path]);
+        return hkai()->process()->bridge()->request("/diagnostics/git/get_status", ["project_path" => $project_path]);
     }
 }

@@ -52,7 +52,7 @@ trait shift_queue_message
         
         // 判定：DB 寫入失敗 → 記錯誤 log＋唔出列（原行留隊，下一拍再試）
         if ($message_row === null) {
-            hkai__sc_runtime_io()->error("shift_queue_message insert failed: chat_id=" . $chat_id . " queue_uid=" . $queue_line["queue_uid"]);
+            hkai()->runtime()->logger()->error("shift_queue_message insert failed: chat_id=" . $chat_id . " queue_uid=" . $queue_line["queue_uid"]);
 
             return null;
         }
@@ -73,8 +73,13 @@ trait shift_queue_message
         // 出等待列（按 queue_uid——行存在＝未派工專屬；已派工唔應該再顯示 chip）
         sc_ai_chats()->queue()->remove_queue_line($chat_id, $queue_line["queue_uid"]);
         
-        // 放出去（notify bridge——喚醒與否由 bridge 決定；daemon 最舊優先＝就係呢條）
-        hkai__python_bridge_daemon()->notify_daemon_add_message($chat_id, $message_id);
+        // 附件判定（有附件＝等整理完成才派工）
+        $conf_attachments = $conf_data["attachments"] ?? [];
+
+        // 判定：冇附件 → 即刻放出去（有附件留待 promote_prepared_jobs 放行）
+        if (count($conf_attachments) < 1) {
+            hkai()->process()->bridge()->notify_server_new_prompt($chat_id, $message_id, hkai()->agent()->get_agent());
+        }
 
         // 專案統計（最後一步——唔影響派工）
         sc_ai_projects()->project()->refresh_project_stats($project_id);

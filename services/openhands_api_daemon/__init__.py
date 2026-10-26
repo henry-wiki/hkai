@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-openhands_api_daemon 套件——引擎接駁版（全 class、單一職責、singleton 統一入口）。
+openhands_api_daemon 套件——agent接駁版（全 class、單一職責、singleton 統一入口）。
 
     main.py                    入口（薄）：initialize() + daemon_manager_class.run() 一行呼叫
     daemon/
@@ -14,9 +14,9 @@ openhands_api_daemon 套件——引擎接駁版（全 class、單一職責、si
         msg_claim.py           msg_claim_class(singleton)——處理認領（原子）
         msg_state_machine.py   msg_state_machine_class(singleton)——FSM（唯一 msg_status 寫入者；fsm_map.json 契約）
         msg_events.py          event 常數集中檔（與 sc_config/hkai/fsm_map.json 同步）
-    engine/
-        auth_setup.py          api_key_loader_class(singleton)——API keys 載入環境變數（引擎子程序由此取 key）
-        openhands_api_entry.py         openhands_api_entry_class(singleton)——執行入口（冷／暖；引擎 stream-json 翻譯）
+    agent/
+        auth_setup.py          api_key_loader_class(singleton)——API keys 載入環境變數（agent子程序由此取 key）
+        openhands_api_entry.py         openhands_api_entry_class(singleton)——執行入口（冷／暖；agent stream-json 翻譯）
     utils/
         process_helper.py      process_helper_class(singleton)——子程序安全終止
         timer.py               timer_class(singleton)——統一時間格式輸出

@@ -9,11 +9,11 @@ trait build_tab_git_head
 {
     public function build_tab_git_head($is_edit)
     {
-        $modal_title = hkai__i18n()->get("git.modal_new");
+        $modal_title = hkai()->i18n()->get("git.modal_new");
 
         // 編輯模式 → 標題改 i18n「編輯專案」
         if ($is_edit === true) {
-            $modal_title = hkai__i18n()->get("git.modal_edit");
+            $modal_title = hkai()->i18n()->get("git.modal_edit");
         }
 
         return $modal_title;

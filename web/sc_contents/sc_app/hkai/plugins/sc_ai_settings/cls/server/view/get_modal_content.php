@@ -6,6 +6,7 @@ namespace sc\app\hkai\plugins\sc_ai_settings\server\view;
 // == 2026-09-27 自舊 flat server_Class 分遷入（one file one action） ==
 // == 2026-10-05 結構改版：分區（Connection／Status／Action／Live logs）——跟 DARK PRO v3 稿示範；動作鈕＝啟用／重新啟動／停用 ==
 // == 2026-10-09 footer 全移除（無儲存／重新整理掣——純狀態／操作頁）；host／port 由啟用／重啟時套用入 runtime ==
+// == 2026-10-26 footer 加單一「Refresh」掣（重載本頁內容）；移除 1s 日誌輪詢（日誌只喺重載時重畫） ==
 
 trait get_modal_content
 {
@@ -16,11 +17,11 @@ trait get_modal_content
         $server_port        = $setting_data["port"];
 
         // 狀態文字（兩態——實測存活與否；顏色 class 見 sc_ai_settings.css）
-        $server_status_label = hkai__i18n()->get("settings.server.status_stopped");
+        $server_status_label = hkai()->i18n()->get("settings.server.status_stopped");
 
         // 判定：已啟用 → Running
         if ($server_status === "running") {
-            $server_status_label = hkai__i18n()->get("settings.server.status_running");
+            $server_status_label = hkai()->i18n()->get("settings.server.status_running");
         }
 
         // 唯讀屬性（實測已啟用——host／port 運行中不可改）
@@ -51,15 +52,15 @@ trait get_modal_content
             $icon_glyph_class = "fa-solid fa-circle-xmark";
         }
 
-        // 日誌（Live logs——初始全量：tail 最後 500 行＋offset 增量標記；最新喺頂）
-        $server_log_read       = hkai__python_bridge()->read_server_log_after_offset(0, 500);
+        // 日誌（Live logs——重載時全量：tail 最後 500 行；最新喺頂；唔再輪詢）
+        $server_log_read       = hkai()->process()->bridge_log()->read_server_log_after_offset(0, 500);
         $server_log_lines_html = $this->render_server_log_lines($server_log_read["lines"]);
-        $server_log_html       = "<div class='settings_server_log' data-slot='server_log' data-log_offset='" . $server_log_read["offset"] . "'>" . $server_log_lines_html . "</div>";
+        $server_log_html       = "<div class='settings_server_log'>" . $server_log_lines_html . "</div>";
 
         // === header ===
         $modal_header = [];
-        $modal_header[] = "<div class='modal__title'>" . hkai__i18n()->get("settings.server.title") . "</div>";
-        $modal_header[] = "<div class='modal__subtitle'>" . hkai__i18n()->get("settings.server.subtitle") . "</div>";
+        $modal_header[] = "<div class='modal__title'>" . hkai()->i18n()->get("settings.server.title") . "</div>";
+        $modal_header[] = "<div class='modal__subtitle'>" . hkai()->i18n()->get("settings.server.subtitle") . "</div>";
 
         // === body ===
         $modal_body = [];
@@ -67,15 +68,15 @@ trait get_modal_content
 
             // === 分區：Connection（連線位址） ===
             $modal_body[] = "<div class='settings_section'>";
-                $modal_body[] = "<div class='settings_section_title'>" . hkai__i18n()->get("settings.server.section_connection") . "</div>";
+                $modal_body[] = "<div class='settings_section_title'>" . hkai()->i18n()->get("settings.server.section_connection") . "</div>";
 
                 $modal_body[] = "<div class='modal-form__row'>";
                     $modal_body[] = "<div class='modal-form__icon " . $icon_state_class . "'>";
                         $modal_body[] = "<i class='" . $icon_glyph_class . "'></i>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__info'>";
-                        $modal_body[] = "<div class='modal-form__label'>" . hkai__i18n()->get("settings.server.label_host_port") . "</div>";
-                        $modal_body[] = "<div class='modal-form__desc'>" . hkai__i18n()->get("settings.server.desc_host_port") . "</div>";
+                        $modal_body[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("settings.server.label_host_port") . "</div>";
+                        $modal_body[] = "<div class='modal-form__desc'>" . hkai()->i18n()->get("settings.server.desc_host_port") . "</div>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__content'>";
                         $modal_body[] = "<div class='modal-form__input_pair'>";
@@ -111,15 +112,15 @@ trait get_modal_content
 
             // === 分區：Status（運行狀態） ===
             $modal_body[] = "<div class='settings_section'>";
-                $modal_body[] = "<div class='settings_section_title'>" . hkai__i18n()->get("settings.server.section_status") . "</div>";
+                $modal_body[] = "<div class='settings_section_title'>" . hkai()->i18n()->get("settings.server.section_status") . "</div>";
 
                 $modal_body[] = "<div class='modal-form__row'>";
                     $modal_body[] = "<div class='modal-form__icon'>";
                         $modal_body[] = "<i class='fa-solid fa-bolt'></i>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__info'>";
-                        $modal_body[] = "<div class='modal-form__label'>" . hkai__i18n()->get("settings.server.section_status") . "</div>";
-                        $modal_body[] = "<div class='modal-form__desc'>" . hkai__i18n()->get("settings.server.desc_status") . "</div>";
+                        $modal_body[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("settings.server.section_status") . "</div>";
+                        $modal_body[] = "<div class='modal-form__desc'>" . hkai()->i18n()->get("settings.server.desc_status") . "</div>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__content'>";
                         $modal_body[] = "<span class='settings_server_status settings_server_status--" . $server_status . "'>" . $server_status_label . "</span>";
@@ -129,39 +130,48 @@ trait get_modal_content
 
             // === 分區：Action（啟停控制） ===
             $modal_body[] = "<div class='settings_section'>";
-                $modal_body[] = "<div class='settings_section_title'>" . hkai__i18n()->get("settings.server.section_action") . "</div>";
+                $modal_body[] = "<div class='settings_section_title'>" . hkai()->i18n()->get("settings.server.section_action") . "</div>";
 
                 $modal_body[] = "<div class='modal-form__row'>";
                     $modal_body[] = "<div class='modal-form__icon'>";
                         $modal_body[] = "<i class='fa-solid fa-play'></i>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__info'>";
-                        $modal_body[] = "<div class='modal-form__label'>" . hkai__i18n()->get("settings.server.section_action") . "</div>";
-                        $modal_body[] = "<div class='modal-form__desc'>" . hkai__i18n()->get("settings.server.desc_action") . "</div>";
+                        $modal_body[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("settings.server.section_action") . "</div>";
+                        $modal_body[] = "<div class='modal-form__desc'>" . hkai()->i18n()->get("settings.server.desc_action") . "</div>";
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='modal-form__content modal-form__content_double'>";
 
                         // 判定：運行中 → 重新啟動＋停用；未運行 → 只出啟用（三功能按狀態出——唔同時出）
                         if ($server_status === "running") {
-                            $modal_body[] = "<button type='button' class='button' data-request_btn='restart_server'>" . hkai__i18n()->get("settings.server.btn_restart") . "</button>";
-                            $modal_body[] = "<button type='button' class='button button--danger' data-request_btn='stop_server'>" . hkai__i18n()->get("settings.server.btn_stop") . "</button>";
+                            $modal_body[] = "<button type='button' class='button' data-request_btn='restart_server'>" . hkai()->i18n()->get("settings.server.btn_restart") . "</button>";
+                            $modal_body[] = "<button type='button' class='button button--danger' data-request_btn='stop_server'>" . hkai()->i18n()->get("settings.server.btn_stop") . "</button>";
                         } else {
-                            $modal_body[] = "<button type='button' class='button button--primary' data-request_btn='start_server'>" . hkai__i18n()->get("settings.server.btn_start") . "</button>";
+                            $modal_body[] = "<button type='button' class='button button--primary' data-request_btn='start_server'>" . hkai()->i18n()->get("settings.server.btn_start") . "</button>";
                         }
                     $modal_body[] = "</div>";
                 $modal_body[] = "</div>";
             $modal_body[] = "</div>";
 
-            // === 分區：Live logs（flex 柱——最新喺頂；觀察器＋1s 增量輪詢） ===
+            // === 分區：Live logs（flex 柱——最新喺頂；下方 Refresh 掣重載本頁） ===
             $modal_body[] = "<div class='settings_section'>";
-                $modal_body[] = "<div class='settings_section_title'>" . hkai__i18n()->get("settings.server.section_live_logs") . "</div>";
+                $modal_body[] = "<div class='settings_section_title'>" . hkai()->i18n()->get("settings.server.section_live_logs") . "</div>";
                 $modal_body[] = $server_log_html;
             $modal_body[] = "</div>";
 
         $modal_body[] = "</div>";
 
+        // === footer ===（單一 Refresh 掣——重載本頁內容：狀態／按鈕／日誌一次過重畫）
+        $modal_footer   = [];
+        $modal_footer[] = "<div class='modal__content-footer'>";
+            $modal_footer[] = "<div class='sc_btn_wrapper'>";
+                $modal_footer[] = "<button type='button' class='button' data-btn='server_refresh'>" . hkai()->i18n()->get("common.refresh") . "</button>";
+            $modal_footer[] = "</div>";
+        $modal_footer[] = "</div>";
+
         $modal = [
             "header" => implode("\r\n", $modal_header),
+            "footer" => implode("\r\n", $modal_footer),
             "body"   => implode("\r\n", $modal_body),
         ];
 

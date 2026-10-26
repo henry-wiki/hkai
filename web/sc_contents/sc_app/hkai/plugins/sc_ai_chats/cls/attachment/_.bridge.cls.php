@@ -8,11 +8,13 @@ namespace sc\app\hkai\plugins\sc_ai_chats\attachment;
 
 class attachment_Class
 {
-    use action\get_uploads_dir;
     use action\store_uploaded_image;
     use action\get_rows_by_ids;
     use action\bind_to_message;
     use action\delete_by_message;
+    use action\delete_by_project;
+    use action\save_extract_result;
+    use action\import_draft_file;
 
     private static $instance = null;
 

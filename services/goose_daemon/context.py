@@ -9,10 +9,11 @@ context.py
 import time
 
 from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+from .runtime import identity
 
-# ===== 程式身份（心跳／台帳用——單一來源） =====
-PROGRAM_NAME = "goose_daemon"
-PROGRAM_LABEL = "goose_daemon.main"
+# ===== 程式身份（心跳／台帳用——常量源：runtime/identity.py） =====
+PROGRAM_NAME = identity.DAEMON_PROGRAM_NAME
+PROGRAM_LABEL = identity.DAEMON_PROGRAM_LABEL
 
 # 心跳間隔（秒——heartbeat 執行緒每拍一次；主迴圈節奏另見 daemon_manager.MAIN_LOOP_INTERVAL_SEC）
 HEARTBEAT_INTERVAL_SEC = 1.0
@@ -34,9 +35,6 @@ LOCALDB_DIR = DATA_DIR / "localdb"
 
 # 程序台帳（append-only JSONL——核心路徑，唔靠 runtime.json）
 PROCESS_FILE_LIST = PROCESS_DIR / "process_list.jsonl"
-
-# 活躍標記（presence——有工人即刷新；畀 presence.exit_when_idle 計閒置）
-PRESENCE_FILE = PROCESS_DIR / (PROGRAM_NAME + ".last_presence")
 
 # 訊息目錄（站台根 data/messages——PHP 寫入；daemon 讀取）
 MESSAGES_DIR = DATA_DIR / "messages"
@@ -60,6 +58,13 @@ RUNTIME_CONFIG_FILE = DATA_DIR / "runtime.json"
 
 # ==========================================
 # 統一獲取全局單例（Bridging Functions）
+#
+# 各函數刻意「函數內延遲 import」——運行時單向（context 先載入、使用時才拉子模組）；
+# basedpyright 靜態掃描會標成 import cycle，故本檔停用該規則（檔案級）。
+# pyright: reportImportCycles=false
+#
+# 各函數刻意「函數內延遲 import」——運行時單向（context 先載入、使用時才拉子模組），
+# 唔存在實際循環；basedpyright 靜態掃描仍會視為 import cycle，故逐行標註忽略。
 # ==========================================
 def timer():
     """取得 timer_class 單例。"""
@@ -68,7 +73,9 @@ def timer():
 
 def daemon():
     """取得 daemon_manager_class 單例。"""
-    from .daemon.daemon_manager import daemon_manager_class  # 延遲——避免循環 import
+    from .daemon.daemon_manager import (
+        daemon_manager_class,  # 延遲——避免循環 import
+    )
     return daemon_manager_class.get_instance()
 
 def get_timestamp() -> int:
@@ -88,22 +95,28 @@ def get_datetime() -> str:
 def conversation_sync():
     """取得 conversation_sync_class 單例。"""
     # 延遲——避免循環 import
-    from .worker.engine.conversation_sync import conversation_sync_class
+    from .worker.agent.conversation_sync import (
+        conversation_sync_class,
+    )
     return conversation_sync_class.get_instance()
 
 def acp_client():
     """取得 acp_client 單例。"""
-    from .worker.engine.acp_client import acp_client  # 延遲——避免循環 import
+    from .worker.agent.acp_client import acp_client  # 延遲——避免循環 import
     return acp_client.get_instance()
 
-def engine_entry():
-    """取得 engine_entry_class 單例。"""
-    from .worker.engine.engine_entry import engine_entry_class  # 延遲——避免循環 import
-    return engine_entry_class.get_instance()
+def entry():
+    """取得 entry_class 單例。"""
+    from .worker.agent.entry import (
+        entry_class,  # 延遲——避免循環 import
+    )
+    return entry_class.get_instance()
 
 def job_executor():
     """取得 job_executor_class 單例。"""
-    from .worker.job_executor import job_executor_class  # 延遲——避免循環 import
+    from .worker.job_executor import (
+        job_executor_class,  # 延遲——避免循環 import
+    )
     return job_executor_class.get_instance()
 
 def message_log():
@@ -155,7 +168,6 @@ __all__ = [
     "MESSAGES_DIR",
     "MESSAGES_POLLING_DIR",
     "NEED_MOTHER",
-    "PRESENCE_FILE",
     "PROCESS_DIR",
     "PROCESS_FILE_LIST",
     "PROGRAM_LABEL",
@@ -170,7 +182,7 @@ __all__ = [
     "goose_db",
     "get_datetime",
     "get_timestamp",
-    "engine_entry",
+    "entry",
     "conversation_sync",
     "job_executor",
     "job_stdout",

@@ -14,8 +14,8 @@ function sc_to_web_path($filepath)
         return false;
     }
     
-    // 統一正斜線（Windows 反斜線 → 正斜線——匹配與輸出一致）
-    $filepath = str_replace("\\", "/", $filepath);
+    // 路徑正規化（Apache FastCGI 交 //./G:/…——唔剝就同 SC_DOCUMENT_ROOT 對唔上，會漏磁碟路徑出 URL）
+    $filepath = sc_normalize_path($filepath);
     
     // SC_DOCUMENT_ROOT 同源正規化（dirname() 在 Windows 回傳反斜線）
     $document_root = str_replace("\\", "/", SC_DOCUMENT_ROOT);

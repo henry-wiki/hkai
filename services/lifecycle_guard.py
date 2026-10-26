@@ -3,7 +3,7 @@
 規則：
 - 程序只准活喺「設定檔存在」＋「BUILD 未變」兩個條件之下；任一失效 → 呼叫端記錄後自我退出。
 - BUILD 位置＝站台根（含 web／services 的資料夾）；值由 lab build 寫入（YYYYMMDD.HHMMSS）。
-- 本模組唔知引擎細節：只回傳判斷結果，退出方式由呼叫端決定。
+- 本模組唔知agent細節：只回傳判斷結果，退出方式由呼叫端決定。
 """
 
 from pathlib import Path

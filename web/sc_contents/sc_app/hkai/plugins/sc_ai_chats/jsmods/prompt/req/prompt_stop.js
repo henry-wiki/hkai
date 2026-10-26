@@ -29,12 +29,13 @@ class _prompt_stop {
         const project_slug = project_instance.get_project_slug();
         const chats = registry().sc_ai_chats();
 
+        // 橋接駁（同域——取 active chat_sid）
+        const prompt_instance = await chats.prompt();
+
         const payload = {};
             Object.assign(payload, request_data);
         payload.project_slug = project_slug;
-        const chat_instance = await chats.chat();
-
-        payload.chat_sid     = chat_instance.get_chat_sid();
+        payload.chat_sid     = await prompt_instance.get_active_chat_sid();
 
         // before 程序（經 before_send callback——存在但唔強求執行）
         if (

@@ -37,13 +37,10 @@ class storage_Class
         return $this->storageDir;
     }
 
-    // 取得 messages 目錄（live 訊息桶——值由 hkai_config folders.messages 帶；高頻使用——單一路徑來源）
+    // 取得 messages 目錄（live 訊息桶——sc_config 絕對路徑；高頻使用——單一路徑來源）
     public function get_messages_dir()
     {
-        $folders  = hkai__core()->get_hkai_configs("folders");
-        $messages = $folders["messages"];
-
-        return $this->get_storage_dir() . "/" . $messages;
+        return sc_get_config("hkai.messages_polling_dir");
     }
 
 }

@@ -144,4 +144,14 @@ class sc_ai_chats_Class
         return attachment\attachment_Class::getInstance();
     }
 
+    /**
+     * 草稿域（draft_Class——建立／讀取／丟棄）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_chats\draft\draft_Class
+     */
+    public function draft()
+    {
+        return draft\draft_Class::getInstance();
+    }
+
 }

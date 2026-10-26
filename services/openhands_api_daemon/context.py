@@ -53,7 +53,7 @@ def child_memory_guard():
 
 def openhands_api_entry():
     """取得 openhands_api_entry_class 單例。"""
-    from .engine.openhands_api_entry import openhands_api_entry_class  # 延遲——避免循環 import
+    from .agent.openhands_api_entry import openhands_api_entry_class  # 延遲——避免循環 import
     return openhands_api_entry_class.get_instance()
 
 def msg_processor():

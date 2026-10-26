@@ -69,11 +69,11 @@ sc_ai_status_bar()->status_bar()->add_status_item("chat", function () {
     // 依語境定目標（歸檔語境＝離開歸檔（箭頭圖示）／普通＝入歸檔（盒仔圖示）——後台出；URL 一變由 status bar 區重渲更新）
     if (sc_ai_chats()->chat()->is_archive_chat_segment(sc_get_friendly(1))) {
         $archive_url   = "/" . $project_segment . "/";
-        $archive_title = hkai__i18n()->get("chat.archive_leave");
+        $archive_title = hkai()->i18n()->get("chat.archive_leave");
         $archive_icon  = "fa-solid fa-arrow-left";
     } else {
         $archive_url   = "/" . $project_segment . "/archive/";
-        $archive_title = hkai__i18n()->get("chat.archive");
+        $archive_title = hkai()->i18n()->get("chat.archive");
         $archive_icon  = "fa-solid fa-box-archive";
     }
     
@@ -89,7 +89,7 @@ $plugin->add_request_action("prompt_send", __DIR__ . "/request/prompt/prompt_sen
 $plugin->add_request_action("upload_attachment", __DIR__ . "/request/prompt/upload_attachment.php");
 $plugin->add_request_action("message_poll", __DIR__ . "/request/message/message_poll.php");
 $plugin->add_request_action("prompt_stop", __DIR__ . "/request/prompt/prompt_stop.php");
-$plugin->add_request_action("daemon_engine_switch", __DIR__ . "/request/prompt/daemon_engine_switch.php");
+$plugin->add_request_action("agent_switch", __DIR__ . "/request/prompt/agent_switch.php");
 $plugin->add_request_action("queue_cancel", __DIR__ . "/request/queue/queue_cancel.php");
 $plugin->add_request_action("queue_clear", __DIR__ . "/request/queue/queue_clear.php");
 $plugin->add_request_action("queue_dispatch", __DIR__ . "/request/queue/queue_dispatch.php");
@@ -100,6 +100,15 @@ $plugin->add_request_action("chat_archive", __DIR__ . "/request/chat/chat_archiv
 $plugin->add_request_action("chat_restore", __DIR__ . "/request/chat/chat_restore.php");
 $plugin->add_request_action("chat_item_fetch", __DIR__ . "/request/chat/chat_item_fetch.php");
 $plugin->add_request_action("permission_decide", __DIR__ . "/request/permission/permission_decide.php");
+
+
+
+$plugin->add_request_action("draft_create", __DIR__ . "/request/draft/draft_create.php");
+$plugin->add_request_action("draft_fetch", __DIR__ . "/request/draft/draft_fetch.php");
+$plugin->add_request_action("draft_discard", __DIR__ . "/request/draft/draft_discard.php");
+$plugin->add_request_action("draft_upload", __DIR__ . "/request/draft/draft_upload.php");
+$plugin->add_request_action("draft_delete_file", __DIR__ . "/request/draft/draft_delete_file.php");
+$plugin->add_request_action("draft_save_meta", __DIR__ . "/request/draft/draft_save_meta.php");
 
 // 注入 storage 目錄（storage dir = sc_storage/{app 名}——由執行語境 controller 提供）
 sc_ai_chats()->storage()->set_storage_dir($controller->get_storage_dir());

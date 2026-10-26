@@ -24,10 +24,10 @@ trait build_tab_rule_foot_note
         // 判定：專案已有規則（非空檔）→ 顯示最後更新時間（標籤＝i18n）
         if (trim($rule_content) !== "") {
             $rule_updated_at = date("Y-m-d H:i:s", (int)@filemtime($rule_file));
-            $foot_note_text  = hkai__i18n()->get("rule.updated_label") . $rule_updated_at;
+            $foot_note_text  = hkai()->i18n()->get("rule.updated_label") . $rule_updated_at;
         } else {
             // 否則（缺檔／空檔）→ 默認版本提示字眼（i18n——告訴用戶可撳儲存建立）
-            $foot_note_text = hkai__i18n()->get("rule.default_note");
+            $foot_note_text = hkai()->i18n()->get("rule.default_note");
         }
 
         // 顯示路徑（統一 "/"——G:/ 樣）

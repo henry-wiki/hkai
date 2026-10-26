@@ -91,7 +91,7 @@ class msg_processor_class:
 
     def _process_start(self, msg_conf_path: Path) -> None:
         """單次 spawn 執行查詢（重試全權交給 aider 內建退避機制——同進程零 respawn）＋連線逾時兜底。"""
-        # 判定：暖池模式 → 同程序執行（引擎已預載——無 spawn、無通道）
+        # 判定：暖池模式 → 同程序執行（agent已預載——無 spawn、無通道）
         if daemon().get_daemon_conf_data().get("daemon_warm_workers", False):
             self._process_start_warm(msg_conf_path)
             return
@@ -167,7 +167,7 @@ class msg_processor_class:
         self._finalize(proc)
 
     def _process_start_warm(self, msg_conf_path: Path) -> None:
-        """暖模式執行：同程序跑 job（引擎已預載）；取消／逾時由 daemon 監督裁決。"""
+        """暖模式執行：同程序跑 job（agent已預載）；取消／逾時由 daemon 監督裁決。"""
         # 狀態轉換：派工（→ queued）——事件與冷路徑一致（FSM 契約不變）
         self._transition_status(EVENT_QUERY_DISPATCHED, "Dispatching to warm worker...")
 

@@ -5,7 +5,7 @@ runner.py
 goose_daemon worker 子程序入口（由 daemon 調度器 spawn；承載 msg_conf 的處理語境）。
 
 入口：
-    run  常駐工人——載入引擎一次；迴圈收工單；同程序執行、無子程序
+    run  常駐工人——載入agent一次；迴圈收工單；同程序執行、無子程序
 
 職責：在獨立程序內重新載入 daemon 設定 → 交給 job_executor 完成查詢（阻塞的是 worker，不是 daemon）。
 
@@ -21,64 +21,64 @@ from multiprocessing.queues import Queue
 from pathlib import Path
 
 from .. import context
-from ..context import daemon, engine_entry, job_executor, message_log, message_status
-from ..runtime import heartbeat_engine, heartbeat_worker, lifecycle, process, sc_logger
+from ..context import daemon, entry, job_executor, message_log, message_status
+from ..runtime import heartbeat_agent, heartbeat_worker, lifecycle, process, sc_logger
 from . import memory_guard, report
-from .engine import engine_chat_mode
+from .agent import chat_mode
 
 
 def _abort_job_on_mother_gone() -> None:
-    """母親死收尾：標記取消（引擎按正常流程停）→ 等引擎退 → 自殺。
+    """母親死收尾：標記取消（agent按正常流程停）→ 等agent退 → 自殺。
 
     上游：heartbeat_worker 心跳執行緒（母親唔在）
-    下游：message_status／message_log（寫狀態）→ heartbeat_engine（讀引擎 pid）→ lifecycle.exit_self
+    下游：message_status／message_log（寫狀態）→ heartbeat_agent（讀agent pid）→ lifecycle.exit_self
     """
-    engine_pid = heartbeat_engine.get_engine_pid()
-    engine_create_time = heartbeat_engine.get_engine_create_time()
+    agent_pid = heartbeat_agent.get_agent_pid()
+    agent_create_time = heartbeat_agent.get_agent_create_time()
 
-    # 判定：冇引擎（工人閒置）→ 直接自殺
-    if engine_pid == 0:
+    # 判定：冇agent（工人閒置）→ 直接自殺
+    if agent_pid == 0:
         lifecycle.exit_self("mother gone (idle)")
 
-    # 1) 標記取消（watchdog 見到即送 session/cancel——引擎按正常流程停）
+    # 1) 標記取消（watchdog 見到即送 session/cancel——agent按正常流程停）
     _ = message_status().apply("FAILURE_RECORDED")
     _ = message_log().append_error_log("MOTHER_GONE_ABORT", "mother gone — job aborted")
 
-    # 2) 等引擎退（最多 6 秒——唔強殺）
-    _wait_engine_exit(engine_pid, engine_create_time, 6)
+    # 2) 等agent退（最多 6 秒——唔強殺）
+    _wait_agent_exit(agent_pid, agent_create_time, 6)
 
     # 3) 自殺（狀態已寫）
     lifecycle.exit_self("mother gone (job aborted)")
 
 
-def _wait_engine_exit(engine_pid: int, engine_create_time: int, wait_seconds: int) -> None:
-    """逐秒等引擎消失（最多 wait_seconds 秒；核 create_time 防 pid 重用）。"""
+def _wait_agent_exit(agent_pid: int, agent_create_time: int, wait_seconds: int) -> None:
+    """逐秒等agent消失（最多 wait_seconds 秒；核 create_time 防 pid 重用）。"""
     elapsed_seconds = 0
 
-    # 逐秒檢查引擎仍在否
+    # 逐秒檢查agent仍在否
     while elapsed_seconds < wait_seconds:
-        # 判定：引擎已消失（或被重用）→ 收工
-        if _engine_is_alive(engine_pid, engine_create_time) is False:
+        # 判定：agent已消失（或被重用）→ 收工
+        if _agent_is_alive(agent_pid, agent_create_time) is False:
             return
 
         time.sleep(1.0)
         elapsed_seconds = elapsed_seconds + 1
 
 
-def _engine_is_alive(engine_pid: int, engine_create_time: int) -> bool:
-    """引擎仍在跑？（整數毫秒 create_time 精確對比——唔同＝pid 已被重用）。"""
-    current_create_time = process.get_process_create_time(engine_pid)
+def _agent_is_alive(agent_pid: int, agent_create_time: int) -> bool:
+    """agent仍在跑？（整數毫秒 create_time 精確對比——唔同＝pid 已被重用）。"""
+    current_create_time = process.get_process_create_time(agent_pid)
 
     # 判定：讀唔到（已死）→ 唔在
     if current_create_time is None:
         return False
 
     # 判定：create_time 相同＝仍係同一程序（唔同＝pid 已被重用）
-    return current_create_time == engine_create_time
+    return current_create_time == agent_create_time
 
 
 def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]", chat_id: str, message_id: str) -> None:
-    """工人入口（常駐：預載引擎一次 → 迴圈收工單；生死全由 daemon 裁決）。"""
+    """工人入口（常駐：預載agent一次 → 迴圈收工單；生死全由 daemon 裁決）。"""
     # 啟動即記錄自己 pid ＋母親 pid＋建立時間（生命週期判斷用）
     process.init()
 
@@ -88,8 +88,8 @@ def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]"
     # 子程序重新載入 daemon 設定（spawn 後為新程序——重新讀 runtime.json）
     _ = daemon().load_config()
 
-    # chat_mode 對映（UI 模 → goose 原生模式；依本引擎組重建）
-    _ = engine_chat_mode.init()
+    # chat_mode 對映（UI 模 → goose 原生模式；依本agent組重建）
+    _ = chat_mode.init()
 
     # 母親死收尾次序（收工 → 寫狀態 → 自殺）——心跳執行緒呼叫
     heartbeat_worker.set_abort_handler(_abort_job_on_mother_gone)
@@ -100,7 +100,7 @@ def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]"
     memory_guard.start()
 
     # 預載檢查（goose 執行檔——輕量；整條 worker 生命只做一次）
-    engine_entry().preload()
+    entry().preload()
 
     # ── 工人主命脈：等單 → 做單 → 回報（循環到閒置超時或母親叫停為止）──
     # 收尾交 finally：multiprocessing 子程序正常 return 唔會跑 atexit（實測）——

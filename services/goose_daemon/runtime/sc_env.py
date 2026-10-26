@@ -9,12 +9,11 @@ sc_env.py
 - get_env()         取 dict 值（缺 key → 記 log＋None）
 - load_api_keys()   讀 .env → 將 *_API_KEY 寫入 os.environ（有值覆寫）
 
-上游：daemon_manager（開機一次）、engine_entry（每張工單）
+上游：daemon_manager（開機 init／load_api_keys）、job_executor（每張工單 load_api_keys）、paths（get_env）
 下游：python-dotenv（dotenv_values——quote／空格／跳脫邊界交標準庫）
 """
 
 import os
-from typing import Any
 
 from dotenv import dotenv_values
 
@@ -22,10 +21,10 @@ from ..context import ENV_FILE
 from . import sc_logger
 
 # 已讀入嘅 .env（key → value；init_env() 建立）
-_env_values = {}
+_env_values: dict[str, str | None] = {}
 
 
-def init_env() -> dict:
+def init_env() -> dict[str, str | None]:
     """讀整份 .env（含任何 key——唔限 API）→ 記憶體 dict；回傳新表。
 
     讀取失敗（權限／編碼等）→ 記 log 後直接退出（冇 .env 就冇 key，唔可以繼續行）。
@@ -39,13 +38,12 @@ def init_env() -> dict:
         from . import lifecycle
 
         lifecycle.exit("env read failed", 1)
-        return _env_values
 
     _env_values = dict(env_values)
     return _env_values
 
 
-def get_env(env_key: str) -> Any:
+def get_env(env_key: str) -> str | None:
     """取 .env 值（缺 key → 記 log 回 None；裸 key／無值 → None）。"""
     # 判定：key 唔存在 → 記 log 並回 None
     if env_key not in _env_values:

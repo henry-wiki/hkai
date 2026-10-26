@@ -21,8 +21,8 @@ trait handle_settings_save_general
             return sc_response()->json(["ok" => false, "errors" => $errors], 400);
         }
 
-        // 寫入 sc_config/hkai/settings.json（只動 general 組）
-        hkai__core()->write_user_settings("general", ["language" => $language]);
+        // 寫入 data/settings.json（只動 general.language）
+        hkai()->settings()->set("general.language", $language);
 
         return sc_response()->json(["ok" => true]);
     }
@@ -34,13 +34,13 @@ trait handle_settings_save_general
 
         // 判定：語言為空 → 錯誤
         if ($language === "") {
-            $errors["language"] = hkai__i18n()->get("settings.general.error_language_empty");
+            $errors["language"] = hkai()->i18n()->get("settings.general.error_language_empty");
         }
 
         // 判定：語言非空但唔支援 → 錯誤（現行語言檔＝cls/i18n/lang）
         if ($language !== "") {
             if (!in_array($language, ["zh-HK", "en-US"], true)) {
-                $errors["language"] = hkai__i18n()->get("settings.general.error_language_unsupported") . $language;
+                $errors["language"] = hkai()->i18n()->get("settings.general.error_language_unsupported") . $language;
             }
         }
 

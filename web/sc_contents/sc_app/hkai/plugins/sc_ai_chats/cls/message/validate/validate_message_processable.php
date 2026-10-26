@@ -87,10 +87,10 @@ trait validate_message_processable
             return [
                 "ok"      => false,
                 "code"    => "E_VALIDATION_RECOVERABLE",
-                "title"   => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.title"),
+                "title"   => hkai()->i18n()->get("error.E_VALIDATION_RECOVERABLE.title"),
                 "message" => implode("
 ", $error_messages),
-                "hint"    => hkai__i18n()->get("error.E_VALIDATION_RECOVERABLE.hint"),
+                "hint"    => hkai()->i18n()->get("error.E_VALIDATION_RECOVERABLE.hint"),
                 "errors"  => $errors,
             ];
         }

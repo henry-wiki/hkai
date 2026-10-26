@@ -24,8 +24,7 @@ class project_Class
     use request\handle_project_restore;
     use resolver\get_default_project;
     use resolver\normalize_project_path;
-    use resolver\get_bare_project_slug;
-    use resolver\is_archive_project_key;
+    use resolver\resolve_project_slug;
     use slug\add_reserved_slugs;
     use slug\generate_project_slug;
     use slug\is_reserved_slug;

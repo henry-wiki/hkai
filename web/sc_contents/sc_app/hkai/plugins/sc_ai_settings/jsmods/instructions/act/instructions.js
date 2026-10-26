@@ -47,49 +47,6 @@ class _instructions {
         editor_controller.teardown_editor();
     }
 
-    // 儲存（確認後——編輯器現值 → 後端寫 storage 工作檔；成功重載分頁）
-    async settings_save_instructions(j_modal) {
-        // registry 取值（靜態——直回單例）
-        const shared = registry().shared();
-
-        // 判定：用戶唔確認 → 唔做（標準確認框——讀 data-confirm_msg）
-        const j_save_button = j_modal.find("[data-btn='save_instructions']");
-        if (!await shared.sc_web_utils().is_confirmed(j_save_button)) {
-            return;
-        }
-
-        // spawn 取 modal 狀態（active_section＝現行 item）
-        const modal_domain = await (await registry().sc_ai_settings()).modal();
-        const modal_module = await modal_domain.act().settings_modal();
-
-        const instructions_name = modal_module.active_section;
-
-        const editor_controller = await this.get_editor_controller();
-        const content           = editor_controller.read_editor_content();
-
-        const request_data = {};
-        request_data["instructions_name"] = instructions_name;
-        request_data["content"]           = content;
-
-        const result = await shared.sc_request().post_json("/request/hkai/settings_save_instructions/", request_data);
-
-        // 判定：請求失敗（無回應）→ alert 後停
-        if (result === null) {
-            alert("Save failed: request error");
-            return;
-        }
-
-        // 判定：後端拒絕 → alert 後停
-        if (!result.ok) {
-            alert(result.error);
-            return;
-        }
-
-        alert("Saved.");
-
-        await this.reload_instructions_section(instructions_name);
-    }
-
     // Reset（確認後——後端刪走 storage 自訂版；成功重載分頁回出廠默認）
     async settings_reset_instructions(j_modal) {
         // registry 取值（靜態——直回單例）

@@ -13,9 +13,13 @@ lifecycle.py — 程序生死契約（bridge 專用；只依賴標準庫＋psuti
 母親一死，子孫會被系統重新掛到 root，就唔再屬於原本子樹。
 """
 
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
+# （psutil 冇 type stub——「類型部分未知」一律關，其餘照檢）
+
 import os
 import threading
 import time
+from typing import NoReturn
 
 import psutil
 
@@ -40,13 +44,13 @@ def _safe_log(message: str) -> None:
         pass
 
 
-def exit(reason: str = "", exit_code: int = 0) -> None:
+def exit(reason: str = "", exit_code: int = 0) -> NoReturn:
     """自殺（連子孫）：先殺子孫 → 再自殺。"""
     exit_children()
     exit_self(reason, exit_code)
 
 
-def exit_self(reason: str = "", exit_code: int = 0) -> None:
+def exit_self(reason: str = "", exit_code: int = 0) -> NoReturn:
     """只自殺：清狀態／在線檔 → 記 log → os._exit（死亡出口）。"""
     # 刪自己狀態檔（heartbeat 擁有——延遲 import 免循環）
     from . import heartbeat
@@ -96,7 +100,7 @@ def _watch_loop() -> None:
 
         # 判定：BUILD 已變（站台已重新發佈）→ 記錄後自我退出，等新版本再拉起
         if build_watch_result["changed"] is True:
-            exit("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"])
+            exit("BUILD changed " + str(build_watch_result["previous"]) + " -> " + str(build_watch_result["current"]))
 
         time.sleep(1.0)
 

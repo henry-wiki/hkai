@@ -13,7 +13,7 @@ msg_processor.py
     queued（建檔獲派工）→ connecting（子程序啟動＋等待首 chunk）→ summarizing（摘要串流）→ replying（主回答）→ completed / failed（留 polling 待 PHP 收尾）
 
 執行模式（daemon_warm_workers——runtime 設定）：
-    冷路徑（false）每訊息 spawn 引擎子程序（逾時由本模組等待迴圈兜底）
+    冷路徑（false）每訊息 spawn agent子程序（逾時由本模組等待迴圈兜底）
     暖路徑（true）  暖 worker 同程序執行 run_job（取消／逾時由 daemon 監督兜底）
 """
 
@@ -56,7 +56,7 @@ class msg_processor_class:
         流程：
 
             messages/polling/{project_slug}/{message_id}/msg_conf.json
-            -> 單次 spawn 子程序（重試由 引擎自理；連線逾時卡死兜底）
+            -> 單次 spawn 子程序（重試由 agent自理；連線逾時卡死兜底）
             -> 認領（原子——msg_claim）
             -> 連通：子程序首次輸出建立 msg_stdout
             -> 完成/失敗：四檔一併移入 archive/
@@ -90,8 +90,8 @@ class msg_processor_class:
         self._process_start(msg_conf_path)
 
     def _process_start(self, msg_conf_path: Path) -> None:
-        """單次 spawn 執行查詢（重試全權交給 引擎——同進程零 respawn）＋連線逾時兜底。"""
-        # 判定：暖池模式 → 同程序執行（引擎已預載——無 spawn、無通道）
+        """單次 spawn 執行查詢（重試全權交給 agent——同進程零 respawn）＋連線逾時兜底。"""
+        # 判定：暖池模式 → 同程序執行（agent已預載——無 spawn、無通道）
         if daemon().get_daemon_conf_data().get("daemon_warm_workers", False):
             self._process_start_warm(msg_conf_path)
             return
@@ -110,7 +110,7 @@ class msg_processor_class:
         # 跨程序事件通道（FSM 內部——FSM 為唯一狀態管理者；子程序自行套用並回報）
         state_channel = msg_state_machine().create_channel()
 
-        # spawn 子程序（唯一一次——重試由 引擎自理）
+        # spawn 子程序（唯一一次——重試由 agent自理）
         proc = multiprocessing.Process(
             target=openhands_api_entry().run_coder,
             args=(daemon_conf_path, str(msg_conf_path), state_channel),
@@ -118,7 +118,7 @@ class msg_processor_class:
         )
         proc.start()  # 非阻塞啟動——子程序背景執行，主程序立刻繼續
 
-        # 台帳（append-only JSONL）：引擎子程序——worker 為 spawn 者（本程序即父程序）
+        # 台帳（append-only JSONL）：agent子程序——worker 為 spawn 者（本程序即父程序）
         chat_id    = str(msg_main().get_chat_id())
         message_id = str(msg_main().get_message_id())
         if proc.pid is not None:
@@ -131,7 +131,7 @@ class msg_processor_class:
                 message_id=message_id,
             )
 
-        # 程序狀態（自我心跳）：引擎子程序由 worker 代寫（它是監護人——子程序自己不寫檔；心跳執行緒每秒覆寫）
+        # 程序狀態（自我心跳）：agent子程序由 worker 代寫（它是監護人——子程序自己不寫檔；心跳執行緒每秒覆寫）
         if proc.pid is not None:
             process_status.register("openhands_api", proc.pid, "openhands_api_entry.run_coder")
 
@@ -167,7 +167,7 @@ class msg_processor_class:
         self._finalize(proc)
 
     def _process_start_warm(self, msg_conf_path: Path) -> None:
-        """暖模式執行：同程序跑 job（引擎已預載）；取消／逾時由 daemon 監督裁決。"""
+        """暖模式執行：同程序跑 job（agent已預載）；取消／逾時由 daemon 監督裁決。"""
         # 狀態轉換：派工（→ queued）——事件與冷路徑一致（FSM 契約不變）
         self._transition_status(EVENT_QUERY_DISPATCHED, "Dispatching to warm worker...")
 

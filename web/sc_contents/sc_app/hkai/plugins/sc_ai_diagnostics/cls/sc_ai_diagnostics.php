@@ -45,16 +45,6 @@ class sc_ai_diagnostics_Class
     }
 
     /**
-     * system_env 域（system_env_Class——系統級環境索要／寫檔／渲染）
-     *
-     * @return \sc\app\hkai\plugins\sc_ai_diagnostics\system_env\system_env_Class
-     */
-    public function system_env()
-    {
-        return system_env\system_env_Class::getInstance();
-    }
-
-    /**
      * project_env 域（project_env_Class——專案級環境索要（帶專案路徑））
      *
      * @return \sc\app\hkai\plugins\sc_ai_diagnostics\project_env\project_env_Class

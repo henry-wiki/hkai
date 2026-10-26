@@ -500,9 +500,6 @@
 .instructions-editor[data-edit_mode='0'] ~ .modal__content-footer [data-btn='reset_instructions'] {
     display: none;
 }
-.instructions-editor[data-edit_mode='0'] ~ .modal__content-footer [data-btn='save_instructions'] {
-    display: none;
-}
 /* 編輯區貼邊全幅（高度隨 flex 撐滿；底色接 modal 底＝無縫） */
 .instructions-editor__mount {
     flex: 1;

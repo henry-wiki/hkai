@@ -26,17 +26,17 @@ class _model_activity {
     // 讀取 model selector 活動（成功回 model info bundle、查無回 null；scope 用當前存低嗰個）
     async get_activity() {
         // 動態載入（registry——用先載）
-        const sc_page_activity_instance = await registry().sc_page_activity();
+        const sc_activity_instance = await registry().sc_activity();
 
-        return await sc_page_activity_instance.get_activity("model_selector", this.activity_scope);
+        return await sc_activity_instance.get_activity("model_selector", this.activity_scope);
     }
 
     // 寫入 model selector 活動（model info 全件直送——傳咩寫咩；scope 用當前存低嗰個）
     async set_activity(model_info) {
         // 動態載入（registry——用先載）
-        const sc_page_activity_instance = await registry().sc_page_activity();
+        const sc_activity_instance = await registry().sc_activity();
 
-        await sc_page_activity_instance.set_activity("model_selector", model_info, this.activity_scope);
+        await sc_activity_instance.set_activity("model_selector", model_info, this.activity_scope);
     }
 
     // 更新頁面活動記憶（由當前選取砌包——讀 modal 選取（provider／model／active effort）打包交核心；無選取＝唔寫）

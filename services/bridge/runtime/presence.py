@@ -24,7 +24,7 @@ def touch() -> None:
 
     try:
         presence_file.parent.mkdir(parents=True, exist_ok=True)
-        presence_file.write_text(get_datetime(), encoding="utf-8")
+        _ = presence_file.write_text(get_datetime(), encoding="utf-8")
     except OSError:
         pass
 

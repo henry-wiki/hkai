@@ -34,13 +34,4 @@ class sc_ai_health_Class
         return health\health_Class::getInstance();
     }
 
-    /**
-     * heartbeat 域（heartbeat_Class——config／beat）
-     *
-     * @return \sc\app\hkai\plugins\sc_ai_health\heartbeat\heartbeat_Class
-     */
-    public function heartbeat()
-    {
-        return heartbeat\heartbeat_Class::getInstance();
-    }
 }

@@ -29,7 +29,7 @@ trait get_host_port_test_result
 
         // 判定：連不上（refused／timeout／DNS 失敗）→ error
         if ($response_body === false) {
-            return ["state" => "error", "message" => hkai__i18n()->get("settings.server.test_no_response")];
+            return ["state" => "error", "message" => hkai()->i18n()->get("settings.server.test_no_response")];
         }
 
         // 判定：HTTP 2xx（成功範圍——分段判、單一條件）
@@ -52,10 +52,10 @@ trait get_host_port_test_result
 
         // 判定：身份對得上 → pass
         if ($is_bridge_identity) {
-            return ["state" => "pass", "message" => hkai__i18n()->get("settings.server.test_ok")];
+            return ["state" => "pass", "message" => hkai()->i18n()->get("settings.server.test_ok")];
         }
 
         // 有回應但唔似本機 server（例：port 被其他服務佔用）→ error
-        return ["state" => "error", "message" => hkai__i18n()->get("settings.server.test_occupied") . $http_code . ")"];
+        return ["state" => "error", "message" => hkai()->i18n()->get("settings.server.test_occupied") . $http_code . ")"];
     }
 }

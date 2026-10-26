@@ -21,15 +21,14 @@ trait handle_save_provider_settings
             return sc_response()->json(["ok" => false, "error" => "unknown provider"], 400);
         }
 
-        $oauth_keys    = hkai__sc_oauth_keys();
         $env_key       = $provider_item["env_key"];
-        $current_value = $oauth_keys->get_key($env_key);
+        $current_value = sc_get_env($env_key, "");
 
         // 值正規化（剝外層引號——用戶可能連引號一齊貼上）
-        $api_token = $oauth_keys->normalize_value($api_token);
+        $api_token = $this->normalize_token($api_token);
 
         // 判定：提交值＝現值 mask（未改動）→ no-op 直接 ok
-        $current_mask = $oauth_keys->make_mask($current_value);
+        $current_mask = $this->mask_token($current_value);
         if ($api_token === $current_mask) {
             return sc_response()->json(["ok" => true]);
         }
@@ -39,7 +38,7 @@ trait handle_save_provider_settings
 
         // 判定：含換行 → 欄位錯誤（防寫入多行）
         if (preg_match("/[\r\n]/", $api_token)) {
-            $errors["api_token"] = hkai__i18n()->get("settings.provider.token_multiline_error");
+            $errors["api_token"] = hkai()->i18n()->get("settings.provider.token_multiline_error");
         }
 
         // 判定：有錯 → 400＋errors
@@ -47,8 +46,8 @@ trait handle_save_provider_settings
             return sc_response()->json(["ok" => false, "errors" => $errors], 400);
         }
 
-        // 寫入 .env（單鍵更新——原子；$api_token 為空＝以空白值寫入＝清除）
-        $oauth_keys->write_key($env_key, $api_token);
+        // 寫入 .env（sc_env 原子覆蓋——$api_token 為空＝以空值寫入＝清除）
+        sc_env()->replace($env_key, $api_token);
 
         return sc_response()->json(["ok" => true]);
     }

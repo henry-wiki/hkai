@@ -380,7 +380,7 @@ class acp_agent_class:
             gpt_prompts_copy.main_system = gpt_prompts_copy.main_system + "\n\n" + system_prompt_text.replace("{", "{{").replace("}", "}}")
             coder.gpt_prompts = gpt_prompts_copy
 
-        # 歷史注入（client 帶入——done_messages；restore_chat_history=False＝唔讀引擎自身歷史）
+        # 歷史注入（client 帶入——done_messages；restore_chat_history=False＝唔讀agent自身歷史）
         done_messages = []
 
         # 逐條歷史 → aider 訊息形（{role, content}——aider done_messages 注入形）

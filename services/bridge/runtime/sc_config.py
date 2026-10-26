@@ -12,13 +12,13 @@ sc_config.py — 全域唯一嘅 JSON 設定讀取。
 """
 
 import sys
-from typing import Any
+from typing import cast
 
 from ..utils.io import read_json
 from . import sc_logger
 
 # 已載入設定（init_config 一次寫入；其後全程序共用同一份）
-_configs: dict = {}
+_configs: dict[str, object] = {}
 
 
 def init_config() -> None:
@@ -37,12 +37,12 @@ def init_config() -> None:
     _configs = data
 
 
-def get_configs() -> dict:
+def get_configs() -> dict[str, object]:
     """取整份已載入設定（init_config 之後必有值）。"""
     return _configs
 
 
-def get_config(config_key: str, sub_key: str | None = None) -> Any:
+def get_config(config_key: str, sub_key: str | None = None) -> object:
     """取設定值（冇 sub_key＝第一層；有＝第一層 > 第二層；缺 key＝記 log 回 None）。"""
     # 判定：第一層 key 唔存在 → 記 log 並回 None
     if config_key not in _configs:
@@ -55,10 +55,12 @@ def get_config(config_key: str, sub_key: str | None = None) -> Any:
     if sub_key is None:
         return config_value
 
+    sub_config = cast("dict[str, object]", config_value)
+
     # 判定：第二層 key 唔存在 → 記 log 並回 None
-    if sub_key not in config_value:
+    if sub_key not in sub_config:
         sc_logger.log("config sub key missing: " + config_key + "." + sub_key)
         return None
 
-    return config_value[sub_key]
+    return sub_config[sub_key]
 

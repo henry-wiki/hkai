@@ -10,7 +10,7 @@ process_status.py
 	      目錄出自靜態 SSOT sc_config/hkai/hkai_config.json 的 folders.process_status（storage_dir 拼接）；
 	      由 daemon_manager._apply_static_configs 展開為 process_status_dir。
 
-	寫入者：永遠只有「該程序自己」（worker 代寫 引擎子程序——它是監護人）；
+	寫入者：永遠只有「該程序自己」（worker 代寫 agent子程序——它是監護人）；
 	        每程序一檔 → 無寫入競爭（同 runtime/process_list.py 的單一寫者原則）。
 
 	內容：pid／ppid／program／program_label／create_time／parent_create_time／started_at／started_at_fmt／updated_at／updated_at_fmt／beat_count
@@ -35,12 +35,14 @@ import psutil
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-# 程序建立時間（防 pid 重用——讀唔到 → 0.0）
-def _get_create_time(process_pid: int) -> float:
+# 程序建立時間（防 pid 重用——整數毫秒；讀唔到 → 0）
+def _get_create_time(process_pid: int) -> int:
 	try:
-		return psutil.Process(process_pid).create_time()
+		create_time = psutil.Process(process_pid).create_time()
 	except psutil.Error:
-		return 0.0
+		return 0
+
+	return int(create_time * 1000)
 
 
 # 程序父 pid（讀唔到 → 0）
@@ -79,7 +81,7 @@ class process_status_class:
 
 	# 登記心跳項目（自己 ＋ 代寫的子程序——重複呼叫安全）
 	def register(self, name: str, pid: int, program: str) -> None:
-		"""登記一個由本程序負責心跳的項目（例：worker 登記自己 ＋ 它拉起的 引擎）。"""
+		"""登記一個由本程序負責心跳的項目（例：worker 登記自己 ＋ 它拉起的 agent）。"""
 		pid = int(pid)
 
 		# 判定：pid 無效 → 不登記（無從辨識）
@@ -132,7 +134,7 @@ class process_status_class:
 				pass
 		self._entries = {}
 
-	# 取消登記並刪除該項狀態檔（子程序結束——由監護人呼叫，如 worker 收掉 引擎）
+	# 取消登記並刪除該項狀態檔（子程序結束——由監護人呼叫，如 worker 收掉 agent）
 	def unregister(self, name: str, pid: int) -> None:
 		"""取消登記（刪除該項狀態檔——程序已結束，不留殘檔）。"""
 		entry = self._entries.pop(name + "." + str(int(pid)), None)

@@ -11,7 +11,7 @@ trait build_tab_diagnostics_body
         // 守衛：新建語境（無專案列）→ 無路徑可掃，回提示殼（同 git 域模式）
         $is_new_project = empty($project_row);
         if ($is_new_project) {
-            return $this->build_notice_pane(hkai__i18n()->get("diagnostics.need_save"));
+            return $this->build_notice_pane(hkai()->i18n()->get("diagnostics.need_save"));
         }
 
         // 資料與渲染分家——只組外殼（每 tab 獨立：section 內容開面板只載首個、其餘點擊先 fetch——footer 由呼叫端帶入）

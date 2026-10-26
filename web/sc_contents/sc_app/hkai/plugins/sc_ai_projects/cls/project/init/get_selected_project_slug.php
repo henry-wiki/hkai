@@ -17,7 +17,8 @@ trait get_selected_project_slug
         }
 
         // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值）
-        $lookup_project_slug = $this->get_bare_project_slug($requested_project_key);
+        $resolved_project_slug    = $this->resolve_project_slug($requested_project_key);
+        $lookup_project_slug = $resolved_project_slug["project_slug"];
 
         // URL 有指定且有效 → 採用（回純 slug）
         if ($this->has_project($lookup_project_slug)) {

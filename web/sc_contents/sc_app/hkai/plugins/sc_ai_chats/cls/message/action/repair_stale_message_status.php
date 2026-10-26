@@ -60,7 +60,7 @@ trait repair_stale_message_status
             sc_ai_chats()->message()->repo_update()->update_db_message_status_repair_meta($message_id, $repair_record);
 
             // 診斷 log（審計：邊條、由咩、改成咩、點解）
-            hkai__sc_runtime_io()->info("repair_stale_message_status: message_id=" . $message_id . " " . $message_status . " -> " . $repaired_status . " (" . $repair_reason . ")");
+            hkai()->runtime()->logger()->info("repair_stale_message_status: message_id=" . $message_id . " " . $message_status . " -> " . $repaired_status . " (" . $repair_reason . ")");
         }
     }
 

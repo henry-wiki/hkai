@@ -28,18 +28,18 @@ trait git_commit
         // 準確值：Python 只收 project_path
         $project_path      = $project_row["project_path"];
 
-        hkai__sc_runtime_io()->info("git_commit start: project_slug=" . $project_slug);
+        hkai()->runtime()->logger()->info("git_commit start: project_slug=" . $project_slug);
 
         $git_commit_result = $this->run_python_git_commit($project_path);
 
         // git commit 失敗 → 記錄＋400（帶回 Python 的錯誤訊息）
         if ($git_commit_result["ok"] === false) {
-            hkai__sc_runtime_io()->warn("git_commit failed: project_slug=" . $project_slug . " — " . $git_commit_result["error"]);
+            hkai()->runtime()->logger()->warn("git_commit failed: project_slug=" . $project_slug . " — " . $git_commit_result["error"]);
 
             return sc_response()->json($git_commit_result, 400);
         }
 
-        hkai__sc_runtime_io()->info("git_commit done: project_slug=" . $project_slug);
+        hkai()->runtime()->logger()->info("git_commit done: project_slug=" . $project_slug);
 
         return sc_response()->json($git_commit_result);
     }

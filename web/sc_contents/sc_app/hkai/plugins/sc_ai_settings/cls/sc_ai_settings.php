@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_settings;
 
 // == sc_ai_settings_Class：插件頂層本體（singleton——bridging sc_ai_settings()） ==
-// == 職責：域入口（accessor）——例：sc_ai_settings()->settings()->handle_fetch_settings() ==
+// == 職責：域入口（accessor）——例：sc_ai_settings()->view()->handle_fetch_settings() ==
 // == 2026-09-27 域收攏（舊 7 支 sc_ai_settings__<x>() bridging 收成頂層單一入口） ==
 
 class sc_ai_settings_Class
@@ -35,13 +35,13 @@ class sc_ai_settings_Class
     }
 
     /**
-     * settings 域（settings_Class——config／menu／bench／check）
+     * view 域（設定對話框——側選單＋section 清單）
      *
-     * @return \sc\app\hkai\plugins\sc_ai_settings\settings\settings_Class
+     * @return \sc\app\hkai\plugins\sc_ai_settings\view\view_Class
      */
-    public function settings()
+    public function view()
     {
-        return settings\settings_Class::getInstance();
+        return view\view_Class::getInstance();
     }
 
     /**

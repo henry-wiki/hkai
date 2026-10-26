@@ -24,7 +24,8 @@ trait fetch_project_form
         $project_slug = trim($input_data["project_slug"] ?? "");
 
         // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值——歸檔專案照查到）
-        $project_slug = sc_ai_projects()->project()->get_bare_project_slug($project_slug);
+        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+        $project_slug = $resolved_project_slug["project_slug"];
 
         // 新增語境（空 slug）→ 一律當新專案（唔可以查表——空 slug 會解析成 Home，變成預填 Home 資料）
         $project_row = null;
@@ -39,7 +40,7 @@ trait fetch_project_form
             if ($project_row === null) {
                 // 錯誤內容照後端砌（共用空狀態塊——前端錯誤路插 modal body 顯示；唔淨止出面 toast）
                 $error_html          = [];
-                $error_html["slots"] = sc_empty_state(hkai__i18n()->get("error.project_not_found"), false);
+                $error_html["slots"] = sc_empty_state(hkai()->i18n()->get("error.project_not_found"), false);
 
                 return sc_response()->json(["ok" => false, "error" => "project not found", "html" => $error_html], 404);
             }
