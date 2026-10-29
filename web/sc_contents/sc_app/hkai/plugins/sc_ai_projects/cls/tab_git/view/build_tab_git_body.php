@@ -19,7 +19,7 @@ trait build_tab_git_body
         $project_path = $project_row["project_path"];
 
         // 資料與渲染分家——先取 git 狀態（唯讀診斷），再由本 view 純渲染
-        $git_status = sc_ai_diagnostics()->git()->run_git_status($project_path);
+        $git_status = sc_ai_diagnostics()->git()->run_git_status($project_path, true);
 
         $outputLines   = [];
         $outputLines[] = "<div class='modal_pane on' data-pane='git'>";

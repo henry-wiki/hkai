@@ -9,12 +9,12 @@ namespace sc\app\hkai\plugins\sc_ai_chats\poll\file;
 trait get_msg_conf_data
 {
 
-    // 讀 msg_conf（msg_conf.json——執行參數來源）→ 直接回解碼後陣列（缺失／唔合法 → null）
+    // 讀 meta.json（執行參數來源）→ 直接回解碼後陣列（缺失／唔合法 → null）
     public function get_msg_conf_data($chat_id, $message_id)
     {
         $conf_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "conf");
 
-        return $this->read_msg_conf_file($conf_file);
+        return sc_ai_chats()->poll()->file()->read_msg_conf_file($conf_file);
     }
 
     // 讀 msg_conf（目錄名已知：messages/polling/{project_slug}/{message_id}——掃描入口，免查 chat 列）
@@ -22,11 +22,11 @@ trait get_msg_conf_data
     {
         $conf_file = sc_ai_chats()->poll()->get_poll_file_by_slug($project_slug, $message_id, "conf");
 
-        return $this->read_msg_conf_file($conf_file);
+        return sc_ai_chats()->poll()->file()->read_msg_conf_file($conf_file);
     }
 
     // 讀 conf 檔（單一讀取來源——兩個入口共用；缺失／唔合法 → null）
-    private function read_msg_conf_file($conf_file)
+    public function read_msg_conf_file($conf_file)
     {
         // 判定：conf 檔唔存在 → null
         if (!is_file($conf_file)) {

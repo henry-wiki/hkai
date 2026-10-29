@@ -75,6 +75,40 @@ class bridge_Class
         return $decoded;
     }
 
+    // 單程通知（POST /path——curl 送出即返；回應唔讀；上限 300ms；失敗交重入 resume 補派）
+    public function post_fire_and_forget($path, $data = [], $timeout_ms = 300)
+    {
+        $runtime_configs = hkai()->runtime()->get_runtime_configs();
+        $server_settings = $runtime_configs["server_settings"] ?? [];
+
+        $server_host = (string)($server_settings["host"] ?? "127.0.0.1");
+        $server_port = (int)($server_settings["port"] ?? 0);
+        $request_url = "http://" . $server_host . ":" . $server_port . "/" . ltrim($path, "/");
+
+        $curl_handle = curl_init($request_url);
+        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl_handle, CURLOPT_POST, true);
+        curl_setopt($curl_handle, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        curl_setopt($curl_handle, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
+        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, 300);
+        curl_setopt($curl_handle, CURLOPT_TIMEOUT_MS, $timeout_ms);
+        $response_body = curl_exec($curl_handle);
+
+        // curl 錯誤碼（curl_close 之後讀唔到——先記落嚟）
+        $curl_errno = curl_errno($curl_handle);
+
+        curl_close($curl_handle);
+
+        // 判定：連唔上（bridge 未運行）→ false（唔等、唔重試——重入時 resume 會補派）
+        if ($response_body === false && $curl_errno !== CURLE_OPERATION_TIMEDOUT) {
+            hkai()->runtime()->logger()->warn("bridge fire_and_forget failed: " . $path . " curl_errno=" . $curl_errno);
+
+            return false;
+        }
+
+        return true;
+    }
+
     // 通知 bridge 有新訊息（POST /daemon/add_message/——喚醒與否由 bridge 決定；PHP 不檢查、不喚醒）
     // 回傳 true = bridge 已收到（HTTP 200）；false = bridge 未運行／路由不存在／HTTP 錯誤（訊息仍已落地）
     public function notify_server_new_prompt($chat_id, $message_id, $agent = "")

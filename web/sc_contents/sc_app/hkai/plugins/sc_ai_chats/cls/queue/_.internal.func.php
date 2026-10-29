@@ -6,7 +6,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\queue;
 // == 委派全局 bridging（解析源單一——class 引用仍只喺插件 cls/_.func.php） ==
 
 /**
- * queue 單例（本域短名——例：queue()->get_queue_lines($chat_id)）
+ * queue 單例（本域短名——例：queue()->get_queue_items($project_slug, $chat_sid)）
  *
  * @return \sc\app\hkai\plugins\sc_ai_chats\queue\queue_Class
  */

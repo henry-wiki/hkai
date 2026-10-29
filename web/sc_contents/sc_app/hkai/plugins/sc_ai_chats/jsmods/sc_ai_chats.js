@@ -11,7 +11,6 @@ class _sc_ai_chats {
     constructor() {
         this.ctx = null;
         this.inited = false;
-        this.health_hook_registered = false;
         this.hooks = {};
     }
     // 啟動 plugin（bootstrap 取例項後呼叫——子模組初始化；重複呼叫只行一次）
@@ -166,6 +165,12 @@ class _sc_ai_chats {
                 detect_project_slug_change_instance.detect_project_slug_change(goto_url, prev_url);
                 detect_chat_list_context_change_instance.detect_chat_list_context_change(goto_url, prev_url);
                 detect_chat_sid_change_instance.detect_chat_sid_change(goto_url, prev_url);
+
+                // 重開 health_stream（URL 變＝舊連線參數已過時；open_stream 內部先關舊線）
+                const health_instance = await registry().sc_ai_health().health();
+                const act_fetch_health_instance = await health_instance.act().act_fetch_health();
+
+                await act_fetch_health_instance.open_stream();
             }
         });
 
@@ -189,13 +194,9 @@ class _sc_ai_chats {
             after: async function () {
                 registry().sc_loading().stop_loading(j_sidebar_chat_list);
 
-                // 清單重繪後同步狀態列（sb_chat 讀 .sc_chat_list .sc_chat_card--active——來源域推：對話清單變咗＝chat 側叫同步）
-                await registry().sc_ai_status_bar().sync_chat();
-
                 // !! 必須留喺呢度（清單載入後才激活）——唔可以搬上 init !!
-                // 原因：health 每拍會調整／改變對話列（更新／建立／刪除卡）——早註冊＝對未載入清單盲建卡（chat_list_refresh 建立路線）
+                // 原因：載入清單期間 SSE 可能已推 chat 變動——清單未載入就套用＝對空白 DOM 盲建卡
                 const chats_instance = registry().sc_ai_chats();
-                await chats_instance.health_hook_register();
 
                 // 對話項觀察器重掛（動態——清單加減／重繪後新卡要重新盯；init 內置 disconnect 防重）
                 const chat_item_observer_instance = await chat_instance.obs().chat_item_observer();
@@ -285,7 +286,6 @@ class _sc_ai_chats {
     // prompt 側 hook 註冊（prompt 載入 → composer 遮罩；發送完成 → 重啟 health 輪詢——暫時分組，令 root 好睇）
     async prompt_hook_register() {
         // 接駁（health plugin 根——發送後重啟輪詢用）
-        const health_instance = registry().sc_ai_health();
 
         // composer 容器（loading 遮罩目標——load_prompt before／after 兩相共用）
         const j_sc_composer = jQuery(".sc_composer");
@@ -312,45 +312,8 @@ class _sc_ai_chats {
             }
         });
 
-        // 發送完成 hook 反應（prompt 流派發 prompt_sent → 重啟 health 輪詢——新任務即刻偵測）
-        this.register_hook("prompt_sent", {
-            before: function () {
-
-            },
-            after: async function () {
-                // 立即重跳一輪（唔等下一班——新 job 早一輪見到）
-                await health_instance.restart();
-            }
-        });
     }
 
-
-    async health_hook_register() {
-        // 判定：已激活 → 唔重複登記（load_chat_list 每次清單載入都派；只認第一次）
-        if (this.health_hook_registered) {
-            return;
-        }
-
-        this.health_hook_registered = true;
-
-        // 接駁（health plugin 根——登記健康更新反應）
-        const health_instance = registry().sc_ai_health();
-
-        // 接駁（chat 域 act 橋——反應同步用）
-        const chat_instance = await this.chat();
-        const chat_list_refresh_instance = await chat_instance.act().chat_list_refresh();
-
-        // 健康更新 hook 反應（通訊由 chats 發起——登記喺 health 側；每輪執行）
-        health_instance.register_hook("health_updated", {
-            before: function () {
-
-            },
-            after: async function (health_result) {
-                // 刷新對話列（health_result 直入——過濾／補缺／刷狀態全交 chat_list_refresh）
-                await chat_list_refresh_instance.chat_list_refresh(health_result);
-            }
-        });
-    }
 
 
 

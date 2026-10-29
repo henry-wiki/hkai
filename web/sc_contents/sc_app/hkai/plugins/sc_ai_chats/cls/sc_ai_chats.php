@@ -3,11 +3,15 @@
 namespace sc\app\hkai\plugins\sc_ai_chats;
 
 // == sc_ai_chats_Class：插件頂層本體（singleton——bridging sc_ai_chats()） ==
-// == 職責：域入口（accessor）——例：sc_ai_chats()->queue()->get_queue_file_path($chat_id) ==
+// == 職責：域入口（accessor）——例：sc_ai_chats()->queue()->get_queue_chat_dir($chat_id) ==
 // == 2026-09-27 建（域收攏後補頂層單一入口——各域經 accessor：sc_ai_chats()-><域>()） ==
 
 class sc_ai_chats_Class
 {
+
+    use resolver\project\resolve_project_row;
+    use resolver\project\resolve_project_context;
+    use resolver\chat\resolve_chat_title;
 
     private static $instance = null;
 
@@ -72,6 +76,16 @@ class sc_ai_chats_Class
     public function poll()
     {
         return poll\poll_Class::getInstance();
+    }
+
+    /**
+     * 歸檔域（archive_Class——終態收尾／歸檔搬箱／過期清理）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_chats\archive\archive_Class
+     */
+    public function archive()
+    {
+        return archive\archive_Class::getInstance();
     }
 
     /**

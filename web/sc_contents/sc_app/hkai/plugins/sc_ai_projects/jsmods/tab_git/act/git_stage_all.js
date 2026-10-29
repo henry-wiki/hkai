@@ -25,19 +25,14 @@ class _git_stage_all {
             before_load: function () {
 
             },
-            success: async function () {
+            success: async function (result) {
                 // 動態載入（registry——用先載）
                 const loading = registry().sc_loading();
 
-                // 成功 → 按鈕復原＋重載當前 tab（狀態即刻反映）
+                // 成功 → 按鈕復原＋用回應內 HTML 直接換 Git tab（一次往返、免再 fetch 整個 modal）
                 loading.stop_loading(j_button);
-                const tab_id = j_modal.find(".modal_tab.on").attr("data-tab_id") || "git";
 
-                // 直接重載當前 tab（唔靠合成 click——合成事件喺 modal_open 內未必接到）
-                const modal_instance = await registry().sc_ai_projects().modal();
-                const modal_open_instance = await modal_instance.act().modal_open();
-
-                await modal_open_instance.modal_open(project_slug, tab_id, {});
+                j_modal.find(".modal_pane[data-pane='git']").replaceWith(result.html.tab_body);
             },
             error: async function (result) {
                 // 動態載入（registry——用先載）

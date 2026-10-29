@@ -58,10 +58,11 @@ class _project_item_fetch {
 
         return this.project_item_fetch(project_slug, {
             success: async function (response_data) {
-                // 清單重繪後同步狀態列（sb_project 讀 .sc_project_list .sc_project_card--active）
-                const status_bar = registry().sc_ai_status_bar();
+                // 狀態欄專案區跟隨（URL 驅動 fetch——單一來源）
+                const status_bar_domain = await registry().sc_ai_status_bar().status_bar();
+                const project_fetch_instance = await status_bar_domain.act().project_fetch();
 
-                status_bar.sync_project();
+                project_fetch_instance.project_fetch();
 
                 // topnav 路徑列同步（顯示切換後專案路徑——空＝placeholder）
                 const topnav = await registry().sc_topnav();

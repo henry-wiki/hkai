@@ -62,7 +62,7 @@ trait record_failed_message
         file_put_contents($response_result_file, $response_source);
 
         // 收尾（回填／歷史／歸檔 archive/——同一般訊息同一支）
-        sc_ai_chats()->message()->finalize_poll_job($chat_id, $message_id, "failed");
+        sc_ai_chats()->archive()->finalize_poll_job($chat_id, $message_id, "failed");
 
         $failed_record = [];
         $failed_record["existing_chat_row"] = $existing_chat_row;

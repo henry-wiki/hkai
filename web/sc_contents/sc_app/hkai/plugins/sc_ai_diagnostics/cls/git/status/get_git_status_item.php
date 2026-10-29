@@ -8,7 +8,7 @@ namespace sc\app\hkai\plugins\sc_ai_diagnostics\git\status;
 trait get_git_status_item
 {
     // 提供 status item HTML 給 sc_ai_status_bar（Closure 時求值——provider 全權決定 item 內容；只決定擺去邊）
-    // 文字槽 sc-text 隨 health 報告 git 每輪更新（此處只出外框——⎇ —）
+    // 文字槽 sc-text：首屏放佔位「—」（同 model 一樣），由 status bar init 的 refresh_git_item() 填真值
     public function get_git_status_item()
     {
         $project_slug = sc_ai_projects()->project()->get_selected_project_slug();
@@ -27,9 +27,9 @@ trait get_git_status_item
         $status_item_html   = [];
         $status_item_html[] = "<div class='sc_statusbar__item sc_statusbar__item--clickable sc_statusbar__item--git' data-click='project_git'>";
             $status_item_html[] = "<span class='sc-icon'><i class='fa-solid fa-code-merge'></i></span>";
-            $status_item_html[] = "<span class='sc-text'></span>";
+            $status_item_html[] = "<span class='sc-text'>—</span>";
         $status_item_html[] = "</div>"; 
-        
+
         return implode("", $status_item_html);
     }
 }

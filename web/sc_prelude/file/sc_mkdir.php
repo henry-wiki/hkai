@@ -1,7 +1,7 @@
 <?PHP
 
 // 建立目錄（遞迴；已存在＝無動作；建立後 chmod 校正——防 umask／怪權限）
-function sc_mkdir($dir_path, $mode = 0755)
+function sc_mkdir($dir_path, $mode = 0755, $recursive = true)
 {
     // 判定：mode 唔係整數（字串／浮點／null——PHP 數值強轉會出坑）→ 用安全底 0755
     if (!is_int($mode)) {
@@ -23,8 +23,8 @@ function sc_mkdir($dir_path, $mode = 0755)
         return true;
     }
 
-    // 建立（遞迴）
-    $created = mkdir($dir_path, $mode, true);
+    // 建立（遞迴與否由 $recursive 決定——預設 true）
+    $created = mkdir($dir_path, $mode, $recursive);
 
     // 判定：建立失敗 → 回報
     if ($created === false) {

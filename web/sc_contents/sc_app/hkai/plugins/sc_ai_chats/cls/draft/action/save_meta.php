@@ -16,10 +16,9 @@ trait save_meta
 
         $project_slug = trim((string)($input_data["project_slug"] ?? ""));
         $chat_sid     = trim((string)($input_data["chat_sid"] ?? ""));
-        $draft_key    = $this->get_draft_key($chat_sid);
 
         // 判定：目錄 key 格式唔合 → 400
-        if (!$this->is_valid_draft_key($draft_key)) {
+        if (!sc_ai_chats()->chat()->is_valid_chat_sid($chat_sid)) {
             return sc_response()->json(["ok" => false, "error" => "invalid chat_sid"], 400);
         }
 
@@ -38,7 +37,13 @@ trait save_meta
 
         $project_slug = (string)$project_row["project_slug"];
 
-        $this->ensure_meta($project_slug, $draft_key, $chat_sid);
+        // 現行 meta（內容比對用）
+        $current_meta = sc_ai_chats()->draft()->get_draft_meta($project_slug, $chat_sid);
+
+        // 判定：冇 meta → 當空
+        if (is_array($current_meta) === false) {
+            $current_meta = [];
+        }
 
         $meta_patch = [];
         $meta_patch["chat_sid"] = $chat_sid;
@@ -68,6 +73,33 @@ trait save_meta
             $meta_patch["chat_mode"] = (string)$input_data["chat_mode"];
         }
 
+        // 判定：內容與現行完全相同 → 不寫（回音防護——rev／mtime 都唔動）
+        $changed_field_keys = [];
+
+        foreach ($meta_patch as $patch_field_key => $patch_field_value) {
+            // 判定：非內容欄位（由後台蓋章）→ 唔計入比較
+            if (in_array($patch_field_key, ["chat_sid", "agent", "is_new_chat"])) {
+                continue;
+            }
+
+            $current_field_value = (string)($current_meta[$patch_field_key] ?? "");
+
+            // 判定：值有實際改變 → 記入
+            if ($current_field_value !== (string)$patch_field_value) {
+                $changed_field_keys[] = $patch_field_key;
+            }
+        }
+
+        // 判定：冇任何內容改變 → 直接回現行版本（唔寫檔、唔遞增 rev）
+        if (count($changed_field_keys) < 1) {
+            return sc_response()->json([
+                "ok"             => true,
+                "chat_sid"       => $chat_sid,
+                "missing_fields" => $this->_get_missing_prompt_fields($current_meta),
+                "unchanged"      => true,
+            ]);
+        }
+
         // agent（後台現行值——系統讀嘅 id）
         $meta_patch["agent"] = (string)hkai()->agent()->get_agent();
 
@@ -75,11 +107,37 @@ trait save_meta
         $chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
         $meta_patch["is_new_chat"] = ($chat_row === null) ? 1 : 0;
 
-        $saved = $this->update_meta($project_slug, $draft_key, $meta_patch);
+        $saved = sc_ai_chats()->draft()->set_draft_meta($project_slug, $chat_sid, $meta_patch);
+
+        // 儲存後檢查（同 gates 同一份清單——只回報缺失，唔阻擋草稿儲存）
+        $saved_meta     = sc_ai_chats()->draft()->get_draft_meta($project_slug, $chat_sid);
+        $missing_fields = $this->_get_missing_prompt_fields($saved_meta);
 
         return sc_response()->json([
-            "ok"        => ($saved === true),
-            "draft_key" => $draft_key,
+            "ok"             => ($saved === true),
+            "chat_sid"       => $chat_sid,
+            "missing_fields" => $missing_fields,
         ]);
+    }
+
+    // 缺失必填欄位（清單單一來源住 draft 域；回 key 清單）
+    private function _get_missing_prompt_fields($meta_data)
+    {
+        $required_fields = sc_ai_chats()->draft()->get_prompt_required_fields();
+
+        $missing_fields = [];
+
+        // 逐個必填欄位對照 meta
+        foreach ($required_fields as $required_field_item) {
+            $required_field_key   = (string)$required_field_item["key"];
+            $required_field_value = $meta_data[$required_field_key] ?? null;
+
+            // 判定：未提交／空值 → 記入缺失
+            if ($required_field_value === null || $required_field_value === "") {
+                $missing_fields[] = $required_field_key;
+            }
+        }
+
+        return $missing_fields;
     }
 }

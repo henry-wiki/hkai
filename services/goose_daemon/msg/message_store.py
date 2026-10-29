@@ -89,6 +89,15 @@ class message_store_class:
 
         self._project_path      = str(self._msg_conf_data.get("project_path", "")).strip()
         self._model_name        = str(self._msg_conf_data.get("model_name", "")).strip()
+
+        # 判定：草稿 meta 冇 model_name → 由 provider_id／model_id 併（讀取層對照，唔改檔案）
+        if self._model_name == "":
+            provider_id = str(self._msg_conf_data.get("provider_id", "")).strip()
+            model_id    = str(self._msg_conf_data.get("model_id", "")).strip()
+
+            # 判定：兩邊都有值 → 併成 provider/model
+            if provider_id != "" and model_id != "":
+                self._model_name = provider_id + "/" + model_id
         self._chat_mode         = str(self._msg_conf_data.get("chat_mode", "")).strip()
         context_length_value = self._msg_conf_data.get("context_length", None)
 
@@ -108,6 +117,9 @@ class message_store_class:
 
     def load(self, msg_conf_path: Path) -> None:
         """讀取 msg_conf 檔 → 與默認值合併（載入覆蓋默認）→ 存入 self。"""
+        # 訊息目錄＝實際 conf 所在目錄（新舊結構通用——唔靠 slug／message_id 重砌）
+        self._message_dir = msg_conf_path.parent
+
         msg_conf_data = io.read_json(msg_conf_path)
 
         # 判定：讀唔到（缺失／損壞）→ 保持默認值
@@ -117,6 +129,11 @@ class message_store_class:
         merged_conf: dict[str, object] = {**self._msg_conf_data, **msg_conf_data}
 
         self.init_msg_conf_data(merged_conf)
+
+        # init_msg_conf_data 內嘅 init_msg_paths 用舊兩層砌路徑——載入後以實際目錄為準
+        self._message_dir = msg_conf_path.parent
+
+        self._claim_path = message_context.get_msg_file_path(self._message_dir, "claim")
 
     def get_chat_id(self) -> str:
         return self._chat_id
@@ -177,18 +194,15 @@ class message_store_class:
         """認領檔路徑（init_msg_paths 已算好）。"""
         return self._claim_path
 
-    def get_msg_prompt_path(self) -> Path:
-        return message_context.get_msg_file_path(self.get_message_dir(), "prompt")
-
     def get_msg_prompt(self) -> str:
-        """讀 msg_prompt.json 嘅 content（使用者輸入原樣；缺失／損壞回空字串）。"""
-        prompt_data = io.read_json(self.get_msg_prompt_path())
+        """讀 meta.json 嘅 prompt_text（舊鍵 content 為後備；使用者輸入原樣）。"""
+        content = str(self._msg_conf_data.get("content", ""))
 
-        # 判定：讀唔到（缺失／損壞）→ 空字串
-        if prompt_data is None:
-            return ""
+        # 判定：草稿 meta 只有 prompt_text → 讀取層對照（唔改檔案）
+        if content == "":
+            content = str(self._msg_conf_data.get("prompt_text", ""))
 
-        return str(prompt_data.get("content", ""))
+        return content
 
     def get_msg_status_path(self) -> Path:
         return message_context.get_msg_file_path(self.get_message_dir(), "status")
@@ -213,9 +227,10 @@ class message_store_class:
             _ = output_file.write(status + "\n")
 
     def get_msg_conf_files(self) -> list[Path]:
-        """掃描 messages/polling/*/*/msg_conf.json → 按建立時間排序回傳路徑清單（最舊優先）。"""
+        """掃描 polling 全部 meta.json → 按建立時間排序回傳路徑清單（最舊優先）。"""
+        # 遞歸掃（polling/<slug>/<chat_sid>/<prompt_id>/meta.json）
         return sorted(
-            Path(context.MESSAGES_POLLING_DIR).glob("*/*/msg_conf.json"),
+            Path(context.MESSAGES_POLLING_DIR).rglob("meta.json"),
             key=lambda p: p.stat().st_birthtime,
         )
 

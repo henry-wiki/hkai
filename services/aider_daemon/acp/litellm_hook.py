@@ -67,7 +67,7 @@ def setup() -> None:
     try:
         # runtime.json（無副作用——messages_dir 等路徑展開用）
         daemon().load_config()
-        # msg_conf.json（本訊息語境——message_id／chat_id／project_slug）
+        # meta.json（本訊息語境——message_id／chat_id／project_slug）
         msg_main().load_msg_conf_data(Path(_msg_conf_path))
     except Exception as exc:  # noqa: BLE001
         # 語境失敗 → 唔攔截（aider 照跑——嚴格安全退化）

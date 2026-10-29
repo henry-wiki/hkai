@@ -160,11 +160,12 @@ def reap_workers() -> None:
             # 第一步：清走 OS zombie＋收 exit code（唔係等程序——佢已死，即時返回）
             worker_proc.join()
 
-            # 第二步：工單在身 → 幫死者收終態（否則前端永遠等）
-            watchdog.cleanup_dead_worker(worker_entry)
-
-            # 第三步：由名冊除名（收尾成功後才除名——出錯可下拍重試）
-            roster.remove_worker_entry(worker_pid)
+            # 第二步＋第三步：先幫死者收終態；無論成敗，第三步一定除名
+            # （否則死者永遠佔住 chat_id 名額——同對話新工單永遠派唔出）
+            try:
+                watchdog.cleanup_dead_worker(worker_entry)
+            finally:
+                roster.remove_worker_entry(worker_pid)
 
             # 第三步之二：清死者狀態檔（心跳／tmp／撤退旗標——子程序唔跑 atexit，唔可以靠佢自己清）
             _remove_worker_status_files(worker_pid)

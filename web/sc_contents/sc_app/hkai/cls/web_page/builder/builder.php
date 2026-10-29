@@ -22,7 +22,7 @@ class builder_Class
     {}
 
     // <head> 內容（meta＋資源＋語境 island——資源註冊後由 get_embed_assets／get_embed_jsmods 統一輸出）
-    public function render_page_head($controller)
+    public function render_page_head($controller, $viewer_id = "")
     {
         // 資源註冊（css／CDN／ESM entry）
         sc_web_asset()->register_assets("hkai", [
@@ -57,13 +57,31 @@ class builder_Class
         $outputLines[] = "<meta name='viewport' content='width=1430'/>";
         $outputLines[] = "<meta name='csrf-token' content='" . CSRF_get_token() . "'/>";
 
+        // 本頁 viewer 參照（SSE 更新時回寫此檔；每頁一個 uuidv7）
+        $outputLines[] = "<meta name='viewer-id' content='" . sc_html_encode($viewer_id) . "'/>";
+
         // SSE 串流設定（一律啟用；base_url 由 runtime server_settings 即時組——唔寫死）
-        $stream_config  = ["enabled" => true];
-        $runtime_configs = hkai()->runtime()->get_runtime_configs();
-        $server_settings = $runtime_configs["server_settings"] ?? [];
-        $server_host     = (string)($server_settings["host"] ?? "127.0.0.1");
-        $server_port     = (int)($server_settings["port"] ?? 0);
-        $stream_config["base_url"] = "http://" . $server_host . ":" . $server_port;
+        $stream_config      = ["enabled" => true];
+        $server_instance    = hkai()->process()->server();
+        $is_stopped_by_user = $server_instance->is_server_stopped_by_user();
+
+        // 判定：用戶手動停過 → 唔起 server，stream 停用（meta 冇 base_url）
+        if ($is_stopped_by_user === true) {
+            $stream_config["enabled"] = false;
+        } else {
+            $server_status = $server_instance->get_server_status();
+
+            // 判定：server 未起 → 用同一支 start_server 起（與手動一致）
+            if ($server_status["is_alive"] !== true) {
+                $server_instance->start_server();
+            }
+
+            $runtime_configs = hkai()->runtime()->get_runtime_configs();
+            $server_settings = $runtime_configs["server_settings"] ?? [];
+            $server_host     = (string)($server_settings["host"] ?? "127.0.0.1");
+            $server_port     = (int)($server_settings["port"] ?? 0);
+            $stream_config["base_url"] = "http://" . $server_host . ":" . $server_port;
+        }
         $stream_config_json = json_encode($stream_config, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $outputLines[]      = "<meta name='stream-config' content='" . sc_html_encode($stream_config_json) . "'/>";
         $outputLines[] = "<title>hkai agent console</title>";
@@ -151,9 +169,9 @@ class builder_Class
     }
 
     // 整頁（DOCTYPE～</html>——index.php 唯一出口）
-    public function render_page_index($controller)
+    public function render_page_index($controller, $viewer_id = "")
     {
-        $head_content = $this->render_page_head($controller);
+        $head_content = $this->render_page_head($controller, $viewer_id);
         $body_content = $this->render_page_body($controller);
 
         // 側欄狀態（活動 sidebar_state——開機讀；兩欄開合隨 SSR 落 body 旗標——純 CSS 閘第一時間生效）

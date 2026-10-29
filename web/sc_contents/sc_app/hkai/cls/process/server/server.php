@@ -5,13 +5,16 @@ namespace sc\app\hkai\cls\process\server;
 // == server_Class：python server 生命週期（singleton——經 hkai()->process()->server() 取得）
 // == 職責：狀態（get_server_status——讀心跳＋pid 核實）／啟動（交 server_host 取位址 → 寫設定 → 拉起 → 等心跳 → 同步指示檔）／停止（交 bridge 自殺 → 等心跳檔消失 → 逾時交清道夫）／重啟（停→起）
 // == 回傳：outcome 表 ["ok" => bool, ...]；失敗帶 error_kind（no_port／failed）——HTTP status 由 request 層決定
-// == 上游：request/process/bridge/{start,stop,restart}_server.php、health 輪詢、server_status 端點、prompt_send 前置檢查
+// == 上游：request/process/bridge/{start,stop,restart}_server.php、health_stream 自動起動、prompt_send 前置檢查
 // == 下游：server_host（位址／白名單）、bridge_watch（等心跳）、launcher（spawn／cleanup）、instruction（指示檔）
 
 class server_Class
 {
     // 停止確認上限（秒——等心跳檔消失；自殺 timer 3 秒＋裕度）
     private const STOP_WAIT_SEC = 5;
+
+    // 心跳新鮮門檻（秒——≤ 此值＝當在生，免 tasklist）
+    private const HEARTBEAT_FRESH_SEC = 3;
 
     // 啟動確認上限（秒——等心跳檔出現；Python 冷啟約 2–3 秒＋裕度）
     private const START_WAIT_SEC = 15;
@@ -110,6 +113,9 @@ class server_Class
 
         $logger->info("start_server: ready " . $actual_host . ":" . $actual_port);
 
+        // 起動成功 → 清除「用戶主動停」旗標（之後恢復自動起動）
+        $this->set_server_stopped_by_user(false);
+
         return ["ok" => true, "host" => $actual_host, "port" => $actual_port];
     }
 
@@ -131,8 +137,13 @@ class server_Class
                 $logger->warn("stop_server: cleanup failed (exit=" . $cleanup_result["exit_code"] . ")");
             }
 
+            $this->set_server_stopped_by_user(true);
+
             return ["ok" => true, "pid" => $bridge_pid, "forced" => false, "waited_sec" => 0];
         }
+
+        // 用戶主動停 → 即刻寫旗標（收窄並發窗口；失敗會回寫 false）
+        $this->set_server_stopped_by_user(true);
 
         $logger->info("stop_server: begin (pid=" . $bridge_pid . ")");
 
@@ -174,6 +185,9 @@ class server_Class
         if ($is_heartbeat_removed === false) {
             $logger->error("stop_server: heartbeat still exists (pid=" . $bridge_pid . ")");
 
+            // 停止失敗（仍然在生）→ 回寫旗標（唔可以卡住自動起動）
+            $this->set_server_stopped_by_user(false);
+
             return ["ok" => false, "error_kind" => "failed", "error" => "server still alive (pid " . $bridge_pid . ")"];
         }
 
@@ -188,6 +202,36 @@ class server_Class
         $this->stop_server();
 
         return $this->start_server();
+    }
+
+    // 用戶是否主動停過 server（旗標檔存在＝停過）
+    public function is_server_stopped_by_user()
+    {
+        return file_exists($this->get_stopped_by_user_file());
+    }
+
+    // 寫「用戶主動停」旗標（true＝建檔；false＝起動成功即刪檔）
+    public function set_server_stopped_by_user($is_stopped_by_user)
+    {
+        $stopped_by_user_file = $this->get_stopped_by_user_file();
+
+        // 判定：用戶主動停 → 建旗標檔
+        if ($is_stopped_by_user === true) {
+            file_put_contents($stopped_by_user_file, "1", LOCK_EX);
+
+            return;
+        }
+
+        // 判定：恢復自動 → 刪旗標檔
+        if (file_exists($stopped_by_user_file) === true) {
+            unlink($stopped_by_user_file);
+        }
+    }
+
+    // 旗標檔路徑（data/bridge/server_stopped_by_user）
+    private function get_stopped_by_user_file()
+    {
+        return sc_get_config("hkai.bridge_dir") . "/server_stopped_by_user";
     }
 
     // 伺服器狀態（讀統一心跳檔＋pid 現查；殘檔即清——起 server／開 server tab／送 prompt 前用）
@@ -215,7 +259,15 @@ class server_Class
 
         $bridge_pid = (int)($heartbeat_data["pid"] ?? 0);
 
-        // 判定：pid 現查在生 → 通過
+        // 心跳年齡（秒——bridge 每秒覆寫；新鮮＝進程一定在生）
+        $heartbeat_age_sec = time() - (int)($heartbeat_data["updated_at"] ?? 0);
+
+        // 判定：心跳新鮮（≤3 秒）→ 直接當在生（免跑 tasklist——每次省約 220ms）
+        if ($heartbeat_age_sec <= self::HEARTBEAT_FRESH_SEC) {
+            return $server_status_result;
+        }
+
+        // 判定：pid 現查在生 → 通過（心跳過期時才查——tasklist 貴）
         if (hkai()->process()->is_process_alive($bridge_pid)) {
             return $server_status_result;
         }

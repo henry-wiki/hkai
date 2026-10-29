@@ -63,16 +63,9 @@ class _message_stream {
             });
         }
 
-        // 終態 → 即刻觸發最後一次 poll（收尾渲染）再關連線
+        // 終態（done）→ 只關連線；唔叫 poll（完成後再叫＝無限重啟 tasks: []）
         this.event_source.addEventListener("done", function () {
-            const on_change = thisObject.on_change;
-
             thisObject.stop();
-
-            // 判定：有回呼 → 叫最後一次
-            if (on_change) {
-                on_change();
-            }
         });
 
         // 錯誤（bridge 死／403）→ 關掉，純 poll 接手

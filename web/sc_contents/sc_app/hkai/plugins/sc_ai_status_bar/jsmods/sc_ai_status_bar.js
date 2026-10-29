@@ -1,6 +1,6 @@
 // plugins/sc_ai_status_bar/jsmods/sc_ai_status_bar.js —— status bar 根入口（唯一入口——出入口掛喺 prototype；對齊 sc_ai_chats 形）
 // 用途：registry().sc_ai_status_bar()（單例）；域接駁：(await registry().sc_ai_status_bar().status_bar()).act().<動作>() 咁叫
-// 職責：① 啟動編排（init——bootstrap 呼叫；域召集＋同步四項＋時鐘＋git 刷新）② 對外 API 轉發（set_state／set_item 系／sync_project／sync_chat——跨 plugin 用家）
+// 職責：① 啟動編排（init——bootstrap 呼叫；域召集＋四區首輪 fetch＋時鐘＋健康反應）② 對外 API 轉發（set_state／set_item 系／sync_model——跨 plugin 用家）
 // 契約：1 域（status_bar）；域動作住 status_bar/status_bar.js 檔尾（bridge class——每條自載）
 
 import { _domain_hooks } from "./_common/_domain_hooks.js";
@@ -27,35 +27,6 @@ class _sc_ai_status_bar {
         // URL 變化註冊（反應＋觀察器——一次性；觀察器只報真變化）
         await this.obs_url_change();
 
-        // 橋接駁（同域 act 橋——同步三項：project→chat→model）
-        const status_bar_domain = await this.status_bar();
-        const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
-        await sync_status_items_instance.sync_project();
-        await sync_status_items_instance.sync_chat();
-        await sync_status_items_instance.sync_model();
-
-        // 橋接駁（同域 act 橋——時鐘：簡單時鐘每秒刷新；時間由 JS 出）
-        const tick_clock_instance = await status_bar_domain.act().tick_clock();
-        tick_clock_instance.start_clock();
-
-        // 接駁（health plugin 根——登記健康更新反應；連線狀態＋Git 狀態隨每輪更新）
-        const health_instance = registry().sc_ai_health();
-
-        health_instance.register_hook("health_updated", {
-            before: function () {
-
-            },
-            after: async function (health_result) {
-                // 連線狀態（reports.conn——bridge 快查；只兩態）
-                const conn_status_item_instance = await status_bar_domain.act().conn_status_item();
-                conn_status_item_instance.apply_conn_status(health_result.reports.conn);
-
-                // Git 狀態（reports.git——當前專案）
-                const git_status_item_instance = await status_bar_domain.act().git_status_item();
-                git_status_item_instance.apply_git_status(health_result.reports.git);
-            }
-        });
-
         return this;
     }
 
@@ -66,16 +37,17 @@ class _sc_ai_status_bar {
         // URL 變化觀察器（一次性——訂閱 sc_http；只報真變化）
         (await status_bar_domain.obs().url_changed_observer()).init();
 
-        // URL 變化反應（URL 變化觀察器派 obs:url_changed → 三區動態重取（URL 驅動）；逐區各自換返）
+        // 出值（唯一路徑——URL 變化與首載共用；init 只接線，唔出值）
         this.register_hook("obs:url_changed", {
             after: async function (goto_url, prev_url) {
-                const project_fetch_instance   = await status_bar_domain.act().project_fetch();
-                const chat_fetch_instance      = await status_bar_domain.act().chat_fetch();
-                const workspace_fetch_instance = await status_bar_domain.act().workspace_fetch();
+                await refresh_status_bar_regions(status_bar_domain);
+            }
+        });
 
-                project_fetch_instance.project_fetch();
-                chat_fetch_instance.chat_fetch();
-                workspace_fetch_instance.workspace_fetch();
+        // 首載出值（chats 置 body data-loaded=1 時派 obs:page_loaded——只做一次）
+        registry().sc_ai_chats().register_hook("obs:page_loaded", {
+            after: async function () {
+                await refresh_status_bar_regions(status_bar_domain);
             }
         });
     }
@@ -112,18 +84,6 @@ class _sc_ai_status_bar {
         return status_item_render_instance.set_item_tooltip(item_id, text);
     }
 
-    async sync_project() {
-        const status_bar_domain = await this.status_bar();
-        const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
-        return sync_status_items_instance.sync_project();
-    }
-
-    async sync_chat() {
-        const status_bar_domain = await this.status_bar();
-        const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
-        return sync_status_items_instance.sync_chat();
-    }
-
     async sync_model() {
         const status_bar_domain = await this.status_bar();
         const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
@@ -148,3 +108,23 @@ export const sc_ai_status_bar = (function (instance) {
         return instance;
     };
 })(new _sc_ai_status_bar());
+
+// 出值（status bar 四區一次過重取：三區 fetch＋model＋git＋時鐘起錶）
+async function refresh_status_bar_regions(status_bar_domain) {
+    const project_fetch_instance   = await status_bar_domain.act().project_fetch();
+    const chat_fetch_instance      = await status_bar_domain.act().chat_fetch();
+    const workspace_fetch_instance = await status_bar_domain.act().workspace_fetch();
+
+    project_fetch_instance.project_fetch();
+    chat_fetch_instance.chat_fetch();
+    workspace_fetch_instance.workspace_fetch();
+
+    const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
+    await sync_status_items_instance.sync_model();
+
+    const refresh_git_item_instance = await status_bar_domain.act().refresh_git_item();
+    refresh_git_item_instance.refresh_git_item();
+
+    const tick_clock_instance = await status_bar_domain.act().tick_clock();
+    tick_clock_instance.start_clock();
+}

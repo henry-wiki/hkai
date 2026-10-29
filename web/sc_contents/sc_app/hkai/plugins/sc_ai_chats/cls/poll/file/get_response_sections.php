@@ -18,9 +18,9 @@ trait get_response_sections
         $response_section_list = [];
 
         // poll 對照（Python 寫；key＝poll_file——拆段已補 response_type／response_index）
-        $poll_list_map = $this->get_msg_poll_list($chat_id, $message_id);
+        $poll_list_map = sc_ai_chats()->poll()->file()->get_msg_poll_list($chat_id, $message_id);
 
-        $message_dir = sc_ai_chats()->poll()->get_poll_dir($chat_id, $message_id);
+        $message_dir = sc_ai_chats()->poll()->get_existing_message_dir($message_id);
 
         // 逐對照線：直接食條目（JSON 原文）＋補 response_content
         foreach ($poll_list_map as $poll_list_entry_item) {
@@ -58,11 +58,11 @@ trait get_response_sections
         }
 
         // 失敗記錄（msg_log 最後一條 FAILURE_RECORDED＝失敗原因——活動記錄為單一來源）
-        $log_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "log");
+        $log_file = sc_ai_chats()->poll()->get_existing_poll_file($message_id, "log");
 
         // 判定：polling 位置冇（訊息已歸檔）→ 改用歸檔目錄同一個檔名
         if (!file_exists($log_file)) {
-            $archived_message_dir = sc_ai_chats()->poll()->get_archived_poll_dir($chat_id, $message_id);
+            $archived_message_dir = sc_ai_chats()->archive()->get_archived_poll_dir($chat_id, $message_id);
 
             $log_file = $archived_message_dir . "/" . basename($log_file);
         }

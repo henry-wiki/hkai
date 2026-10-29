@@ -16,7 +16,7 @@ trait get_msg_poll_list
     //---------------------------------------------------------
     public function get_msg_poll_list($chat_id, $message_id)
     {
-        $poll_list_file = sc_ai_chats()->poll()->get_poll_file($chat_id, $message_id, "poll_list");
+        $poll_list_file = sc_ai_chats()->poll()->get_existing_poll_file($message_id, "poll_list");
         $poll_list_map  = [];
 
         // 判定：對照檔唔存在 → 空 map

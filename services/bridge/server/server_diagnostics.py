@@ -27,11 +27,12 @@ diagnostics = diagnostics_class()
 def get_git_status(payload: dict[str, Any]) -> dict[str, Any]:
     """PHP 執行 Git 狀態診斷。"""
     project_path = payload.get("project_path")
-    
+    is_fresh     = bool(payload.get("fresh", False))
+
     if not project_path:
         return {"ok": False, "error": "missing project_path"}
-    
-    result = diagnostics.get_git_status(project_path)
+
+    result = diagnostics.get_git_status(project_path, is_fresh)
     return result
 
 @router.post("/diagnostics/git/get_config_list")

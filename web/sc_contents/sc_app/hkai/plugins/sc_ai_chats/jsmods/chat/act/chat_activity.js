@@ -32,13 +32,14 @@ class _chat_activity {
         this.chat_list_rank_refresh();
     }
 
-    // 依 data-update_time 自動重排首 30 項（最新第一；無值者殿後照原序——FLIP 全列自動滑位）
-    chat_list_rank_refresh() {
+    // 依 data-update_time 自動重排（最新第一；無值者殿後照原序——FLIP 全列自動滑位）
+    // rank_all＝true：全清單參與（新插入卡可能落在第 30 項之後——唔放寬就永遠排唔上）
+    chat_list_rank_refresh(rank_all) {
         const j_list = jQuery(".sc_chat_list");
 
         const j_chat_items = j_list.children(".sc_chat_card");
         const rank_scope_size = 30;
-        const j_rank_scope_items = j_chat_items.slice(0, rank_scope_size);
+        const j_rank_scope_items = (rank_all === true) ? j_chat_items : j_chat_items.slice(0, rank_scope_size);
 
         // 判定：範圍內不足兩項 → 唔動
         if (j_rank_scope_items.length < 2) {

@@ -8,7 +8,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\poll\log;
 trait build_invalid_log_entry
 {
     // 異常行 entry（安全防專用——獨立，唔混入正常流程）
-    private function build_invalid_log_entry($trimmed_log_line, $reason)
+    public function build_invalid_log_entry($trimmed_log_line, $reason)
     {
         return [
             "level"     => "error",

@@ -6,7 +6,7 @@ context.py — image_extractor 路徑常數（單一來源；全部由本檔位�
 - 定義套件根／services／站台根／data 目錄
 - 定義 job 目錄、附件目錄、log 檔、OCR 縮圖上限
 
-上游：image_extractor 各模組（main／job_store／extractor／pipeline）
+上游：image_extractor 各模組（main／extractor／box_store／pipeline）
 下游：pathlib（stdlib）
 """
 
@@ -24,11 +24,9 @@ ROOT_DIR = SERVICES_DIR.parent
 # 站台資料目錄（所有執行產物集中喺呢度）
 DATA_DIR = ROOT_DIR / "data"
 
-# 抽取工作目錄（每個 message 一個子目錄）
-JOBS_DIR = DATA_DIR / "_tmp" / "image_extract"
 
-# 附件目錄（job 內檔案只准喺呢度之下——防任意路徑讀取）
-ATTACHMENTS_DIR = DATA_DIR / "messages" / "attachments"
+# 訊息根目錄（紙箱附件住 <box>/attachments/——抽取只准讀呢個樹之下）
+MESSAGES_DIR = DATA_DIR / "messages"
 
 # log（同其他套件同一個 logs 目錄）
 LOG_DIR = DATA_DIR / "logs"

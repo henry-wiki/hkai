@@ -100,7 +100,7 @@ class aider_entry_class:
         單次查詢（暖 worker 每張工單一次）：組環境 → spawn aider_daemon.acp → 收尾。
         與冷路徑同一流程——差別只在「有無跨程序通道」。
         """
-        # 讀 msg_conf.json（每張工單重新載入——語境切換）
+        # 讀 meta.json（每張工單重新載入——語境切換）
         msg_main().load_msg_conf_data(Path(msg_conf_path))
 
         # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）

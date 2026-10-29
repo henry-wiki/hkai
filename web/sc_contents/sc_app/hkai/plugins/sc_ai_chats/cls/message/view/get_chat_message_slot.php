@@ -116,7 +116,7 @@ trait get_chat_message_slot
         
         // slots：動態內容（各帶自己嘅容器——前端 replaceWith 後下一輪仍可直接覆蓋）
         $slots = [];
-        $slots["user_message"]  = "<div class='user_message' data-slot='user_message'>" . sc_ai_chats()->message()->view()->get_user_prompt($message_row, $message_model_text) . "</div>";
+        $slots["user_message"]  = "<div class='user_message' data-slot='user_message'>" . sc_ai_chats()->message()->view()->get_user_attachments($message_row) . sc_ai_chats()->message()->view()->get_user_prompt($message_row, $message_model_text) . "</div>";
         $slots["agent_message"] = "<div class='agent_message' data-slot='agent_message'>" . sc_ai_chats()->message()->view()->get_agent_response($message_row, $message_response_rows, $display_summarize, $include_skeleton) . "</div>";
         
         $message_render = [];

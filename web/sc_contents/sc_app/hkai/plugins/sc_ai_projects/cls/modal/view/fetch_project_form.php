@@ -23,9 +23,11 @@ trait fetch_project_form
         // 目標專案（只認 project_slug——前端帶；新增＝空 slug → row=null）
         $project_slug = trim($input_data["project_slug"] ?? "");
 
-        // 查表用純 slug（歸檔語境形 archive@<project_slug> → @ 後；其餘 → 原值——歸檔專案照查到）
-        $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
-        $project_slug = $resolved_project_slug["project_slug"];
+        // 判定：有 slug（編輯語境）→ 解析歸檔語境形；空＝新增，保持空白（唔可以解析——空會 reset 做預設專案）
+        if ($project_slug !== "") {
+            $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($project_slug);
+            $project_slug = $resolved_project_slug["project_slug"];
+        }
 
         // 新增語境（空 slug）→ 一律當新專案（唔可以查表——空 slug 會解析成 Home，變成預填 Home 資料）
         $project_row = null;
@@ -81,7 +83,7 @@ trait fetch_project_form
             
             // footer 按模式揀 builder（新增＝建立專案；編輯＝儲存——view 內唔再靠 $is_edit 分岔）
             if ($is_edit === true) {
-                $foot_html = tab_general_form_view()->build_general_form_tab_foot_edit();
+                $foot_html = tab_general_form_view()->build_general_form_tab_foot_edit($project_slug);
             } else {
                 $foot_html = tab_general_form_view()->build_general_form_tab_foot_add();
             }

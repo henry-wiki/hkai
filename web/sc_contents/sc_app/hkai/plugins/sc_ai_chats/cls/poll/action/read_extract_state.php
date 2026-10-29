@@ -86,7 +86,7 @@ trait read_extract_state
 
         $extract_state["total"] = count($state_list);
         $extract_state["done"]  = $done_count;
-        $extract_state["state"] = $this->derive_extract_state($state_list);
+        $extract_state["state"] = sc_ai_chats()->poll()->derive_extract_state($state_list);
 
         return $extract_state;
     }

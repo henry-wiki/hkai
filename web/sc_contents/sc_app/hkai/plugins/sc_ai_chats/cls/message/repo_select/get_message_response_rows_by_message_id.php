@@ -7,7 +7,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_select;
 
 trait get_message_response_rows_by_message_id
 {
-    // 讀取指定訊息集合的回應列（卡優先；其餘 DB 一次過查——response_id 正序）
+    // 讀取指定訊息集合的回應列（DB 一次過查——response_id 正序）
     public function get_message_response_rows_by_message_id($message_ids)
     {
         // 空清單 → 回空（不查詢）
@@ -16,29 +16,7 @@ trait get_message_response_rows_by_message_id
         }
 
         $response_rows       = [];
-        $missing_message_ids = [];
-
-        // 逐個 message_id：卡有 → 直接收；卡冇 → 留返查 DB
-        foreach ($message_ids as $message_id_item) {
-            $message_card = sc_ai_chats()->message()->card()->read_message_card($message_id_item);
-
-            // 判定：冇卡 → 交 DB 批次查
-            if ($message_card === null) {
-                $missing_message_ids[] = $message_id_item;
-
-                continue;
-            }
-
-            // 逐 row 收入（卡內已按寫入序）
-            foreach ($message_card["responses"] as $card_response_row_item) {
-                $response_rows[] = $card_response_row_item;
-            }
-        }
-
-        // 判定：全部有卡 → 唔使查 DB
-        if (count($missing_message_ids) === 0) {
-            return $response_rows;
-        }
+        $missing_message_ids = $message_ids;
 
         $pdo = sc_db()->getPdo();
 

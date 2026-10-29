@@ -30,6 +30,6 @@ trait git_status
         // 準確值：診斷只收 project_path
         $project_path = $project_row["project_path"];
 
-        return sc_response()->json(sc_ai_diagnostics()->git()->run_git_status($project_path));
+        return sc_response()->json(sc_ai_diagnostics()->git()->run_git_status($project_path, true));
     }
 }

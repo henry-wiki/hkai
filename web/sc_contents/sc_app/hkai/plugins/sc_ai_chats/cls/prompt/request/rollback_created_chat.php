@@ -10,10 +10,10 @@ trait rollback_created_chat
 {
 
     // 回滾：本次請求新建嘅對話（拒絕＝不記錄——唔留孤兒空對話）
-    private function rollback_created_chat($existing_chat_row, $chat_created_this_request)
+    private function rollback_created_chat($existing_chat_row, $is_new_chat_row_this_request)
     {
         // 判定：唔係本次新建 → 唔動作
-        if (!$chat_created_this_request) {
+        if (!$is_new_chat_row_this_request) {
             return;
         }
         

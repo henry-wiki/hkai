@@ -78,7 +78,8 @@ public function prompt_fetch()
 
     // 判定：空白（新對話）→ 後端配 sid
     if ($is_chat_sid_blank === true) {
-        $chat_sid = sc_generate_uuid();
+        // chat_sid 用 UUIDv7（時間排序——列表／檔案次序天然有序）
+        $chat_sid = sc_uuid7();
     } else {
         // 已有 sid → 查對話列（查唔到＝新 prompt 預配 sid——照渲染、靠 draft 還原）
         $chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);

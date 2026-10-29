@@ -9,7 +9,7 @@ class _message_poll {
     }
 
     // 一輪 message_poll（與伺服器連接部分——只做連線：組 payload → 後端 message_poll → 收到嘅資料派去本機側程序；進行中請求自管可取消——新一輪前先 abort 舊）
-    async message_poll(chat_sid, acquired_responses, callbacks) {
+    async message_poll(chat_sid, acquired_responses, last_message_id, callbacks) {
         const thisObject = this;
 
         // 取消上一個未完成嘅請求（新一輪前先殺舊輪——慢輪唔會疊）
@@ -34,6 +34,9 @@ class _message_poll {
 
         // 已獲取申報（per 訊息 per 段——response_id＋已收長度；後台據此裁增量）
         payload.acquired_responses = acquired_responses || {};
+
+        // 前端最後見到嘅訊息（目錄歸檔後，後端據此補交終態結果）
+        payload.last_message_id = last_message_id || 0;
 
         // before 程序（經 before_load callback——存在但唔強求執行）
         if (

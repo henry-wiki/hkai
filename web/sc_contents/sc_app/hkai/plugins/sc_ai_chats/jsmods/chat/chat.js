@@ -133,7 +133,6 @@ class _chat_act_bridge {
     async chat_item_remove() { return (await import("./act/chat_item_remove.js")).chat_item_remove(); }
     async chat_item_switch() { return (await import("./act/chat_item_switch.js")).chat_item_switch(); }
     async chat_list_fetch() { return (await import("./act/chat_list_fetch.js")).chat_list_fetch(); }
-    async chat_list_refresh() { return (await import("./act/chat_list_refresh.js")).chat_list_refresh(); }
     async chat_start_new() { return (await import("./act/chat_start_new.js")).chat_start_new(); }
     async detect_chat_list_context_change() { return (await import("./act/detect_chat_list_context_change.js")).detect_chat_list_context_change(); }
     async detect_chat_sid_change() { return (await import("./act/detect_chat_sid_change.js")).detect_chat_sid_change(); }

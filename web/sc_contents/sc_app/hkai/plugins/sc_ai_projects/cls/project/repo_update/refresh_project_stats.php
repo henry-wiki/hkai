@@ -18,5 +18,7 @@ trait refresh_project_stats
             . "WHERE project_id = ?";
 
         sc_db()->connection("sqlite")->affectingStatement($refresh_sql, [(int)$project_id]);
+
+        sc_ai_health()->stream()->mark_target_updated("project");
     }
 }

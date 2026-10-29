@@ -45,7 +45,7 @@ sc_ai_health()->health()->add_health_action("finalize_stale_job", function () {
 
 // 登記 health 動作（每輪 health 檢查即時執行——回傳值丟棄、唔入回應；清 old archive：已歸檔訊息目錄逾 1 日 → 整個刪）
 sc_ai_health()->health()->add_health_action("sweep_old_archived_messages", function () {
-    return sc_ai_chats()->poll()->sweep_old_archived_messages();
+    return sc_ai_chats()->archive()->sweep_old_archived_messages();
 });
 
 // 外部貢獻 status item（chat 欄右側——歸檔入口／離開歸檔；provider HTML——Closure 於 render 時求值）
@@ -89,6 +89,7 @@ $plugin->add_request_action("prompt_send", __DIR__ . "/request/prompt/prompt_sen
 $plugin->add_request_action("upload_attachment", __DIR__ . "/request/prompt/upload_attachment.php");
 $plugin->add_request_action("message_poll", __DIR__ . "/request/message/message_poll.php");
 $plugin->add_request_action("prompt_stop", __DIR__ . "/request/prompt/prompt_stop.php");
+$plugin->add_request_action("prompt_resume", __DIR__ . "/request/prompt/prompt_resume.php");
 $plugin->add_request_action("agent_switch", __DIR__ . "/request/prompt/agent_switch.php");
 $plugin->add_request_action("queue_cancel", __DIR__ . "/request/queue/queue_cancel.php");
 $plugin->add_request_action("queue_clear", __DIR__ . "/request/queue/queue_clear.php");
@@ -106,8 +107,9 @@ $plugin->add_request_action("permission_decide", __DIR__ . "/request/permission/
 $plugin->add_request_action("draft_create", __DIR__ . "/request/draft/draft_create.php");
 $plugin->add_request_action("draft_fetch", __DIR__ . "/request/draft/draft_fetch.php");
 $plugin->add_request_action("draft_discard", __DIR__ . "/request/draft/draft_discard.php");
-$plugin->add_request_action("draft_upload", __DIR__ . "/request/draft/draft_upload.php");
-$plugin->add_request_action("draft_delete_file", __DIR__ . "/request/draft/draft_delete_file.php");
+$plugin->add_request_action("upload_draft_attachment", __DIR__ . "/request/attachment/upload_draft_attachment.php");
+$plugin->add_request_action("request_delete_draft_attachment", __DIR__ . "/request/attachment/request_delete_draft_attachment.php");
+$plugin->add_request_action("serve_attachment", __DIR__ . "/request/attachment/serve_attachment.php");
 $plugin->add_request_action("draft_save_meta", __DIR__ . "/request/draft/draft_save_meta.php");
 
 // 注入 storage 目錄（storage dir = sc_storage/{app 名}——由執行語境 controller 提供）

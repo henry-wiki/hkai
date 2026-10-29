@@ -54,6 +54,40 @@ def remove_pid(job_dir: Path) -> None:
         pid_file.unlink(missing_ok=True)
 
 
+def is_pid_running(pid: int) -> bool:
+    """判定 pid 係唔係仍活著（psutil）。"""
+    # 判定：pid 無效 → False
+    if pid <= 0:
+        return False
+
+    try:
+        return psutil.Process(pid).is_running()
+    except psutil.Error:
+        return False
+
+
+def claim_pid(box_dir: Path, pid: int) -> bool:
+    """原子認領（箱內 extract.pid）：冇人／舊主人已死＝成功；活主人＝False。"""
+    box_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_pid = read_pid(box_dir)
+
+    # 判定：已有活主人 → 認領失敗
+    if existing_pid > 0 and is_pid_running(existing_pid) is True:
+        return False
+
+    write_pid(box_dir, pid)
+
+    return True
+
+
+def release_pid(box_dir: Path, pid: int) -> None:
+    """交還認領（只刪自己嗰個）。"""
+    # 判定：pid 檔係自己 → 刪
+    if read_pid(box_dir) == int(pid):
+        remove_pid(box_dir)
+
+
 def terminate_tree(pid: int) -> bool:
     """連子進程終止；回 True＝有殺到，False＝本身已死。"""
     # 判定：pid 無效 → 唔做

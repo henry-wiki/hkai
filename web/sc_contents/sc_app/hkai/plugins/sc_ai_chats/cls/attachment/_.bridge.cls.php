@@ -8,13 +8,23 @@ namespace sc\app\hkai\plugins\sc_ai_chats\attachment;
 
 class attachment_Class
 {
+    use guard\detect_image_mime_type;
+    use guard\webp_to_jpg_or_gif_to_png;
     use action\store_uploaded_image;
     use action\get_rows_by_ids;
+    use action\get_attachment_diskpath;
     use action\bind_to_message;
-    use action\delete_by_message;
     use action\delete_by_project;
     use action\save_extract_result;
-    use action\import_draft_file;
+    use action\backfill_extract_results;
+    use action\sync_poll_attachments;
+    use upload\upload_draft_attachment;
+    use upload\process_uploaded_image;
+    use upload\write_attachment_info;
+    use upload\write_thumbnail;
+    use request\request_delete_draft_attachment;
+    use request\serve_attachment;
+    use action\delete_draft_attachment;
 
     private static $instance = null;
 

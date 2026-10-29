@@ -101,8 +101,6 @@ class _project_act_bridge {
     async project_item_fetch() { return (await import("./act/project_item_fetch.js")).project_item_fetch(); }
     async project_item_insert() { return (await import("./act/project_item_insert.js")).project_item_insert(); }
     async project_item_remove() { return (await import("./act/project_item_remove.js")).project_item_remove(); }
-    async project_list_refresh() { return (await import("./act/project_list_refresh.js")).project_list_refresh(); }
-    async project_list_status_refresh() { return (await import("./act/project_list_status_refresh.js")).project_list_status_refresh(); }
     async project_list_rank_refresh() { return (await import("./act/project_list_rank_refresh.js")).project_list_rank_refresh(); }
     async detect_project_slug_change() { return (await import("./act/detect_project_slug_change.js")).detect_project_slug_change(); }
     async detect_project_list_context_change() { return (await import("./act/detect_project_list_context_change.js")).detect_project_list_context_change(); }

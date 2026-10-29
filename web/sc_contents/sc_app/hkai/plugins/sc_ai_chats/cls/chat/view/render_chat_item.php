@@ -38,6 +38,15 @@ trait render_chat_item
 
         $chat_link = $this->build_chat_url($project_slug, $project_status, $chat_sid, $chat_status);
 
+        // 判定：輪詢區仍有此對話訊息 → 開頁即帶 polling（bar 純 CSS；唔等 SSE 首次 diff）
+        $chat_polling_files = glob(sc_get_config("hkai.messages_polling_dir") . "/*/" . $chat_sid . "/*/meta.json");
+        $polling_class = "";
+
+        // 判定：有進行中訊息 → 加 class
+        if (is_array($chat_polling_files) === true && count($chat_polling_files) > 0) {
+            $polling_class = " polling";
+        }
+
         // 卡片身份段（data-chat_sid——同 URL 段同一語言：歸檔＝archive@{chat_sid}；各刷新程序比對用）
         $chat_segment = $this->build_chat_segment($chat_sid, $chat_status);
 
@@ -61,7 +70,7 @@ trait render_chat_item
         }
 
         $item_attr = [];
-        $item_attr[] = "class='sc_chat_card{$active_class}{$archived_class}'";
+        $item_attr[] = "class='sc_chat_card{$active_class}{$archived_class}{$polling_class}'";
         $item_attr[] = "href='{$chat_link}'";
         $item_attr[] = "data-chat_id='{$chat_id}'";
         $item_attr[] = "data-chat_sid='{$chat_segment}'";

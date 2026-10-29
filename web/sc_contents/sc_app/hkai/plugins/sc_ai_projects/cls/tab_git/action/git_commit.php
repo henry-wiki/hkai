@@ -41,6 +41,14 @@ trait git_commit
 
         hkai()->runtime()->logger()->info("git_commit done: project_slug=" . $project_slug);
 
-        return sc_response()->json($git_commit_result);
+        // 同一個請求內即刻重建 Git tab（fresh 取狀態）——前端收到即換，免第二次往返
+        $git_tab_html = $this->build_tab_git_body($project_row);
+
+        $response_data = [];
+        $response_data["ok"]      = true;
+        $response_data["message"] = $git_commit_result["message"] ?? "";
+        $response_data["html"]    = ["tab_body" => $git_tab_html];
+
+        return sc_response()->json($response_data);
     }
 }

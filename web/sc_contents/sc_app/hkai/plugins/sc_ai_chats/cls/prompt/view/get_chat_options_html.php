@@ -8,24 +8,15 @@ namespace sc\app\hkai\plugins\sc_ai_chats\prompt\view;
 trait get_chat_options_html
 {
     // prompt 區塊格1：chat options 內容（模式鈕＋模型選擇顯示＋hidden 欄位——與整頁渲染同一源）
-    public function get_chat_options_html($project_slug, $chat_sid, $prompt_draft = null)
+    public function get_chat_options_html($project_slug, $chat_sid)
     {
-        // 活動草稿（prompt_draft——新源優先；無草稿 → 舊存（chats row／SESSION 兜底））
-        // 判定：活動有草稿 → 用草稿值
-        if ($prompt_draft !== null) {
-            $provider_id      = $prompt_draft["provider_id"];
-            $model_id         = $prompt_draft["model_id"];
-            $reasoning_effort = $prompt_draft["reasoning_effort"];
-            $chat_mode        = $prompt_draft["chat_mode"];
-        } else {
-            // 舊存讀取（chats row → SESSION → 預設）
-            $chat_options = sc_ai_chats()->chat_option()->get_chat_options($project_slug, $chat_sid);
-            
-            $provider_id      = $chat_options["provider_id"];
-            $model_id         = $chat_options["model_id"];
-            $reasoning_effort = $chat_options["reasoning_effort"];
-            $chat_mode        = $chat_options["chat_mode"];
-        }
+        // 選項來源（chat row → 專案記錄 → 預設；草稿值由前端 restore 自行套用）
+        $chat_options = sc_ai_chats()->chat_option()->get_chat_options($project_slug, $chat_sid);
+
+        $provider_id      = $chat_options["provider_id"];
+        $model_id         = $chat_options["model_id"];
+        $reasoning_effort = $chat_options["reasoning_effort"];
+        $chat_mode        = $chat_options["chat_mode"];
         
         // chat mode（驗證後使用——未選／無效值一律回第一粒顯示模）
         $chat_mode = sc_ai_chats()->chat_option()->get_chat_mode($chat_mode);

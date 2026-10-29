@@ -4,7 +4,7 @@ job_executor.py
 
 查詢四檔（msg_*）的流程處理（job_executor_class singleton——get_instance() 取得）。
 
-    data/messages/polling/{project_slug}/{message_id}/msg_conf.json   找到 → 處理（raw 行經 session 寫 job_stdout）
+    data/messages/polling/{project_slug}/{chat_sid}/{prompt_id}/meta.json   找到 → 處理（raw 行經 session 寫 job_stdout）
     → 完成/失敗 → status 寫入 msg_status（留 polling——PHP poll 收尾移 archive）
 
 任何情況（成功/錯誤/例外）都要標記終態，避免卡檔；archive 目錄為純歸檔（PHP 收尾移入），本模組永不讀取。
@@ -16,6 +16,7 @@ job_executor.py
 """
 
 from pathlib import Path
+from typing import cast
 
 from ..context import (
     entry,
@@ -59,7 +60,7 @@ class job_executor_class:
     def initialize(self, msg_conf_path: Path) -> bool:
         """載入單張工單語境（msg_conf → message_store 狀態；每次開工一次——單一載入點）。
 
-        回 False＝唔使做單：①已終態（completed／failed／cancelled）；②stdout 已存在（之前開過工）；③msg_prompt 空。
+        回 False＝唔使做單：①已終態（completed／failed／cancelled）；②stdout 已存在（之前開過工）；③msg_conf 嘅 content 空。
         """
         # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
         sc_env.load_api_keys()
@@ -80,11 +81,15 @@ class job_executor_class:
             sc_logger.log("initialize: job skipped (stdout exists) path=" + str(msg_conf_path))
             return False
 
-        # 讀使用者輸入（msg_prompt JSON——取 content 欄）
+        # 讀使用者輸入（meta.json——prompt_text／content；msg_prompt.json 已退役）
         content = message_store().get_msg_prompt()
 
-        # 判定：空內容 → 標記完成＋記 log＋即刻停（留 polling，PHP poll 收尾移 archive）
-        if not content.strip():
+        # 附件（msg_conf.attachments——純圖片訊息：冇文字但有圖，仍然要交模型）
+        attachments_conf = cast("list[dict[str, object]]", message_store().get_msg_conf_data().get("attachments", []))
+        has_attachment   = len(attachments_conf) > 0
+
+        # 判定：空內容且冇附件 → 標記完成＋記 log＋即刻停（留 polling，PHP poll 收尾移 archive）
+        if not content.strip() and not has_attachment:
             sc_logger.log("initialize: job skipped (empty prompt) path=" + str(msg_conf_path))
             _ = message_status().apply(EVENT_COMPLETED)
             return False
@@ -105,7 +110,7 @@ class job_executor_class:
             -> 收尾（_finalize_warm 依現時狀態＋回應判終態）
         """
 
-        # 認領本訊息（原子——同時只一個）
+        # 認領本訊息（原子——同時只一個；先認領，認領唔到一個字都唔寫）
         if message_claim().claim(process.self_pid()) is False:
             sc_logger.log("claim failed: pid=" + str(process.self_pid()) + " owner=" + str(message_claim().get_owner_pid()) + " path=" + str(message_store().get_message_dir()))
             return True
@@ -179,6 +184,10 @@ class job_executor_class:
 
     def finalize_abandoned_message(self, msg_conf_path: Path) -> None:
         """被遺棄訊息收終態（daemon 用——暖 worker 死於工單中時，防條訊息卡死等人救）。"""
+        # 判定：工單目錄已消失（PHP 已搬 archive／已刪）→ 唔收尾（一個字都唔寫）
+        if Path(msg_conf_path).exists() is False:
+            return
+
         _ = self.initialize(msg_conf_path)
 
         # 判定：status 檔不存在（PHP 已歸檔移走）→ 直接返回

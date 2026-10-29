@@ -12,6 +12,11 @@ class _tick_clock {
     start_clock() {
         const thisObject = this;
 
+        // 判定：已有 interval → 唔重複起（page_loaded／URL 變化共用同一條）
+        if (thisObject.clock_timer_id !== null) {
+            return;
+        }
+
         thisObject.tick();
         thisObject.clock_timer_id = setInterval(function () {
             thisObject.tick();
@@ -28,7 +33,23 @@ class _tick_clock {
         const status_bar_domain = await registry().sc_ai_status_bar().status_bar();
         const status_item_render_instance = await status_bar_domain.act().status_item_render();
 
-        status_item_render_instance.set_item("sb_clock", hour_text + ":" + minute_text);
+        const clock_text = hour_text + ":" + minute_text;
+        const clock_item = status_item_render_instance.get_item("sb_clock");
+
+        // 判定：item 未渲染 → 唔寫
+        if (!clock_item) {
+            return;
+        }
+
+        const clock_text_item = clock_item.querySelector(".sc-text");
+        const current_text = (clock_text_item === null) ? "" : clock_text_item.textContent;
+
+        // 判定：文字未變 → 唔寫（避免每秒重寫同一字串）
+        if (current_text === clock_text) {
+            return;
+        }
+
+        status_item_render_instance.set_item("sb_clock", clock_text);
     }
 }
 

@@ -1,5 +1,5 @@
 // jsmods/project/act/project_item_insert.js —— 新專案項插入（act 層——一檔一事；主動作＝檔名）
-// 職責：project_item_insert（按 project_slug 後端載入該專案項 HTML → append 入 .sc_project_list 尾——由 project_list_refresh 迴圈逐個呼叫）
+// 職責：project_item_insert（按 project_slug 後端載入該專案項 HTML → append 入 .sc_project_list 尾——由 act_project_updater 逐個呼叫）
 // 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _project_item_insert {

@@ -11,15 +11,11 @@ session.py
 """
 
 import asyncio
-import base64
-import io
 import json
 import os
 import time
 from pathlib import Path
 from typing import TypedDict, cast
-
-from PIL import Image
 
 from ...context import (
     acp_client,
@@ -53,45 +49,13 @@ class StreamState(TypedDict):
     usage: dict[str, object]
 
 
-def _normalise_image_for_provider(image_bytes: bytes) -> tuple[str, bytes] | None:
-    """provider 只收 PNG／JPEG：真圖片轉 provider 格式；唔係圖片回 None。"""
-
-    # PNG 原樣（零解碼）
-    if image_bytes.startswith(bytes([137]) + b"PNG"):
-        return "image/png", image_bytes
-
-    # JPEG 原樣（零解碼）
-    if image_bytes.startswith(bytes([255, 216, 255])):
-        return "image/jpeg", image_bytes
-
-    # 其餘：交 Pillow 解碼（GIF／WebP／BMP…）
-    try:
-        with Image.open(io.BytesIO(image_bytes)) as image_handle:
-            # GIF → PNG（保留透明；動畫取第一幀）
-            if image_handle.format == "GIF":
-                gif_frame = image_handle.convert("RGBA")
-                png_buffer = io.BytesIO()
-                gif_frame.save(png_buffer, format="PNG")
-                return "image/png", png_buffer.getvalue()
-
-            # 其餘 → JPEG 白底（體積細；透明位變白）
-            image_frame = image_handle.convert("RGBA")
-            jpeg_canvas = Image.new("RGB", image_frame.size, (255, 255, 255))
-            jpeg_canvas.paste(image_frame, mask=image_frame.split()[3])
-            jpeg_buffer = io.BytesIO()
-            jpeg_canvas.save(jpeg_buffer, format="JPEG", quality=90)
-            return "image/jpeg", jpeg_buffer.getvalue()
-    except (OSError, ValueError):
-        return None
-
-
 def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
     """
     ACP 準備：組本次連線參數（附件／prompt／provider／model／session 名）——回 session_request。
     權限檔案契約（message 目錄）：
         msg_permission.json           本側寫（pending 請求——PHP 讀出提示卡）
         msg_permission_decision.json  本側讀（使用者決定；逾時＝本側寫入 deny）
-        msg_conf.json                 本側讀（permission_allow_all／permission_deny_all 旗標；PHP 寫——本輪免問）
+        meta.json                     本側讀（permission_allow_all／permission_deny_all 旗標；PHP 寫——本輪免問）
     """
     # 語境（msg_conf——execute_job 已載入 message_store）
     content            = message_store().get_msg_prompt()
@@ -102,47 +66,55 @@ def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
     # goose chat mode（agent原生模式——會話政策：chat／smart_approve／auto；由 prepare_goose_env 寫入）
     goose_mode = str(goose_env["GOOSE_MODE"])
 
-    # 附件（msg_conf.attachments——原檔轉 base64 交 ACP image block；冇＝空）
+    # 附件（msg_conf.attachments——只列本機路徑；模型需要睇圖時自行呼叫 read_image，唔再 inline base64）
     prompt_images: list[PromptImage] = []
-    attachment_paths: list[str] = []
+    attachment_lines: list[str] = []
 
     attachments_conf = cast("list[dict[str, object]]", message_store().get_msg_conf_data().get("attachments", []))
+    attachments_root = str(message_store().get_msg_conf_data().get("attachments_dir", "") or "")
 
-    # 逐個附件讀檔
+    # 逐個附件：砌一行「路徑＋原檔名＋尺寸／大小」（零讀檔——唔佔 provider bytes）
     for attachment_file_item in attachments_conf:
         attachment_path = str(attachment_file_item.get("path", ""))
+        attachment_filename = str(attachment_file_item.get("filename", ""))
 
-        # 判定：檔案唔存在 → 跳過
+        # 判定：草稿 meta 只有 filename → 對照成包內相對路徑
+        if attachment_path == "":
+            # 判定：有檔名 → 砌 attachments/<檔名>
+            if attachment_filename != "":
+                attachment_path = "attachments/" + attachment_filename
+
+        # 判定：冇路徑 → 跳過
         if attachment_path == "":
             continue
 
-        try:
-            with open(attachment_path, "rb") as attachment_handle:
-                attachment_bytes = attachment_handle.read()
-        except OSError:
+        # 相對路徑 → 以附件實際目錄（meta.attachments_dir）為基準；冇記 → 箱內 attachments/
+        if not os.path.isabs(attachment_path):
+            attachment_path = os.path.join(attachments_root or str(message_store().get_message_dir() / "attachments"), os.path.basename(attachment_path))
+
+        # 判定：檔案唔存在 → 跳過
+        if os.path.isfile(attachment_path) is False:
             continue
 
-        normalised_image = _normalise_image_for_provider(attachment_bytes)
+        attachment_original_name = str(attachment_file_item.get("original_filename", "") or attachment_filename)
+        attachment_size_bytes = int(attachment_file_item.get("file_size", 0) or 0)
+        attachment_width = int(attachment_file_item.get("image_width", 0) or 0)
+        attachment_height = int(attachment_file_item.get("image_height", 0) or 0)
 
-        # 判定：唔係可解碼圖片 → 跳過（唔污染 provider 請求）
-        if normalised_image is None:
-            continue
+        attachment_line = attachment_path + " （" + attachment_original_name
+        # 判定：有尺寸 → 補寬高
+        if attachment_width > 0:
+            attachment_line += "，" + str(attachment_width) + "×" + str(attachment_height)
+        attachment_line += "，" + str(round(attachment_size_bytes / 1048576, 2)) + " MB）"
+        attachment_lines.append(attachment_line)
 
-        normalised_mime_type, normalised_bytes = normalised_image
-
-        prompt_images.append({
-            "mime_type":   normalised_mime_type,
-            "data_base64": base64.b64encode(normalised_bytes).decode("ascii"),
-        })
-
-        attachment_paths.append(attachment_path)
-
-    # prompt 文字補附件路徑（image block 之外嘅後備——agent 可自行開檔）
+    # prompt 文字補附件清單（模型自行 read_image——原始 bytes 唔入請求）
     prompt_text = content
 
-    # 判定：有附件 → 補路徑行
-    if len(attachment_paths) > 0:
-        prompt_text = prompt_text + "\n\n[附件圖片]\n" + "\n".join(attachment_paths)
+    # 判定：有附件 → 補清單同使用指示
+    if len(attachment_lines) > 0:
+        attachment_header = chr(10) + chr(10) + "[附件圖片（本機檔案；需要睇圖時請呼叫 read_image 工具讀取對應路徑——唔會自動送上）]" + chr(10)
+        prompt_text = prompt_text + attachment_header + chr(10).join(attachment_lines)
 
     # provider／model（litellm 式 provider/model；model 可再含 "/"）
     model_parts = message_store().get_model_name().partition("/")

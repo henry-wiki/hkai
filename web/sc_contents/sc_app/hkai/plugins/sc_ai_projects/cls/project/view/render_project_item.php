@@ -17,6 +17,11 @@ trait render_project_item
         $project_name = (isset($project_item["project_name"]) ? $project_item["project_name"] : null);
         $project_status = (isset($project_item["project_status"]) ? $project_item["project_status"] : null);
 
+        // 判定：Home 專案（預設 slug）→ 一律按 Home 卡處理（清單／單項同一結果：房子 icon、無齒輪掣）
+        if ($project_slug === sc_get_config("hkai.default_project_slug")) {
+            $is_home_card = true;
+        }
+
         // 目前選取的專案加上高亮樣式——slug 相同（URL 主鍵）
         $active_class = "";
         if ($project_slug === $selected_project_slug) {
@@ -29,13 +34,17 @@ trait render_project_item
             $archived_class = " sc_project_card--archived";
         }
 
+        // 判定：輪詢區仍有本專案訊息 → 開頁即帶 polling（bar 純 CSS；唔等 SSE 首次 diff）
+        $project_polling_files = glob(sc_get_config("hkai.messages_polling_dir") . "/" . $project_slug . "/*/*/meta.json");
+        $polling_class = "";
+
+        // 判定：有進行中訊息 → 加 class
+        if (is_array($project_polling_files) === true && count($project_polling_files) > 0) {
+            $polling_class = " polling";
+        }
+
         // 專案連結（含歸檔語境形——URL 知識住 build_project_url；歸檔＝/archive@<project_slug>/）
         $project_link = $this->build_project_url($project_slug, $project_status);
-
-        // 判定：Home 卡 → 連結固定 "/"
-        if ($is_home_card === true) {
-            $project_link = "/";
-        }
 
         // 卡片身份段（同 URL 段同一語言：歸檔＝archive@{project_slug}；各刷新程序比對用——對照 chat 側 data-chat_sid）
         $project_segment = $this->build_project_segment($project_slug, $project_status);
@@ -87,7 +96,7 @@ trait render_project_item
         }
 
         $item_attr = [];
-        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}'";
+        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}{$polling_class}'";
         $item_attr[] = "href='{$project_link}'";
         $item_attr[] = "data-project_slug='{$project_segment}'";
         $item_attr[] = "data-project_id='{$project_id}'";

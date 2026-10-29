@@ -24,6 +24,8 @@ trait restore_project
             "UPDATE projects SET project_status = 'active' WHERE project_id = ?",
             [$project_id]
         );
+
+        sc_ai_health()->stream()->mark_target_updated("project");
     }
 
 }

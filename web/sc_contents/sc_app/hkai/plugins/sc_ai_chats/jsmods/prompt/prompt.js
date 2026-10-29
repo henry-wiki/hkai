@@ -60,6 +60,11 @@ class _prompt {
             return;
         }
 
+        // 判定：冇 project_slug（根頁 "/"）→ 唔改 URL（否則會砌出 "//{sid}/"＝當成網域）
+        if (project_slug === "") {
+            return;
+        }
+
         sc_url.shallow_replace_url("/" + project_slug + "/" + chat_sid + "/");
     }
 
@@ -125,15 +130,15 @@ class _prompt_evt_bridge {
         (await this.prompt_send()).init();
         (await this.prompt_stop()).init();
     }
-    async agent_switch() { return (await import("./evt/agent_switch.js")).agent_switch(); }
-    async prompt_attach()      { return (await import("./evt/prompt_attach.js")).prompt_attach(); }
-    async prompt_draft_restore() { return (await import("./evt/prompt_draft_restore.js")).prompt_draft_restore(); }
-    async prompt_draft_save() { return (await import("./evt/prompt_draft_save.js")).prompt_draft_save(); }
-    async prompt_enter_send() { return (await import("./evt/prompt_enter_send.js")).prompt_enter_send(); }
-    async prompt_gen_random() { return (await import("./evt/prompt_gen_random.js")).prompt_gen_random(); }
-    async prompt_input()      { return (await import("./evt/prompt_input.js")).prompt_input(); }
-    async prompt_send()       { return (await import("./evt/prompt_send.js")).prompt_send(); }
-    async prompt_stop()       { return (await import("./evt/prompt_stop.js")).prompt_stop(); }
+    async agent_switch() { return (await import("./evt/evt_agent_switch.js")).agent_switch(); }
+    async prompt_attach()      { return (await import("./evt/evt_prompt_attach.js")).prompt_attach(); }
+    async prompt_draft_restore() { return (await import("./evt/evt_prompt_draft_restore.js")).prompt_draft_restore(); }
+    async prompt_draft_save() { return (await import("./evt/evt_prompt_draft_save.js")).prompt_draft_save(); }
+    async prompt_enter_send() { return (await import("./evt/evt_prompt_enter_send.js")).prompt_enter_send(); }
+    async prompt_gen_random() { return (await import("./evt/evt_prompt_gen_random.js")).prompt_gen_random(); }
+    async prompt_input()      { return (await import("./evt/evt_prompt_input.js")).prompt_input(); }
+    async prompt_send()       { return (await import("./evt/evt_prompt_send.js")).prompt_send(); }
+    async prompt_stop()       { return (await import("./evt/evt_prompt_stop.js")).prompt_stop(); }
 }
 
 // act（動作——開單叫工作）
@@ -142,11 +147,12 @@ class _prompt_act_bridge {
     init() {
 
     }
-    async prompt_draft_save()        { return (await import("./act/prompt_draft_save.js")).prompt_draft_save(); }
-    async prompt_fetch()           { return (await import("./act/prompt_fetch.js")).prompt_fetch(); }
-    async prompt_send()               { return (await import("./act/prompt_send.js")).prompt_send(); }
-    async prompt_send_button_toggle() { return (await import("./act/prompt_send_button_toggle.js")).prompt_send_button_toggle(); }
-    async prompt_stop()               { return (await import("./act/prompt_stop.js")).prompt_stop(); }
+    async prompt_draft_save()        { return (await import("./act/act_prompt_draft_save.js")).prompt_draft_save(); }
+    async prompt_fetch()           { return (await import("./act/act_prompt_fetch.js")).prompt_fetch(); }
+    async prompt_send()               { return (await import("./act/act_prompt_send.js")).prompt_send(); }
+    async prompt_resume()             { return (await import("./act/act_prompt_resume.js")).prompt_resume(); }
+    async prompt_send_button_toggle() { return (await import("./act/act_prompt_send_button_toggle.js")).prompt_send_button_toggle(); }
+    async prompt_stop()               { return (await import("./act/act_prompt_stop.js")).prompt_stop(); }
 }
 
 // req（出街工作）
@@ -155,14 +161,16 @@ class _prompt_req_bridge {
     init() {
 
     }
-    async agent_switch() { return (await import("./req/agent_switch.js")).agent_switch(); }
-    async prompt_fetch() { return (await import("./req/prompt_fetch.js")).prompt_fetch(); }
-    async prompt_send()  { return (await import("./req/prompt_send.js")).prompt_send(); }
-    async prompt_stop()  { return (await import("./req/prompt_stop.js")).prompt_stop(); }
-    async upload_attachment() { return (await import("./req/upload_attachment.js")).upload_attachment(); }
-    async draft_delete_file() { return (await import("./req/draft_delete_file.js")).draft_delete_file(); }
-    async draft_save_meta() { return (await import("./req/draft_save_meta.js")).draft_save_meta(); }
-    async draft_fetch() { return (await import("./req/draft_fetch.js")).draft_fetch(); }
+    async agent_switch() { return (await import("./req/req_agent_switch.js")).agent_switch(); }
+    async prompt_fetch() { return (await import("./req/req_prompt_fetch.js")).prompt_fetch(); }
+    async draft_create() { return (await import("./req/req_draft_create.js")).draft_create(); }
+    async prompt_send()  { return (await import("./req/req_prompt_send.js")).prompt_send(); }
+    async prompt_resume() { return (await import("./req/req_prompt_resume.js")).prompt_resume(); }
+    async prompt_stop()  { return (await import("./req/req_prompt_stop.js")).prompt_stop(); }
+    async upload_attachment() { return (await import("./req/req_upload_attachment.js")).upload_attachment(); }
+    async request_delete_draft_attachment() { return (await import("./req/req_request_delete_draft_attachment.js")).request_delete_draft_attachment(); }
+    async draft_save_meta() { return (await import("./req/req_draft_save_meta.js")).draft_save_meta(); }
+    async draft_fetch() { return (await import("./req/req_draft_fetch.js")).draft_fetch(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）

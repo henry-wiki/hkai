@@ -40,7 +40,11 @@ POLLING_MSG_FILE_TYPES = {
 
 
 def get_msg_file_path(message_dir: Path, msg_type: str) -> Path:
-    """單一 type 檔路徑：{message_dir}/msg_{type}.{ext}（與 PHP get_poll_file 同一規則）。"""
+    """單一 type 檔路徑：{message_dir}/msg_{type}.{ext}；conf 契約＝meta.json（與 PHP 同一規則）。"""
+    # 判定：conf 類型 → 固定 meta.json（全階段同名）
+    if msg_type == "conf":
+        return message_dir / "meta.json"
+
     file_extension = DEFAULT_MSG_FILE_EXTENSION
 
     # 判定：查表有呢個類型 → 用表嘅副檔名

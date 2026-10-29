@@ -33,16 +33,47 @@ trait handle_message_poll
             return sc_response()->json(["ok" => false, "error" => "chat_sid is required"], 400);
         }
         
-        // 解析 chat row（chat_id／project_id 直取——送出＝唯一激活者，poll 嗰刻對話一定已建）
-        $chat_row   = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
+        // 解析 chat row（chat_id／project_id 直取；對話已被刪 → 回空結果，唔再報錯）
+        $chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
+
+        // 判定：對話列已唔存在（最後一條訊息被刪 → 對話已收走）→ 回空 poll 結果
+        if ($chat_row === null) {
+            $empty_poll_result = [];
+            $empty_poll_result["ok"]                = true;
+            $empty_poll_result["chat_exists"]       = false;
+            $empty_poll_result["tasks"]             = [];
+            $empty_poll_result["html"]["queue_list"] = sc_ai_chats()->prompt()->render_empty_queue_list();
+
+            return sc_response()->json($empty_poll_result);
+        }
+
         $chat_id    = (int)$chat_row["chat_id"];
         $project_id = (int)$chat_row["project_id"];
         
-        // 附件整理監視（preparing → 抽取完成即放行 queued）
-        sc_ai_chats()->poll()->promote_prepared_jobs($chat_id);
+        // 前端最後見到嘅訊息（目錄已歸檔時，用嚟補交終態結果）
+        $last_message_id = isset($request_data["last_message_id"]) ? (int)$request_data["last_message_id"] : 0;
 
-        // 掃描該對話進行中任務（msg_conf——有幾多出幾多）
-        $polling_jobs = sc_ai_chats()->poll()->file()->get_poll_jobs($chat_id);
+        // 掃描該對話進行中任務（msg_conf——有幾多出幾多；帶 last_message_id 補終態渲染 job）
+        $polling_jobs = sc_ai_chats()->poll()->file()->get_poll_jobs($chat_id, $last_message_id);
+
+        // 附件回填（DB 同步＋首次放行；派工由 stream 狀態轉換驅動）
+        foreach ($polling_jobs as $polling_job_backfill) {
+            $backfill_poll_item = sc_ai_chats()->poll()->file()->get_poll_item((int)$polling_job_backfill["message_id"]);
+
+            // 判定：箱讀唔到 → 下一個
+            if ($backfill_poll_item === null) {
+                continue;
+            }
+
+            $backfill_box_dir = sc_ai_chats()->poll()->get_existing_message_dir((int)$polling_job_backfill["message_id"]);
+
+            // 判定：箱唔存在 → 下一個
+            if ($backfill_box_dir === "") {
+                continue;
+            }
+
+            sc_ai_chats()->attachment()->sync_poll_attachments($backfill_poll_item, $backfill_box_dir);
+        }
         
         // 等待列 UI（與 submit／頁面初始共用 builder——傳 chat_id 即掃＋砌整排；前端只 bind）
         $queue_list = sc_ai_chats()->prompt()->render_queue_list($chat_id);
@@ -54,8 +85,13 @@ trait handle_message_poll
             $_message_id         = (int)$_polling_job_item["message_id"];
             $_message_poll_status = $_polling_job_item["status"];
 
-            // 段同步（檔案→卡——寫入鏈：串流期間只寫卡檔；終態 finalize 一次 flush 入 DB）
-            sc_ai_chats()->message()->card()->upsert_message_card_response($chat_row, $_polling_job_item);
+            // 箱內階段狀態（pending／polling）由抽取器＋派工擁有——worker 未開工嘅舊狀態唔覆蓋
+            if (!in_array($_message_poll_status, ["queued", "preparing"], true)) {
+                sc_ai_chats()->message()->set_message_meta_status(sc_ai_chats()->poll()->get_poll_dir($_chat_id, $_message_id), $_message_poll_status);
+            }
+
+            // 段同步（檔案→DB——每 tick 由 poll 檔 upsert；終態 finalize 再全掃一次補齊）
+            sc_ai_chats()->message()->repo_update()->upsert_db_message_response($chat_row, $_polling_job_item);
 
             // 段讀取（卡＝讀源，冇卡讀 DB；兩列入、內部自理）
             $_response_sections = [];
@@ -140,11 +176,14 @@ trait handle_message_poll
         $has_terminal_job = false;
         $has_abnormal_job = false;
         foreach ($polling_jobs as $_polling_job_item) {
+            // 判定：只供渲染嘅補 job → 唔改狀態、唔歸檔
+            if (($_polling_job_item["is_render_only"] ?? false) === true) {
+                continue;
+            }
+
             $_chat_id            = (int)$_polling_job_item["chat_id"];
             $_message_id         = (int)$_polling_job_item["message_id"];
             $_message_poll_status = $_polling_job_item["status"];
-
-            sc_ai_chats()->message()->card()->update_message_card_status($_message_id, $_message_poll_status);
 
             // 判定：已完結 → 記低（之後歸檔）
             if (sc_ai_chats()->fsm()->is_terminal_status($_message_poll_status)) {

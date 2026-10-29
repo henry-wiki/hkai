@@ -54,7 +54,10 @@ trait insert_db_chat
             return null;
         }
 
+        sc_ai_health()->stream()->mark_target_updated("chat");
+
         return $chat_row;
+
     }
 
 }

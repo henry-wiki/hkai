@@ -44,6 +44,9 @@ class _bootstrap {
 
         await chats.init();
 
+        // 連線總管（跨 tab 計數——presence／message stream 開線前要登記）
+        registry().sc_stream().init();
+
         // status bar（事件綁定＋初值同步＋時鐘＋健康更新反應登記；喺 health 之前——首輪就註冊到）
         await registry().sc_ai_status_bar().init();
 

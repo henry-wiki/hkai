@@ -9,10 +9,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\chat;
 // == 2026-09-27 本體自 cls 根上移入本目錄 bridge（_.bridge.cls.php——系統指定名；autoloader 優先載入） ==
 class chat_Class
 {
-    use history\chat_history_update;
-    use history\chat_history_delete;
-    use history\chat_history_update_meta;
-    use history\cleanup_old_logs;
+    use action\cleanup_old_logs;
     use repo_select\get_chat_rows;
     use repo_select\get_latest_chat_row_by_project;
     use repo_select\get_project_chat_stats;
@@ -29,6 +26,7 @@ class chat_Class
     use resolver\get_bare_chat_sid;
     use resolver\resolve_chat_sid;
     use resolver\is_valid_chat_sid;
+    use resolver\resolve_chat_row;
     use view\render_chat_item;
     use view\render_chat_list;
     use view\render_archived_chat_list;
@@ -55,20 +53,6 @@ class chat_Class
     }
 
 
-    // 建立對話標題（純函數——超過上限的內容截斷；唔加省略號——顯示層自理）
-    public function build_chat_title($content)
-    {
-        $chat_title_max_chars = 200;
-        $title_text = preg_replace('/\s+/u', ' ', trim($content));
-
-        // 判定：未超過上限 → 原樣回傳
-        if (mb_strlen($title_text) <= $chat_title_max_chars) {
-            return $title_text;
-        }
-
-        return mb_substr($title_text, 0, $chat_title_max_chars);
-    }
-
     // 對話段（{chat_sid}；歸檔＝語境形 archive@{chat_sid}——段知識唯一住處；卡片身份 attr 同 URL 共用）
     public function build_chat_segment($chat_sid, $chat_status = "normal")
     {
@@ -92,22 +76,6 @@ class chat_Class
         }
 
         return "/" . $project_segment . "/" . $this->build_chat_segment($chat_sid, $chat_status) . "/";
-    }
-
-    // 歷史檔路徑（localdb/history/{project_slug}/{chat_sid}{尾綴}——命名規則唯一來源；尾綴由呼叫端帶．jsonl／_meta.json）
-    public function get_chat_history_file_path($chat_id, $file_suffix)
-    {
-        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
-        $chat_row     = $this->get_chat_row($chat_id);
-
-        $chat_sid = "";
-
-        // 判定：對話列存在 → 取 sid
-        if ($chat_row !== null) {
-            $chat_sid = $chat_row["chat_sid"];
-        }
-
-        return sc_get_config("hkai.history_dir") . "/" . $project_slug . "/" . $chat_sid . $file_suffix;
     }
 
 

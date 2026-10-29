@@ -16,7 +16,7 @@ trait parse_activity_events
 
         // 判定：polling 位置冇（訊息已歸檔）→ 改用歸檔目錄同一個檔名
         if (!is_file($log_file)) {
-            $archived_message_dir = sc_ai_chats()->poll()->get_archived_poll_dir($chat_id, $message_id);
+            $archived_message_dir = sc_ai_chats()->archive()->get_archived_poll_dir($chat_id, $message_id);
 
             $log_file = $archived_message_dir . "/" . basename($log_file);
         }

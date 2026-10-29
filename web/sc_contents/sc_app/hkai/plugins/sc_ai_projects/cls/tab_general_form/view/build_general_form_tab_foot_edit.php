@@ -7,9 +7,17 @@ namespace sc\app\hkai\plugins\sc_ai_projects\tab_general_form\view;
 
 trait build_general_form_tab_foot_edit
 {
-    public function build_general_form_tab_foot_edit()
+    public function build_general_form_tab_foot_edit($project_slug = "")
     {
         $button_lines = [];
+
+        // 判定：Home 專案（slug 空／預設專案）→ 儲存鈕停用
+        $is_home_project = ($project_slug === "");
+
+        // 判定：slug 等於預設專案 → 同樣當 Home
+        if ($project_slug === sc_get_config("hkai.default_project_slug")) {
+            $is_home_project = true;
+        }
 
         // 取消鈕（各 tab 皆有——關閉視窗 affordance）
         $cancel_wrapper   = [];
@@ -21,7 +29,12 @@ trait build_general_form_tab_foot_edit
         // 儲存鈕（編輯——儲存；data-btn=project_edit → 交 project_edit binder 送出）
         $save_wrapper   = [];
         $save_wrapper[] = "<div class='sc_btn_wrapper'>";
-        $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit'>儲存</button>";
+        // 判定：Home 專案 → 停用儲存（title 說明原因）
+        if ($is_home_project === true) {
+            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit' disabled title='Home 專案不可修改'>儲存</button>";
+        } else {
+            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit'>儲存</button>";
+        }
         $save_wrapper[] = "</div>";
         $button_lines[] = implode("\r\n", $save_wrapper);
 

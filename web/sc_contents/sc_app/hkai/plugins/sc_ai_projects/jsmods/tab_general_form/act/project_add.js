@@ -54,7 +54,6 @@ class _project_add {
 
         // 橋接駁（同域 act 橋——新方式）
         const project_instance = await registry().sc_ai_projects().project();
-        const project_list_fetch_instance = await project_instance.act().project_list_fetch();
 
         const j_save_button = ui_context.j_save_button;
         const j_modal       = ui_context.j_modal;
@@ -69,8 +68,20 @@ class _project_add {
             j_modal[0].modal_close();
         }
 
-        // 切去新專案頁（清單重繪——同側欄點擊切換同一條路）
-        await project_list_fetch_instance.switch(result.project_slug);
+        // 切去新專案頁（只換 URL——列表卡由 SSE added 插入；情境載入交 URL 觀察器）
+        sc_url.silent_replace_url(project_instance.build_project_url(result.project_slug));
+
+        // topnav 路徑列同步（新專案路徑由後端回傳）
+        const topnav = await registry().sc_topnav();
+        topnav.set_project_path(result.project_path || "");
+
+        // 本頁補入新卡（本頁 viewer baseline 已吸收變動——SSE 唔會再推 added；insert 自帶防重）
+        const project_item_insert_instance = await project_instance.act().project_item_insert();
+        await project_item_insert_instance.project_item_insert(result.project_slug);
+
+        // 依 data-update_time 重排（同 SSE 插入後同一支排位）
+        const project_list_rank_refresh_instance = await project_instance.act().project_list_rank_refresh();
+        project_list_rank_refresh_instance.project_list_rank_refresh();
     }
 
     // 本機側失敗程序：按鈕復原＋標準表單錯誤套用（modal 保持開啟）＋toast 提示

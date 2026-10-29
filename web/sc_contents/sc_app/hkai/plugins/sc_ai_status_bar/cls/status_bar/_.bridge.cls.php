@@ -23,6 +23,18 @@ class status_bar_Class
     // 定義 status bar groups（靜態設定）
     private function initial_groups()
     {
+        // conn 首屏真值（之後由 SSE conn target 接手；讀本機心跳檔，零 HTTP）
+        $server_status = hkai()->process()->server()->get_server_status();
+
+        $conn_default = hkai()->i18n()->get("status_bar.conn_offline");
+        $conn_class   = "bad";
+
+        // 判定：bridge 心跳在 → 首屏直接顯示已連線
+        if ($server_status["is_alive"] === true) {
+            $conn_default = hkai()->i18n()->get("status_bar.conn_online");
+            $conn_class   = "ok";
+        }
+
         // group: project（對應專案欄）
         $this->groups["project"] = [
             "items" => [
@@ -65,8 +77,8 @@ class status_bar_Class
                     "items" => [
                         "sb_conn" => [
                             "icon"     => "●",
-                            "default"  => hkai()->i18n()->get("status_bar.conn_offline"),
-                            "class"    => "bad",
+                            "default"  => $conn_default,
+                            "class"    => $conn_class,
                             "priority" => 20,
                             "click"    => ["type" => "settings", "tab" => "server"],
                         ],

@@ -27,27 +27,35 @@ trait handle_chat_delete
             return sc_response()->json(["ok" => false, "error" => "chat not found"], 404);
         }
 
-        // 對話歷史檔硬刪（history jsonl／meta）
-        sc_ai_chats()->chat()->chat_history_delete($chat_id);
-
-        // 每則訊息嘅檔案硬刪（現行位置＋歸檔位置）
+        // 每則訊息嘅檔案硬刪（現行位置＋歸檔位置；目錄名＝get_poll_dir_name）
         $message_rows = sc_ai_chats()->message()->repo_select()->get_message_list($chat_id);
+
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+
+        // 判定：專案 slug 空（專案已刪）→ 拋錯（唔好半刪）
+        if ($project_slug === "") {
+            throw new \RuntimeException("chat_delete missing project_slug: chat_id=" . $chat_id);
+        }
 
         // 逐則清檔案（五檔家族——同 action delete_message 一步不差）
         foreach ($message_rows as $message_row_item) {
             $message_id = (int)$message_row_item["message_id"];
 
-            sc_ai_chats()->poll()->delete_msg_files($chat_id, $message_id);
-
-            // 卡檔硬刪（串流熱存——同訊息一齊清）
-            sc_ai_chats()->message()->card()->delete_message_card($message_id);
+            sc_ai_chats()->poll()->delete_poll_files($project_slug, $message_id);
+            sc_ai_chats()->archive()->delete_archive_files($project_slug, $message_id);
         }
 
         // 等待列整檔刪（排隊中嘅行冇 message row——上面逐則掃唔到，喺呢度一刀清）
-        sc_ai_chats()->queue()->delete_queue_file($chat_id);
+        sc_ai_chats()->queue()->delete_queue_chat($project_slug, (string)$chat_row["chat_sid"]);
+
+        // 永久附件庫整批硬刪（<base>/<slug>/<sid>——本對話所有訊息附件）
+        $chat_attachments_dir = sc_get_config("hkai.messages_attachments_dir") . "/" . $project_slug . "/" . (string)$chat_row["chat_sid"];
+        sc_rrmdir($chat_attachments_dir);
 
         // 對話列硬刪（＋殘留 messages／message_response 列——同一事務）
         sc_ai_chats()->chat()->delete_db_chat($chat_id);
+
+        sc_ai_health()->stream()->mark_target_updated("chat");
 
         // 前端導向目標：同專案最新的對話（沒有其他對話 → 空字串＝回專案根）
         $next_chat_sid = sc_ai_chats()->chat()->get_latest_chat_sid($chat_row["project_id"]);

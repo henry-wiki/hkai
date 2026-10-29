@@ -11,6 +11,7 @@ class repo_update_Class
     use close_db_message_response_rows;
     use delete_db_message;
     use insert_db_message;
+    use insert_queue_message_row;
     use insert_db_message_failed;
     use update_db_message_response_timing;
     use update_db_message_status;

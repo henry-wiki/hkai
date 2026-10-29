@@ -6,7 +6,7 @@ server_stream.py — SSE 串流端點（輸出監控）。
 - build_router()：建立路由器（stream 路徑＝固定契約 "/stream"——Apache 反代同名）
 - stream_output()：GET /stream 端點（tail 訊息目錄檔案，push SSE 事件）
 - _resolve_message_dirs()：解析 polling／archive 兩個目錄
-- _read_status()：讀 msg_status.txt 最後一行
+- message.get_msg_status()：讀 msg_status.txt 最後一行（bridge/message 提供）
 - _read_appended()：由指定位元偏移讀新增內容（回 (新內容, 新偏移)）
 - _format_event()：砌 SSE 幀（event ＋ JSON data）
 
@@ -29,7 +29,9 @@ from typing import Any
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from ..context import DATA_DIR, MESSAGES_ARCHIVE_DIR, MESSAGES_POLLING_DIR
+from .. import message
+from ..context import MESSAGES_ARCHIVE_DIR, MESSAGES_POLLING_DIR
+from . import server_daemon, server_image_extract
 from .server_cors import origin_is_allowed, read_origin_allowlist
 
 # 終態（msg_status.txt 最後一行——出現即收尾）
@@ -48,7 +50,6 @@ STREAM_MAX_SECONDS = 900
 PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 # 圖片抽取工作根目錄（每個 message 一個子目錄；一個檔案一個真相）
-IMAGE_EXTRACT_JOBS_DIR = DATA_DIR / "_tmp" / "image_extract"
 
 
 def build_router() -> APIRouter:
@@ -78,24 +79,37 @@ async def _counted_event_generator(request: Request, message_dirs: dict[str, Pat
         _active_stream_count -= 1
 
 
+def _error_response(message: str, origin: str, status_code: int = 200) -> StreamingResponse:
+    """錯誤串流（同一般串流一樣帶 CORS 標頭——否則瀏覽器只見到 CORS 錯，睇唔到真正原因）。"""
+    response_headers = {"Cache-Control": "no-cache"}
+
+    # 判定：有 origin → 回 CORS 標頭
+    if origin != "":
+        response_headers["Access-Control-Allow-Origin"] = origin
+        response_headers["Vary"] = "Origin"
+
+    return StreamingResponse(_error_stream(message), media_type="text/event-stream", headers=response_headers, status_code=status_code)
+
+
 async def stream_output(request: Request, project_slug: str, message_id: int, response_index: int = 0):
     """GET /stream：tail 指定訊息目錄，逐段 push 內容（SSE）。"""
+    origin = request.headers.get("origin", "")
+
     # 判定：slug 唔合法 → 400（防路徑穿越）
     if PROJECT_SLUG_PATTERN.match(project_slug) is None:
-        return StreamingResponse(_error_stream("invalid project_slug"), media_type="text/event-stream")
+        return _error_response("invalid project_slug", origin)
 
-    origin = request.headers.get("origin", "")
     allowed_origins = read_origin_allowlist()
 
     # 判定：origin 唔喺允許清單 → 403（無 origin＝本機工具，照放行）
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
-        return StreamingResponse(_error_stream("origin not allowed"), media_type="text/event-stream", status_code=403)
+        return _error_response("origin not allowed", origin, 403)
 
     message_dirs = _resolve_message_dirs(project_slug, message_id)
 
     # 判定：兩個目錄都唔存在 → 404 串流（前端收到 error 事件即停）
     if message_dirs["polling"].is_dir() is False and message_dirs["archive"].is_dir() is False:
-        return StreamingResponse(_error_stream("message dir not found"), media_type="text/event-stream")
+        return _error_response("message dir not found", origin)
 
     generator = _counted_event_generator(request, message_dirs, response_index, int(message_id))
 
@@ -117,14 +131,34 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     )
 
 
-def _resolve_message_dirs(project_slug: str, message_id: int) -> dict[str, Path]:
-    """解析 polling／archive 兩個訊息目錄（固定：context.MESSAGES_*）。"""
-    polling_root = MESSAGES_POLLING_DIR
-    archive_root = MESSAGES_ARCHIVE_DIR
+def _find_message_dir(root: Path, project_slug: str, message_id: int) -> Path:
+    """喺 <root>/<slug>/<chat_sid>/<prompt_id>/ 找 message_id 相符嘅箱（目錄名＝prompt_id，已唔再係 message_id）。"""
+    project_root = root / project_slug
 
+    # 判定：專案目錄唔存在 → 回舊式路徑（呼叫端當唔存在）
+    if project_root.is_dir() is False:
+        return root / project_slug / str(int(message_id))
+
+    # 逐個三層 meta.json 對 message_id（箱內 meta 係唯一真相）
+    for meta_path in project_root.glob("*/*/meta.json"):
+        try:
+            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+
+        # 判定：message_id 相符 → 回該箱目錄
+        if int(meta_data.get("message_id", 0)) == int(message_id):
+            return meta_path.parent
+
+    # 搵唔到 → 回舊式兩層路徑（舊訊息 fallback——正常唔會行）
+    return root / project_slug / str(int(message_id))
+
+
+def _resolve_message_dirs(project_slug: str, message_id: int) -> dict[str, Path]:
+    """解析 polling／archive 兩個訊息目錄（三層：project_slug／chat_sid／prompt_id）。"""
     message_dirs: dict[str, Path] = {}
-    message_dirs["polling"] = polling_root / project_slug / str(int(message_id))
-    message_dirs["archive"] = archive_root / project_slug / str(int(message_id))
+    message_dirs["polling"] = _find_message_dir(MESSAGES_POLLING_DIR, project_slug, message_id)
+    message_dirs["archive"] = _find_message_dir(MESSAGES_ARCHIVE_DIR, project_slug, message_id)
     return message_dirs
 
 
@@ -140,10 +174,10 @@ async def _event_generator(request: Request, message_dirs: dict[str, Path], resp
         "snapshot",
         {
             "message_id": message_id,
-            "status": _read_status(current_dir),
+            "status": message.get_msg_status(current_dir),
             "result": "",
             "thinking": "",
-            "extract": _read_extract_phase(message_id),
+            "extract": message.extract_progress(current_dir),
         },
     )
 
@@ -158,14 +192,15 @@ async def _event_generator(request: Request, message_dirs: dict[str, Path], resp
         if current_dir.is_dir() is False and message_dirs["archive"].is_dir():
             current_dir = message_dirs["archive"]
 
-        status = _read_status(current_dir)
+        status = message.get_msg_status(current_dir)
 
-        # 判定：狀態有變 → 送 status 事件
+        # 判定：狀態有變 → 送 status 事件＋依轉換派工（stream 驅動）
         if status != last_status:
             last_status = status
             yield _format_event("status", {"status": status})
+            await asyncio.to_thread(_dispatch_on_transition, current_dir)
 
-        extract_phase = _read_extract_phase(message_id)
+        extract_phase = message.extract_progress(current_dir)
         extract_json = json.dumps(extract_phase, ensure_ascii=False, sort_keys=True)
 
         # 判定：抽取進度有變 → 送 phase 事件（前端 activity log 用）
@@ -211,97 +246,85 @@ async def _event_generator(request: Request, message_dirs: dict[str, Path], resp
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
-def _read_extract_phase(message_id: int) -> dict[str, Any]:
-    """讀該訊息嘅圖片抽取狀態（job.json＋<idx>.status.json；冇 job → 空 dict）。"""
-    job_dir = IMAGE_EXTRACT_JOBS_DIR / str(int(message_id))
+def _read_meta_json(message_dir: Path) -> dict[str, Any]:
+    """讀箱內 meta.json（讀唔到／非 dict → 空 dict）。"""
+    meta_path = message_dir / "meta.json"
 
-    # 判定：冇 job 目錄 → 空
-    if job_dir.is_dir() is False:
-        return {}
-
-    job_file = job_dir / "job.json"
-
-    # 判定：冇 job.json → 空
-    if job_file.is_file() is False:
+    # 判定：冇 meta.json → 空
+    if meta_path.is_file() is False:
         return {}
 
     try:
-        job_data = json.loads(job_file.read_text(encoding="utf-8"))
+        meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 
-    job_files = job_data.get("files", [])
-
-    # 判定：files 格式唔啱 → 空
-    if isinstance(job_files, list) is False:
+    # 判定：唔係 dict → 空
+    if isinstance(meta_data, dict) is False:
         return {}
 
-    status_list = []
+    return meta_data
 
-    for job_file_item in job_files:
-        file_index = int(job_file_item.get("idx", 0))
-        status_path = job_dir / (str(file_index) + ".status.json")
-        file_state = "pending"
-        ocr_chars = 0
 
-        # 判定：狀態檔存在 → 讀
-        if status_path.is_file() is True:
-            try:
-                status_data = json.loads(status_path.read_text(encoding="utf-8"))
-                file_state = str(status_data.get("state", "pending"))
-                ocr_chars = int(status_data.get("ocr_chars", 0))
-            except (OSError, ValueError):
-                file_state = "pending"
+def _dispatch_on_transition(message_dir: Path) -> None:
+    """SSE 狀態轉換 → 依箱內 meta.status 派工（pending → 抽取器；polling → agent；其餘唔做）。"""
+    meta_data = _read_meta_json(message_dir)
 
-        status_list.append({"idx": file_index, "state": file_state, "ocr_chars": ocr_chars})
+    # 判定：meta 讀唔到 → 唔做
+    if len(meta_data) == 0:
+        return
 
-    state_list = [status_item["state"] for status_item in status_list]
-    overall_state = "pending"
+    stage_status    = str(meta_data.get("status", ""))
+    message_id      = int(str(meta_data.get("message_id", 0)))
+    chat_id         = int(str(meta_data.get("chat_id", 0)))
+    agent           = str(meta_data.get("agent", ""))
 
-    # 判定：有 cancelled → cancelled
-    if "cancelled" in state_list:
-        overall_state = "cancelled"
-    # 判定：全部 done → done
-    elif len(state_list) > 0 and all(state_item == "done" for state_item in state_list):
-        overall_state = "done"
-    # 判定：全部完結且有 failed → done_with_errors
-    elif len(state_list) > 0 and all(state_item in ("done", "failed") for state_item in state_list) and "failed" in state_list:
-        overall_state = "done_with_errors"
-    # 判定：有 running → running
-    elif "running" in state_list:
-        overall_state = "running"
+    # 判定：等抽取 → 通知抽取器（箱內標記擋重複）
+    if stage_status == "pending":
+        notify_marker = message_dir / "notify.image_extractor"
 
-    done_count = len([state_item for state_item in state_list if state_item == "done"])
+        # 判定：已通知過 → 唔重複
+        if notify_marker.exists() is True:
+            return
 
-    return {"state": overall_state, "done": done_count, "total": len(status_list), "files": status_list}
+        identity: dict[str, Any] = {}
+        identity["message_id"] = message_id
+        identity["chat_id"] = chat_id
+        identity["chat_sid"] = str(meta_data.get("chat_sid", ""))
+        identity["project_slug"] = str(meta_data.get("project_slug", ""))
+
+        result = server_image_extract.start(identity)
+
+        # 判定：開工成功 → 落標記
+        if result.get("ok") is True:
+            _ = notify_marker.touch()
+
+        return
+
+    # 判定：等開工 → 通知 agent（箱內標記擋重複）
+    if stage_status == "polling":
+        notify_marker = message_dir / "notify.agent"
+
+        # 判定：已通知過 → 唔重複
+        if notify_marker.exists() is True:
+            return
+
+        payload: dict[str, Any] = {}
+        payload["chat_id"]      = chat_id
+        payload["message_id"]   = message_id
+        payload["agent"]        = agent
+
+        result = server_daemon.add_message(payload)
+
+        # 判定：喚醒成功 → 落標記
+        if result.get("ok") is True:
+            _ = notify_marker.touch()
 
 
 def _response_file_path(message_dir: Path, response_kind: str, response_index: int) -> Path:
     """回應檔路徑（msg_response.{index}.result.txt／thinking.txt——agent 檔案契約）。"""
     file_name = "msg_response." + str(int(response_index)) + "." + response_kind + ".txt"
     return message_dir / file_name
-
-
-def _read_status(message_dir: Path) -> str:
-    """讀 msg_status.txt 最後一行（冇檔／空白＝空字串）。"""
-    status_path = message_dir / "msg_status.txt"
-
-    # 判定：狀態檔唔存在 → 回空
-    if status_path.is_file() is False:
-        return ""
-
-    try:
-        status_text = status_path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
-
-    status_lines = [status_line.strip() for status_line in status_text.splitlines() if status_line.strip() != ""]
-
-    # 判定：冇任何狀態行 → 回空
-    if len(status_lines) == 0:
-        return ""
-
-    return status_lines[-1]
 
 
 def _read_appended(file_path: Path, offset: int) -> tuple[str, int, bool]:

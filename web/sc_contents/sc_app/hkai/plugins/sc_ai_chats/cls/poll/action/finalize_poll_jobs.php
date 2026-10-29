@@ -28,7 +28,7 @@ trait finalize_poll_jobs
             }
 
             // 終態 → 單條收尾（archive：回填→歷史→status→歸檔——次序喺嗰邊寫死）
-            sc_ai_chats()->message()->finalize_poll_job($chat_id, $_message_id, $_status);
+            sc_ai_chats()->archive()->finalize_poll_job($chat_id, $_message_id, $_status);
         }
     }
 

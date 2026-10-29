@@ -75,6 +75,8 @@ trait project_edit
 
         repo_update()->update_project($project_id, $project_datapairs);
 
+        sc_ai_health()->stream()->mark_target_updated("project");
+
         return sc_response()->json(["ok" => true]);
     }
 }

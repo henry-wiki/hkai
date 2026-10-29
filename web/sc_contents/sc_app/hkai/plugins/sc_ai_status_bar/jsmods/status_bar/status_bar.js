@@ -69,9 +69,9 @@ class _status_bar_act_bridge {
     }
     async sync_status_items()       { return (await import("./act/sync_status_items.js")).sync_status_items(); }
     async tick_clock()              { return (await import("./act/tick_clock.js")).tick_clock(); }
-    async refresh_git_item()        { return (await import("./act/refresh_git_item.js")).refresh_git_item(); }
     async status_item_render()      { return (await import("./act/status_item_render.js")).status_item_render(); }
     async conn_status_item()        { return (await import("./act/conn_status_item.js")).conn_status_item(); }
+    async refresh_git_item()        { return (await import("./act/refresh_git_item.js")).refresh_git_item(); }
     async git_status_item()         { return (await import("./act/git_status_item.js")).git_status_item(); }
     async open_project_git_modal()  { return (await import("./act/open_project_git_modal.js")).open_project_git_modal(); }
     async project_fetch()           { return (await import("./act/project_fetch.js")).project_fetch(); }

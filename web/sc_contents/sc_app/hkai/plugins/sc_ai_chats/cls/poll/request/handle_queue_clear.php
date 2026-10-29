@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\poll\request;
 
 // == sc_ai_chats poll\request handle_queue_clear：poll request 子域動作（trait——掛入 request_Class；檔＝動作） ==
-// == 2026-09-30 跟 reference3 上工具列「清除排隊」——清成個等待列（用已存在動作 delete_queue_file） ==
+// == 2026-09-30 跟 reference3 上工具列「清除排隊」——清成個等待列（刪整個對話排隊目錄） ==
 
 trait handle_queue_clear
 {
@@ -33,7 +33,9 @@ trait handle_queue_clear
         $chat_id = (int)$chat_row["chat_id"];
 
         // 清空等待列（成個排隊檔刪走——檔唔存在＝檔內已判，零動作）
-        sc_ai_chats()->queue()->delete_queue_file($chat_id);
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+
+        sc_ai_chats()->queue()->delete_queue_chat($project_slug, $chat_sid);
 
         // 回應帶最新隊列 UI（後端渲染——前端只 bind）
         $queue_list = sc_ai_chats()->prompt()->render_queue_list($chat_id);

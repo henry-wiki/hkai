@@ -22,31 +22,53 @@ trait delete_message
         // 診斷 log：開始
         hkai()->runtime()->logger()->info("delete_message start: chat_id=" . $chat_id . " message_id=" . $message_id);
 
-        // DB 硬刪（message_response 列＋messages 列＋重算 chat count——repo_update 單一入口）
-        sc_ai_chats()->message()->repo_update()->delete_db_message($message_id, $chat_id);
+        // 身份（project_slug 由 chat 列解析——路徑唯一來源 get_poll_dir_name）
+        $chat_row     = sc_ai_chats()->chat()->get_chat_row($chat_id);
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
 
-        // 卡檔硬刪（串流熱存——同訊息一齊清）
-        sc_ai_chats()->message()->card()->delete_message_card($message_id);
+        // 判定：專案 slug 空（專案已刪）→ 拋錯（唔好半刪）
+        if ($project_slug === "") {
+            throw new \RuntimeException("delete_message missing project_slug: chat_id=" . $chat_id);
+        }
 
-        // 診斷 log：DB 列完成
-        hkai()->runtime()->logger()->info("delete_message db rows removed");
+        // 停止回應（共用入口：停抽取＋標 cancelled＋殺 worker 樹——同 Stop 掣同一支）
+        sc_ai_chats()->prompt()->handle_prompt_stop($message_id);
 
-        // msg 檔案硬刪（現行位置 ＋ 歸檔位置）
-        sc_ai_chats()->poll()->delete_msg_files($chat_id, $message_id);
+        // msg 檔案硬刪（現行箱＋歸檔箱——各自域路徑層）
+        sc_ai_chats()->poll()->delete_poll_files($project_slug, $message_id);
+        sc_ai_chats()->archive()->delete_archive_files($project_slug, $message_id);
+
+        // 永久附件庫硬刪（<base>/<slug>/<sid>/<prompt_id>——附件已於出帶時搬出箱）
+        $prompt_id = (string)($message_row["prompt_id"] ?? "");
+
+        // 判定：有 prompt_id → 刪附件庫目錄
+        if ($prompt_id !== "") {
+            $attachments_store_dir = sc_get_config("hkai.messages_attachments_dir") . "/" . $project_slug . "/" . (string)$chat_row["chat_sid"] . "/" . $prompt_id;
+            sc_rrmdir($attachments_store_dir);
+        }
 
         // 診斷 log：msg 檔案完成
         hkai()->runtime()->logger()->info("delete_message msg files removed");
 
+        // DB 硬刪（message_response 列＋messages 列＋重算 chat count——repo_update 單一入口）
+        sc_ai_chats()->message()->repo_update()->delete_db_message($message_id, $chat_id);
+
+        // 診斷 log：DB 列完成
+        hkai()->runtime()->logger()->info("delete_message db rows removed");
+
         $remove_result = [];
         $remove_result["chat_deleted"] = false;
 
-        // 判定：對話已無訊息（剛刪掉最後一則）→ 連對話一起清掉（空對話沒有存在意義——chat 只在首次送出時建立）
+        // 判定：對話已無訊息（剛刪掉最後一則）→ 先看仲有冇排隊中訊息
         if (sc_ai_chats()->chat()->is_chat_empty($chat_id)) {
-            // 等待列整檔刪（排隊中嘅行——對話將亡，等待列即無意義）
-            sc_ai_chats()->queue()->delete_queue_file($chat_id);
+            $queue_items = sc_ai_chats()->queue()->get_queue_items($project_slug, (string)$chat_row["chat_sid"]);
 
-            // 對話歷史檔硬刪（history jsonl／meta）
-            sc_ai_chats()->chat()->chat_history_delete($chat_id);
+            // 判定：仲有排隊 → 保留對話列（等待列要 chat row 才顯示得到／派得到工）
+            if (count($queue_items) > 0) {
+                hkai()->runtime()->logger()->info("delete_message chat kept (queue not empty): chat_id=" . $chat_id);
+
+                return $remove_result;
+            }
 
             // chats 列硬刪（＋殘留關聯列保險清）
             sc_ai_chats()->chat()->delete_db_chat($chat_id);

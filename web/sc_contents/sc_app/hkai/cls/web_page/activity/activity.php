@@ -51,8 +51,22 @@ class activity_Class
             return [];
         }
 
-        $activity_raw     = file_get_contents($activity_file);
-        $activity_records = json_decode($activity_raw, true);
+        // 開檔＋共享鎖讀（並行寫入持 LOCK_EX 時會等，唔會讀到鎖住嘅檔）
+        $activity_handle = @fopen($activity_file, "rb");
+
+        // 判定：開唔到 → 當無記錄
+        if ($activity_handle === false) {
+            return [];
+        }
+
+        @flock($activity_handle, LOCK_SH);
+
+        $activity_raw = stream_get_contents($activity_handle);
+
+        @flock($activity_handle, LOCK_UN);
+        fclose($activity_handle);
+
+        $activity_records = json_decode((string)$activity_raw, true);
 
         // 判定：解出唔係陣列 → 當無記錄
         if (!is_array($activity_records)) {

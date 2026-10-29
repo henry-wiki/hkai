@@ -68,6 +68,15 @@
     height: 100%;
 }
 
+/* 左組可收縮（長 model 名省略），右組永遠保持原位（連線／時鐘／版權不消失） */
+.sc_statusbar--workspace .sc_statusbar__left {
+    flex: 0 1 auto;
+    overflow: hidden;
+}
+.sc_statusbar--workspace .sc_statusbar__right {
+    flex: none;
+}
+
 /* 掛載槽（外部模組注入——空時不佔位） */
 .sc_statusbar__indicators {
     display: flex;

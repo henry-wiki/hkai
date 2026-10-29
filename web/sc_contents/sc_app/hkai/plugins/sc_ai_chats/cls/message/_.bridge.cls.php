@@ -12,14 +12,8 @@ class message_Class
 {
     use action\delete_message;
     use action\repair_stale_message_status;
-    use archive\archive_msg_files;
-    use archive\finalize_poll_job;
-    use archive\backfill_message_timing;
-    use archive\backfill_response_timing;
-    use archive\read_archived_message_status;
+    use action\set_message_meta_status;
     use request\handle_message_delete;
-    use validate\validate_message_prerequisites;
-    use validate\validate_message_processable;
     use request\message_list_fetch;
 
     private static $instance = null;
@@ -56,16 +50,6 @@ class message_Class
     public function repo_update()
     {
         return repo_update\repo_update_Class::getInstance();
-    }
-
-    /**
-     * card 子域（獨立物件——cls/message/card/_.bridge.cls.php）
-     *
-     * @return \sc\app\hkai\plugins\sc_ai_chats\message\card\card_Class
-     */
-    public function card()
-    {
-        return card\card_Class::getInstance();
     }
 
     /**

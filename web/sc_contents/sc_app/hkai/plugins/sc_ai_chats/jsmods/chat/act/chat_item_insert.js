@@ -1,5 +1,5 @@
 // jsmods/chat/act/chat_item_insert.js —— 新對話項插入（act 層——一檔一事；主動作＝檔名）
-// 職責：chat_item_insert（按 chat_sid 後端載入該對話項 HTML → append 入 .sc_chat_list 尾——由 chat_list_refresh 迴圈逐個呼叫）
+// 職責：chat_item_insert（按 chat_sid 後端載入該對話項 HTML → append 入 .sc_chat_list 尾——由 act_chat_updater 呼叫）
 // 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _chat_item_insert {
@@ -20,7 +20,7 @@ class _chat_item_insert {
         const chat_item_observer_instance = await chat_instance.obs().chat_item_observer();
 
         await chat_item_fetch_req_instance.chat_item_fetch(chat_sid, {
-            success: function (response_data) {
+            success: async function (response_data) {
                 // 新項（離線解析——先落容器再搬）
                 const j_new_item = jQuery(response_data.html.chat_item);
 
@@ -34,6 +34,11 @@ class _chat_item_insert {
 
                 // 重掛觀察器（init 全量覆蓋——新項即納入觀察；data-update_time 一變 → 派 obs:chat_item_updated → 抓新內容換入）
                 chat_item_observer_instance.init();
+
+                // 排位（新卡按 data-update_time 歸位——唔會停在清單尾）
+                const chat_activity_instance = await chat_instance.act().chat_activity();
+
+                chat_activity_instance.chat_list_rank_refresh(true);
             },
             error: function (response_data) {
                 // 失敗 → 唔補（維持現狀——等下一輪再試）

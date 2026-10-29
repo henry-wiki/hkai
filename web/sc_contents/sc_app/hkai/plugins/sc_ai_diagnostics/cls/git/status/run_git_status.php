@@ -8,8 +8,12 @@ namespace sc\app\hkai\plugins\sc_ai_diagnostics\git\status;
 trait run_git_status
 {
     // 執行 Git 狀態診斷（HTTP bridge——Python 診斷程式；PHP 只負責呼叫與讀 JSON）
-    public function run_git_status($project_path)
+    public function run_git_status($project_path, $is_fresh = false)
     {
-        return hkai()->process()->bridge()->request("/diagnostics/git/get_status", ["project_path" => $project_path]);
+        $request_payload = [];
+        $request_payload["project_path"] = $project_path;
+        $request_payload["fresh"]        = $is_fresh;
+
+        return hkai()->process()->bridge()->request("/diagnostics/git/get_status", $request_payload);
     }
 }

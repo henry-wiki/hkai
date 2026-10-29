@@ -19,6 +19,7 @@ server_image_extract.py — 圖片抽取端點（PHP 只 POST，唔等結果）�
 # （payload／job.json／status.json 動態——Any 警告一律關，其餘照檢）
 
 import json
+import re
 import subprocess
 import sys
 import time
@@ -29,17 +30,16 @@ from fastapi import APIRouter
 
 from ..context import DATA_DIR, SERVICES_DIR
 from ..runtime import sc_logger
+from image_extractor import box_store
+from image_extractor.runtime import pidfile
 
 router = APIRouter()
 
-# 抽取工作根目錄（每個 message 一個子目錄）
-JOBS_DIR = DATA_DIR / "_tmp" / "image_extract"
-
-# 附件根目錄（job 內檔案只准喺呢度之下）
-ATTACHMENTS_DIR = DATA_DIR / "messages" / "attachments"
+# 附件／紙箱根目錄（job 內檔案只准喺 data/messages 之下——紙箱附件住 <box>/attachments/）
+MESSAGES_DIR = DATA_DIR / "messages"
 
 # 每條訊息最多圖片數（同前端／PHP 契約一致）
-MAX_IMAGES_PER_MESSAGE = 3
+MAX_IMAGES_PER_MESSAGE = 13
 
 # launcher 拉起寬限（秒——launcher 只負責 spawn，正常 <1 秒）
 LAUNCH_TIMEOUT_SEC = 20
@@ -55,61 +55,32 @@ def _error(message: str) -> dict[str, Any]:
     return {"ok": False, "error": message}
 
 
-def _validate_files(payload: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
-    """驗 images 清單；回 (files, error)。"""
-    raw_files = payload.get("files")
+def _validate_identity(payload: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """驗身份四欄（project_slug／chat_sid／message_id／chat_id）；回 (identity, error)。"""
+    message_id = int(cast(int, payload.get("message_id", 0)))
+    chat_id = int(cast(int, payload.get("chat_id", 0)))
+    chat_sid = str(payload.get("chat_sid", ""))
+    project_slug = str(payload.get("project_slug", ""))
 
-    # 判定：files 唔係陣列 → 錯
-    if isinstance(raw_files, list) is False:
-        return [], "files must be a list"
+    # 判定：message_id／chat_id 無效 → 錯
+    if message_id < 1 or chat_id < 1:
+        return {}, "message_id and chat_id are required"
 
-    file_list = cast(list[Any], raw_files)
+    # 判定：chat_sid 格式唔啱 → 錯
+    if re.fullmatch(r"[A-Za-z0-9_-]{8,64}", chat_sid) is None:
+        return {}, "invalid chat_sid"
 
-    # 判定：張數超限或為空 → 錯
-    if len(file_list) < 1 or len(file_list) > MAX_IMAGES_PER_MESSAGE:
-        return [], "files count must be 1-" + str(MAX_IMAGES_PER_MESSAGE)
+    # 判定：project_slug 格式唔啱 → 錯
+    if re.fullmatch(r"[a-z0-9_-]{1,64}", project_slug) is None:
+        return {}, "invalid project_slug"
 
-    attachments_root = ATTACHMENTS_DIR.resolve()
-    clean_files: list[dict[str, Any]] = []
-    seen_indexes: set[int] = set()
+    identity: dict[str, Any] = {}
+    identity["message_id"] = message_id
+    identity["chat_id"] = chat_id
+    identity["chat_sid"] = chat_sid
+    identity["project_slug"] = project_slug
 
-    for raw_item in file_list:
-        # 判定：單項唔係物件 → 錯
-        if isinstance(raw_item, dict) is False:
-            return [], "file item must be an object"
-
-        file_index = int(cast(int, raw_item.get("idx", 0)))
-        file_path_text = str(raw_item.get("path", ""))
-        file_mime = str(raw_item.get("mime", ""))
-
-        # 判定：idx 範圍錯 → 錯
-        if file_index < 1 or file_index > MAX_IMAGES_PER_MESSAGE:
-            return [], "idx out of range: " + str(file_index)
-
-        # 判定：idx 重複 → 錯
-        if file_index in seen_indexes:
-            return [], "duplicate idx: " + str(file_index)
-
-        # 判定：路徑空白 → 錯
-        if file_path_text == "":
-            return [], "path is required"
-
-        file_path = Path(file_path_text).resolve()
-
-        # 判定：唔喺附件目錄之下 → 拒絕
-        if attachments_root not in file_path.parents:
-            return [], "path outside attachments dir: " + file_path_text
-
-        # 判定：檔案唔存在 → 錯
-        if file_path.is_file() is False:
-            return [], "file not found: " + file_path_text
-
-        seen_indexes.add(file_index)
-        clean_files.append({"idx": file_index, "path": str(file_path), "mime": file_mime})
-
-    clean_files.sort(key=lambda file_item: int(file_item["idx"]))
-
-    return clean_files, ""
+    return identity, ""
 
 
 @router.post("/image_extract/start/")
@@ -117,34 +88,39 @@ def start(payload: dict[str, Any]) -> dict[str, Any]:
     """接收抽取工作：寫 job.json → 拉起 extractor → 即回（唔等結果）。"""
     started_time = time.time()
 
-    message_id = int(cast(int, payload.get("message_id", 0)))
+    identity, validate_error = _validate_identity(payload)
 
-    # 判定：message_id 無效 → 錯
-    if message_id < 1:
-        return _error("message_id is required")
-
-    clean_files, validate_error = _validate_files(payload)
-
-    # 判定：驗證失敗 → 回錯
+    # 判定：身份驗證失敗 → 回錯
     if validate_error != "":
         return _error(validate_error)
 
-    job_dir = JOBS_DIR / str(message_id)
-    job_dir.mkdir(parents=True, exist_ok=True)
+    message_id = int(identity["message_id"])
+    project_slug = str(identity["project_slug"])
+    chat_sid = str(identity["chat_sid"])
 
-    job_data: dict[str, Any] = {
-        "message_id": message_id,
-        "chat_id": int(cast(int, payload.get("chat_id", 0))),
-        "chat_sid": str(payload.get("chat_sid", "")),
-        "project_slug": str(payload.get("project_slug", "")),
-        "files": clean_files,
-        "created_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-    }
+    box_dir = box_store.resolve_box_dir(project_slug, chat_sid, message_id)
 
-    job_file = job_dir / "job.json"
-    temp_file = job_dir / "job.json.tmp"
-    _ = temp_file.write_text(json.dumps(job_data, ensure_ascii=False, indent=2), encoding="utf-8")
-    _ = temp_file.replace(job_file)
+    # 判定：搵唔到箱 → 回錯（PHP 只會對 polling 箱派工）
+    if box_dir is None:
+        return _error("box not found: message_id=" + str(message_id))
+
+    meta_data = box_store.read_meta(box_dir)
+
+    # 判定：meta 讀唔到 → 回錯
+    if meta_data is None:
+        return _error("meta.json invalid: " + str(box_dir))
+
+    clean_files = box_store.list_attachment_files(box_dir, meta_data)
+
+    # 判定：圖片超限 → 回錯（其餘工作留返 PHP 擋）
+    if len(clean_files) > MAX_IMAGES_PER_MESSAGE:
+        return _error("files count over limit: " + str(len(clean_files)))
+
+    # 判定：已有活主人（箱內 extract.pid）→ 唔重複開
+    running_pid = pidfile.read_pid(box_dir)
+
+    if pidfile.is_pid_running(running_pid) is True:
+        return {"ok": True, "already_running": True, "files": len(clean_files), "elapsed_ms": 0}
 
     command = [
         sys.executable,
@@ -154,7 +130,7 @@ def start(payload: dict[str, Any]) -> dict[str, Any]:
         "image_extractor",
         "--bg",
         "run",
-        str(job_dir),
+        str(box_dir),
     ]
 
     try:
@@ -184,16 +160,14 @@ def start(payload: dict[str, Any]) -> dict[str, Any]:
 @router.post("/image_extract/stop/")
 def stop(payload: dict[str, Any]) -> dict[str, Any]:
     """停止抽取：殺進程樹 → 標記 cancelled（已完成者保留）。"""
-    message_id = int(cast(int, payload.get("message_id", 0)))
+    box_dir = Path(str(payload.get("box_dir", ""))).resolve()
 
-    # 判定：message_id 無效 → 錯
-    if message_id < 1:
-        return _error("message_id is required")
+    # 判定：路徑唔喺 data/messages 之下 → 拒絕
+    if MESSAGES_DIR.resolve() not in box_dir.parents:
+        return _error("box_dir outside messages dir")
 
-    job_dir = JOBS_DIR / str(message_id)
-
-    # 判定：job 目錄唔存在 → 冇嘢可停（ok:true——idempotent）
-    if job_dir.is_dir() is False:
+    # 判定：箱唔存在 → 冇嘢可停（ok:true——idempotent）
+    if box_dir.is_dir() is False:
         return {"ok": True, "killed": False, "pid": 0}
 
     command = [
@@ -202,7 +176,7 @@ def stop(payload: dict[str, Any]) -> dict[str, Any]:
         "-m",
         "image_extractor.main",
         "stop",
-        str(job_dir),
+        str(box_dir),
     ]
 
     try:
@@ -221,7 +195,7 @@ def stop(payload: dict[str, Any]) -> dict[str, Any]:
         return _error("stop failed: " + str(completed.stderr).strip())
 
     result_text = str(completed.stdout).strip()
-    sc_logger.log("image_extract stop: message_id=" + str(message_id) + " result=" + result_text)
+    sc_logger.log("image_extract stop: box=" + str(box_dir) + " result=" + result_text)
 
     try:
         stop_result = json.loads(result_text)

@@ -34,4 +34,34 @@ class sc_ai_health_Class
         return health\health_Class::getInstance();
     }
 
+    /**
+     * monitor 域（監視對象容器）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_health\monitor\monitor_Class
+     */
+    public function monitor()
+    {
+        return monitor\monitor_Class::getInstance();
+    }
+
+    /**
+     * request 域（request_Class——request 動作）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_health\request\request_Class
+     */
+    public function request()
+    {
+        return request\request_Class::getInstance();
+    }
+
+    /**
+     * stream 域（stream_Class——stream.json／viewers 讀寫）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_health\stream\stream_Class
+     */
+    public function stream()
+    {
+        return stream\stream_Class::getInstance();
+    }
+
 }

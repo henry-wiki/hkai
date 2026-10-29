@@ -61,23 +61,25 @@ sc_set_configs([
         "messages_polling_dir"     => dirname(SC_WEB_ROOT) . "/data/messages/polling",
         "messages_attachments_dir" => dirname(SC_WEB_ROOT) . "/data/messages/attachments",
         "messages_draft_dir"       => dirname(SC_WEB_ROOT) . "/data/messages/draft",
+        "messages_queue_dir"       => dirname(SC_WEB_ROOT) . "/data/messages/queue",
         // 附件上傳上限（單位 KB——PHP 同前端共用嘅單一來源）
         "attachments" => [
             "max_upload_size" => 20000,
         ],
         // 草稿（draft）設定——可調區（前端由 DOM data-* 讀同一份值）
         "draft" => [
-            "max_upload_size"        => 20000, // KB
-            "max_image_side_px"      => 4096,
-            "resize_image_side_px"   => 2048,
+            "max_upload_size"        => 20000, // 單檔上限 KB
+            "max_source_side_px"     => 12800, // 原圖長邊上限（超過＝拒收）
+            "resize_target_side_px"  => 2500,   // 長邊超過此值 → 縮到此值（≤ 此值＝原樣）
+            "thumb_side_px"          => 640,   // 草稿縮圖長邊（伺服器產生）
             "max_images_per_message" => 13,
         ],
         "image_extract_dir"        => dirname(SC_WEB_ROOT) . "/data/_tmp/image_extract",
         "process_status_dir"       => dirname(SC_WEB_ROOT) . "/data/process_status",
+        "stream_dir"               => dirname(SC_WEB_ROOT) . "/data/stream",
         "localdb_dir"              => dirname(SC_WEB_ROOT) . "/data/localdb",
         "log_dir"                  => dirname(SC_WEB_ROOT) . "/data/logs",
         "instructions_dir"         => dirname(SC_WEB_ROOT) . "/data/instructions",
-        "history_dir"              => dirname(SC_WEB_ROOT) . "/data/localdb/history",
         "bridge_dir"               => dirname(SC_WEB_ROOT) . "/data/bridge",
         "activity_dir"             => dirname(SC_WEB_ROOT) . "/data/activity",
 

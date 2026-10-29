@@ -11,7 +11,9 @@ server_projects.py — projects 端點。
 # （payload 係動態 JSON——Unknown/Any 警告一律關，其餘照檢）
 
 import datetime
+import os
 import subprocess
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
@@ -21,8 +23,77 @@ from ..runtime import sc_logger
 router = APIRouter()
 
 
+def read_git_config_value(gitconfig_path: Path, config_key: str) -> str:
+    """讀單一 git 設定值（指定檔案——唔靠行程 HOME）。"""
+    try:
+        completed = subprocess.run(
+            ["git", "config", "--file", str(gitconfig_path), "--get", config_key],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+    # 判定：讀唔到 → 當冇此設定
+    if completed.returncode != 0:
+        return ""
+
+    return completed.stdout.strip()
+
+
+def resolve_git_identity():
+    """身份：先沿用本機 .gitconfig；搵唔到就自動生成一組——回傳 (name, email)。"""
+    gitconfig_candidates = []
+
+    for home_env_key in ("HOME", "USERPROFILE"):
+        home_env_value = os.environ.get(home_env_key, "")
+
+        # 判定：有 HOME／USERPROFILE → 加入候選
+        if home_env_value != "":
+            gitconfig_candidates.append(Path(home_env_value) / ".gitconfig")
+
+    os_user_name = os.environ.get("USERNAME", "")
+
+    # 判定：有 Windows 用戶名 → 加入該用戶資料夾
+    if os_user_name != "":
+        gitconfig_candidates.append(Path("C:/Users") / os_user_name / ".gitconfig")
+
+    # 服務帳戶啟動時 HOME 唔係真實用戶 → 掃本機用戶資料夾
+    user_gitconfig_paths = list(Path("C:/Users").glob("*/.gitconfig"))
+
+    gitconfig_candidates.extend(user_gitconfig_paths)
+
+    for gitconfig_path in gitconfig_candidates:
+        # 判定：設定檔唔存在 → 試下一個
+        if gitconfig_path.is_file() is False:
+            continue
+
+        config_user_name  = read_git_config_value(gitconfig_path, "user.name")
+        config_user_email = read_git_config_value(gitconfig_path, "user.email")
+
+        # 判定：名稱與電郵齊 → 沿用（現成身份優先）
+        if config_user_name != "" and config_user_email != "":
+            return config_user_name, config_user_email
+
+    # 兜底：自動生成（業界慣例 user@host——唔問用戶）
+    fallback_user_name = os_user_name if os_user_name != "" else "hkai"
+
+    return fallback_user_name, fallback_user_name + "@localhost"
+
+
 def run_git_command(project_path: str, git_arguments: list[str]):
     """在指定路徑執行 git 命令——回傳 (是否成功, 訊息)。"""
+    git_user_name, git_user_email = resolve_git_identity()
+
+    git_env = os.environ.copy()
+
+    git_env["GIT_AUTHOR_NAME"]     = git_user_name
+    git_env["GIT_AUTHOR_EMAIL"]    = git_user_email
+    git_env["GIT_COMMITTER_NAME"]  = git_user_name
+    git_env["GIT_COMMITTER_EMAIL"] = git_user_email
+
     try:
         completed = subprocess.run(
             ["git", *git_arguments],
@@ -31,6 +102,7 @@ def run_git_command(project_path: str, git_arguments: list[str]):
             text=True,
             timeout=60,
             check=False,
+            env=git_env,
         )
     except (OSError, subprocess.SubprocessError) as run_error:
         return False, str(run_error)

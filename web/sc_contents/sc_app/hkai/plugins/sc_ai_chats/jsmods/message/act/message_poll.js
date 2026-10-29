@@ -7,7 +7,7 @@
 
 class _message_poll {
     constructor() {
-        this.interval = 2000;       // 每輪間隔（毫秒）
+        this.interval = 10000;      // 每輪間隔（毫秒）
         this.running = false;
         this.running_timer_id = null;
         this.elapsed_timer_id = null;   // 用時計（每秒 tick——工作緊嘅訊息 counter）
@@ -22,6 +22,12 @@ class _message_poll {
         // 重入防護（SSE 通知可能同計時器同一刻觸發——只准一輪在途）
         this.polling = false;
         this.poll_pending = false;
+
+        // 前端最後見到嘅訊息 id（目錄歸檔後，後端據此補交終態結果）
+        this.poll_last_message_id = 0;
+
+        // 已補過訊息窗嘅 message_id（另一頁新增訊息——每條只補一次）
+        this.refreshed_message_ids = {};
     }
 
     // 啟動（框架 stub——重複防護喺 message_poll() 內 running 旗標）
@@ -68,7 +74,7 @@ class _message_poll {
 
         // 判定：冇工作中訊息 → 關掉殘留連線（唔開串流）
         if (working_message_id === null) {
-            message_stream_instance.stop();
+            await message_stream_instance.stop();
             this.stream_instance = null;
 
             return false;
@@ -76,40 +82,8 @@ class _message_poll {
 
         const project_slug = this.get_project_slug_from_url();
 
-        const stream_config = registry().sc_stream().get_config();
-
-        const stream_base_url = stream_config.base_url || "";
-
-        // 判定：未啟用串流 → 關掉殘留連線（純 poll）
-        if (stream_config.enabled !== true) {
-            message_stream_instance.stop();
-            this.stream_instance = null;
-
-            return false;
-        }
-
-        // 判定：冇 base_url → 關掉殘留連線（純 poll）
-        if (stream_base_url === "") {
-            message_stream_instance.stop();
-            this.stream_instance = null;
-
-            return false;
-        }
-
-        // SSE URL 由本域砌（message_stream 只收現成 URL）
-        const stream_url = stream_base_url
-            + "/stream?project_slug=" + encodeURIComponent(project_slug)
-            + "&message_id=" + encodeURIComponent(working_message_id)
-            + "&response_index=0";
-
-        const thisObject = this;
-
-        // 邊啲 SSE 事件當「內容有變」→ 即刻多跑一輪 poll（聊天域知識——留喺本域）
-        const change_event_names = ["delta", "status", "reset"];
-
-        const stream_started = message_stream_instance.start(stream_url, change_event_names, function () {
-            thisObject.poll_soon();
-        });
+        // 開串流（URL／base_url／事件→poll 全部由 message_stream 自理）
+        const stream_started = await message_stream_instance.open(project_slug, working_message_id, 0);
 
         this.stream_instance = message_stream_instance;
 
@@ -323,6 +297,14 @@ class _message_poll {
             return this;
         }
 
+        // 重入通知：叫伺服器掃 polling 箱（未開工嘅即場補派；一次，唔阻塞輪詢——有 worker 心跳會自動跳過）
+        (async function () {
+            const prompt_instance = await registry().sc_ai_chats().prompt();
+            const prompt_resume_instance = await prompt_instance.act().prompt_resume();
+
+            await prompt_resume_instance.prompt_resume(response_data.chat_sid);
+        })();
+
         // 起輪詢（入場＝該對話 sid）
         this.message_poll(response_data.chat_sid);
     }
@@ -398,9 +380,16 @@ class _message_poll {
             }
         }
 
-        await message_poll_instance.message_poll(poll_chat_sid, acquired_payload, {
+        await message_poll_instance.message_poll(poll_chat_sid, acquired_payload, thisObject.poll_last_message_id, {
             success: async function (result) {
                 thisObject.polling = false;
+
+                // 判定：後端話對話已冇（最後一條訊息被刪 → 對話收走）→ 停 poll
+                if (result.chat_exists === false) {
+                    thisObject.stop_poll_message();
+
+                    return;
+                }
 
                 const tasks = result.tasks || [];
 
@@ -415,16 +404,37 @@ class _message_poll {
 
                 const queue_count = jQuery(".sc_composer__queue_list .queue_item").length;
 
+                // SSE 生命週期跟本輪 tasks：有工作中＝開線；冇＝關掉殘留線（prompt_send 開的線亦在此收）
+                await thisObject.watch_stream(tasks);
+
+                // 逐條任務找最新 message_id（下一輪帶返——歸檔後補終態用）
+                let has_working_task = false;
+
                 // 判定：本輪有任務 → 逐條更新回應內容（畫面冇該訊息 wrapper ＝ 唔注入——update_response 自己判）
                 if (tasks.length > 0) {
                     for (let task_index = 0; task_index < tasks.length; task_index++) {
                         const task = tasks[task_index];
+                        const task_message_id = Number((task.data || {}).message_id || 0);
+
+                        // 判定：有更新嘅 message_id → 記住（取最大）
+                        if (task_message_id > thisObject.poll_last_message_id) {
+                            thisObject.poll_last_message_id = task_message_id;
+                        }
+
+                        // 判定：仍工作中 → 續航
+                        if (task.working === "1") {
+                            has_working_task = true;
+                        }
 
                         thisObject.update_response(task);
                     }
 
-                    // 訂閱 SSE（工作中訊息有 delta 即多跑一輪；bridge 死＝純 poll 照舊）
-                    await thisObject.watch_stream(tasks);
+                    // 判定：全部任務已終態＋冇排隊 → 收工（唔再等目錄 job）
+                    if (has_working_task === false && queue_count === 0) {
+                        thisObject.stop_poll_message();
+
+                        return;
+                    }
                 // 否則＝本輪冇任務 → 睇有冇排隊
                 } else {
                     // 判定：冇排隊 → 冇嘢做：停止（一輪唯一續／停出口）
@@ -460,6 +470,26 @@ class _message_poll {
         });
     }
 
+    // 補訊息窗（跨頁同步用）：
+    // 上游：update_response()——poll 返嚟嘅 message_id 喺畫面搵唔到 wrapper
+    // 下游：message_list_fetch() 重繪窗口，令新訊息插入清單
+    // 限制：每條 message_id 只補一次（refreshed_message_ids），防每輪重複重繪
+    async refresh_message_window_once(message_id) {
+        const refresh_key = String(message_id);
+
+        // 判定：此訊息已補過 → 唔再做（防每輪重複重繪）
+        if (this.refreshed_message_ids[refresh_key] === true) {
+            return;
+        }
+
+        this.refreshed_message_ids[refresh_key] = true;
+
+        const message_instance = await registry().sc_ai_chats().message();
+        const message_list_fetch_instance = await message_instance.act().message_list_fetch();
+
+        await message_list_fetch_instance.message_list_fetch();
+    }
+
     // 更新回應內容（入口——食單一 task object）：依 status 分流（log/segments 兩子函數）
     // 畫面無該 message 的 wrapper → 唔處理（等下次重載全量渲染）
     async update_response(task) {
@@ -469,8 +499,10 @@ class _message_poll {
 
         let j_message_panel = message_instance.get_j_message_panel(task_data.message_id);
 
-        // 判定：畫面無該 wrapper → 唔處理（等下次重載全量渲染）
+        // 判定：畫面無該 wrapper（另一頁新開的訊息）→ 補一次訊息窗後返回
         if (!j_message_panel.length) {
+            await this.refresh_message_window_once(task_data.message_id);
+
             return false;
         }
 

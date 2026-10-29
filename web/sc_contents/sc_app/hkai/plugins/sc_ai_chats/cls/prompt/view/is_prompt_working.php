@@ -30,10 +30,12 @@ trait is_prompt_working
         }
 
         // 來源②：等待列有排隊中
-        $queue_lines = sc_ai_chats()->queue()->get_queue_lines($chat_id);
+        $chat_row     = sc_ai_chats()->chat()->get_chat_row($chat_id);
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+        $queue_items  = sc_ai_chats()->queue()->get_queue_items($project_slug, (string)$chat_row["chat_sid"]);
 
         // 判定：有排隊 → 工作中
-        if (count($queue_lines) > 0) {
+        if (count($queue_items) > 0) {
             return true;
         }
 

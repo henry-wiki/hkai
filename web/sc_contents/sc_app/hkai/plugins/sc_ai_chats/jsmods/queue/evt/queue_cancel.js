@@ -14,7 +14,7 @@ class _queue_cancel {
             .on("click.sc_ai_chats_queue_cancel", "[data-action='queue_cancel']", this.queue_cancel.bind(this));
     }
 
-    // 回收未開始回覆嘅訊息（chip × → prepare data（chip 嘅 queue_uid）→ 交 act/queue）
+    // 回收未開始回覆嘅訊息（chip × → prepare data（chip 嘅 queue_item_id）→ 交 act/queue）
     async queue_cancel(event) {
         const j_cancel_button = jQuery(event.currentTarget);
         const j_chip = j_cancel_button.closest(".queue_item");
@@ -27,13 +27,13 @@ class _queue_cancel {
         // mini loading（click 等待期——交 act 收尾除）
         j_cancel_button.addClass("loading");
 
-        const queue_uid = j_chip.attr("data-queue_uid");
+        const queue_item_id = j_chip.attr("data-queue_item_id");
 
         // 橋接駁（同域 act——新方式）
         const queue_instance = await registry().sc_ai_chats().queue();
         const queue_dispatch_instance = await queue_instance.act().queue_dispatch();
 
-        queue_dispatch_instance.queue_cancel(queue_uid, { j_cancel_button: j_cancel_button });
+        queue_dispatch_instance.queue_cancel(queue_item_id, { j_cancel_button: j_cancel_button });
     }
 }
 

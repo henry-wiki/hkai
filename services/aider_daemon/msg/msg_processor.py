@@ -4,7 +4,7 @@ msg_processor.py
 
 查詢四檔（msg_*）的流程處理（msg_processor_class singleton——get_instance() 取得）。
 
-    messages/polling/{project_slug}/{message_id}/msg_conf.json   找到 → 處理（子程序寫 msg_stdout）
+    messages/polling/{project_slug}/{chat_sid}/{prompt_id}/meta.json   找到 → 處理（子程序寫 msg_stdout）
     → 完成/失敗 → status 寫入 msg_status（留 polling——PHP poll 收尾移 archive）
 
 任何情況（成功/錯誤/例外）都要標記終態，避免卡檔；archive 目錄為純歸檔（PHP 收尾移入），本模組永不讀取。
@@ -55,7 +55,7 @@ class msg_processor_class:
 
         流程：
 
-            messages/polling/{project_slug}/{message_id}/msg_conf.json
+            messages/polling/{project_slug}/{chat_sid}/{prompt_id}/meta.json
             -> 單次 spawn 子程序（重試由 aider 內建退避機制在同進程處理；連線逾時卡死兜底）
             -> 認領（原子——msg_claim）
             -> 連通：子程序首次輸出建立 msg_stdout

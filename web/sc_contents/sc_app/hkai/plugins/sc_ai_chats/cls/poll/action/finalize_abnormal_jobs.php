@@ -66,7 +66,7 @@ trait finalize_abnormal_jobs
             }
 
             // 判定：主人健在（pid 現查＋心跳檔認名）→ 唔殺（等佢／等正常鏈）
-            if ($this->is_msg_worker_alive($_worker_pid)) {
+            if (sc_ai_chats()->poll()->is_msg_worker_alive($_worker_pid)) {
                 continue;
             }
 
@@ -81,7 +81,7 @@ trait finalize_abnormal_jobs
     }
 
     // 主人仲生唔生（pid 現查 ＋ process_status 心跳檔認名——兩者皆在＝生；缺一＝死）
-    private function is_msg_worker_alive($_worker_pid)
+    public function is_msg_worker_alive($_worker_pid)
     {
         // 判定：pid 唔存在 → 死
         if (!hkai()->process()->is_process_alive($_worker_pid)) {

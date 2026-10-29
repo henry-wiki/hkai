@@ -13,6 +13,9 @@ trait build_tab_general_form_body
         $project_name = $project_row["project_name"] ?? "";
         $project_path = $project_row["project_path"] ?? "";
 
+        // 判定：歸檔專案 → 全部欄位唯讀（只能還原，唔可以改）
+        $is_archived_project = (($project_row["project_status"] ?? "") === "archived");
+
         // 欄位選項（逐行賦值——一眼知道每個欄位的設定）
         $options_project_name = [];
         $options_project_name["placeholder"] = "例如 ecommerce-api";
@@ -24,6 +27,12 @@ trait build_tab_general_form_body
         $options_project_path["placeholder"] = "/home/user/projects/my-app";
         $options_project_path["subtitle"]    = "本機的專案的完整途徑";
         $project_path_subtitle = $options_project_path["subtitle"];
+
+        // 判定：歸檔專案 → 兩個欄位都唯讀
+        if ($is_archived_project === true) {
+            $options_project_name["readonly"] = true;
+            $options_project_path["readonly"] = true;
+        }
 
         $outputLines = [];
         $outputLines[] = "<div class='modal_pane on' data-pane='general_form'>";

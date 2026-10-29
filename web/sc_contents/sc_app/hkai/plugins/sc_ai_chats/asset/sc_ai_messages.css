@@ -583,6 +583,16 @@
     flex-direction: column;
     justify-content: flex-end;
 }
+/* 使用者訊息附件列（prompt 上方；chip 樣式沿用 sc_composer__attachment） */
+.user_attachments {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    max-width: 80%;
+    margin-bottom: 6px;
+    align-self: flex-end;
+}
 .user_message .user_prompt {
     max-width: 80%;
     max-height: 300px;

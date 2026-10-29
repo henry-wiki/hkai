@@ -108,11 +108,11 @@ def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]"
     # 等待方式：阻塞（blocking）——get() 停住等，唔輪詢、唔燒 CPU；
     #           管道一有單即由 OS 喚醒，冇單就等夠 30 秒（閒置自殺）。
     # 管道來源：job_queue 由 daemon 喺 spawn_worker() 建立，經 Process(args=...) 傳入；
-    #           daemon 每次 put 一張工單嘅 msg_conf.json 路徑（字串），工人喺下面 get 出嚟。
+    #           daemon 每次 put 一張工單嘅 meta.json 路徑（字串），工人喺下面 get 出嚟。
     try:
         while True:
             try:
-                # 等工單：最多等 30 秒；收到＝一張工單嘅 msg_conf.json 路徑字串
+                # 等工單：最多等 30 秒；收到＝一張工單嘅 meta.json 路徑字串
                 # 注意：get() 係一次性取走（取後管道即空、唔會重播）；
                 #       worker 取走後即刻死 → 管道冇副本，靠 daemon 側 worker_entry["msg_conf_path"] 收終態
                 msg_conf_path = job_queue.get(timeout=context.WARM_WORKER_IDLE_EXIT_SEC)

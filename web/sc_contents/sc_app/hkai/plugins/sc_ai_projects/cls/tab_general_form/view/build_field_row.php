@@ -11,6 +11,7 @@ trait build_field_row
     {
         $input_type  = isset($options["type"]) ? $options["type"] : "text";
         $placeholder = isset($options["placeholder"]) ? $options["placeholder"] : "";
+        $is_readonly = isset($options["readonly"]) ? $options["readonly"] : false;
         
         $field_value_encoded = sc_html_encode($field_value, ENT_QUOTES);
         
@@ -22,6 +23,11 @@ trait build_field_row
         $input_attr[] = "value='{$field_value_encoded}'";
         $input_attr[] = "placeholder='{$placeholder}'";
         $input_attr[] = "autocomplete='off'";
+
+        // 判定：唯讀（歸檔專案）→ 加 readonly
+        if ($is_readonly === true) {
+            $input_attr[] = "readonly";
+        }
         
         $input_attr = implode(" ", $input_attr);
         $control_lines   = [];

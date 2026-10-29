@@ -1,37 +1,49 @@
 <?php
 // == sc_app/shared/func/sc_format_relative_time.func.php：相對時間顯示（全 app 通用——列表時間標籤） ==
-// == 用法：sc_format_relative_time("2026-09-20 01:32:21") → "4d"（唔同時距出 HH:MM／Nd／Nw／Nm／Ny） ==
-// == 階梯：今日 HH:MM；1d-6d；1w-3w（<28 日）；1m-11m（<360 日，30 日為一月）；1y＋（360 日起，12 個月＝一年）；依日曆日界 ==
+// == 用法：sc_format_relative_time("2026-09-20 01:32:21") → "2d"（數字＋單位縮寫——語言中立、免翻譯） ==
+// == 階梯（以經過秒數計，唔用日曆日界）：0s-59s／1m-59m／1h-23h／1d-6d／1w-4w／1mo-11mo／1y＋ ==
+// == 單位：s＝秒、m＝分鐘、h＝小時、d＝日、w＝週、mo＝月、y＝年（mo 用嚟同分鐘 m 區分） ==
 
-// 相對時間標籤（純轉換——唔碰 DOM、唔碰狀態；顯示慣例＝壓縮階梯）
+// 相對時間標籤（純轉換——唔碰 DOM、唔碰狀態）
 function sc_format_relative_time($datetime)
 {
     $updated_timestamp = strtotime($datetime);
-    $updated_day_start = strtotime(date("Y-m-d", $updated_timestamp));
-    $today_day_start   = strtotime(date("Y-m-d"));
+    $elapsed_seconds   = time() - $updated_timestamp;
 
-    // 相差日數（日曆日界——昨日＝1）
-    $day_diff = (int)(($today_day_start - $updated_day_start) / 86400);
-
-    // 判定：今日（同一日曆日）→ 只顯示時間
-    if ($day_diff < 1) {
-        return date("H:i", $updated_timestamp);
+    // 判定：未來時間（時鐘偏差）→ 當剛剛發生
+    if ($elapsed_seconds < 0) {
+        $elapsed_seconds = 0;
     }
 
-    // 判定：一週內 → 日（1d-6d）
-    if ($day_diff < 7) {
-        return $day_diff . "d";
+    // 判定：一分鐘內 → 秒
+    if ($elapsed_seconds < 60) {
+        return $elapsed_seconds . "s";
     }
 
-    // 判定：四週內 → 週（1w-3w）
-    if ($day_diff < 28) {
-        return (int)floor($day_diff / 7) . "w";
+    // 判定：一小時內 → 分鐘
+    if ($elapsed_seconds < 3600) {
+        return (int)floor($elapsed_seconds / 60) . "m";
     }
 
-    // 判定：一年內 → 月（1m-11m）
-    if ($day_diff < 360) {
-        return (int)floor($day_diff / 30) . "m";
+    // 判定：一日內 → 小時
+    if ($elapsed_seconds < 86400) {
+        return (int)floor($elapsed_seconds / 3600) . "h";
     }
 
-    return (int)floor($day_diff / 360) . "y";
+    // 判定：一週內 → 日
+    if ($elapsed_seconds < 604800) {
+        return (int)floor($elapsed_seconds / 86400) . "d";
+    }
+
+    // 判定：四週內 → 週
+    if ($elapsed_seconds < 2592000) {
+        return (int)floor($elapsed_seconds / 604800) . "w";
+    }
+
+    // 判定：一年內 → 月
+    if ($elapsed_seconds < 31536000) {
+        return (int)floor($elapsed_seconds / 2592000) . "mo";
+    }
+
+    return (int)floor($elapsed_seconds / 31536000) . "y";
 }

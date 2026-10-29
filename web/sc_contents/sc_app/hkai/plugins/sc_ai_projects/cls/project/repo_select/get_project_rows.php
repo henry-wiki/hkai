@@ -43,7 +43,7 @@ trait get_project_rows
             "SELECT * FROM projects "
             . "WHERE project_status = 'active' "
             . "AND project_slug != ? "
-            . "ORDER BY chat_updated_at DESC, project_updated_at DESC",
+            . "ORDER BY COALESCE(NULLIF(chat_updated_at, ''), project_updated_at) DESC",
             [sc_get_config("hkai.default_project_slug")]
         );
 

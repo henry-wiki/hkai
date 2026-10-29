@@ -4,7 +4,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\draft\action;
 
 // == sc_ai_chats draft discard：丟棄草稿（trait——掛入 draft_Class） ==
 // == 職責：POST chat_sid → meta.status = discarded（檔案唔刪——交 sweep 清） ==
-// == 上游：request/draft/draft_discard.php；下游：draft_Class read_meta／write_meta ==
+// == 上游：request/draft/draft_discard.php；下游：draft_Class get_draft_meta／write_meta ==
 
 trait discard
 {
@@ -16,10 +16,9 @@ trait discard
 
         $chat_sid     = trim((string)($input_data["chat_sid"] ?? ""));
         $project_slug = trim((string)($input_data["project_slug"] ?? ""));
-        $draft_key    = $this->get_draft_key($chat_sid);
 
         // 判定：目錄 key 格式唔合 → 400
-        if (!$this->is_valid_draft_key($draft_key)) {
+        if (!sc_ai_chats()->chat()->is_valid_chat_sid($chat_sid)) {
             return sc_response()->json(["ok" => false, "error" => "invalid chat_sid"], 400);
         }
 
@@ -37,8 +36,7 @@ trait discard
         }
 
         $project_slug = (string)$project_row["project_slug"];
-        $draft_dir    = $this->get_draft_item_dir($project_slug, $draft_key);
-        $meta_data    = $this->read_meta($draft_dir);
+        $meta_data    = sc_ai_chats()->draft()->get_draft_meta($project_slug, $chat_sid);
 
         // 判定：冇 meta → 404
         if (count($meta_data) < 1) {
@@ -48,7 +46,7 @@ trait discard
         $meta_data["status"]     = "discarded";
         $meta_data["updated_at"] = (int)floor(microtime(true) * 1000);
 
-        $meta_written = $this->write_meta($draft_dir, $meta_data);
+        $meta_written = sc_ai_chats()->draft()->set_draft_meta($project_slug, $chat_sid, $meta_data);
 
         // 判定：寫入失敗 → 500
         if ($meta_written === false) {
@@ -57,7 +55,7 @@ trait discard
 
         return sc_response()->json([
             "ok"        => true,
-            "draft_key" => $draft_key,
+            "chat_sid"  => $chat_sid,
             "status"    => "discarded",
         ]);
     }

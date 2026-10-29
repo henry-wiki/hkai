@@ -8,7 +8,6 @@ import { _domain_hooks } from "./_common/_domain_hooks.js";
 class _sc_ai_projects {
     constructor() {
         this.inited = false;
-        this.health_hook_registered = false;
         this.hooks = {};
     }
 
@@ -179,13 +178,6 @@ class _sc_ai_projects {
 
                 registry().sc_loading().stop_loading(j_sidebar_project_list);
 
-                // 清單重繪後同步狀態列（sb_project 讀 .sc_project_list .sc_project_card--active——來源域推：專案清單變咗＝專案側叫同步）
-                await registry().sc_ai_status_bar().sync_project();
-
-                // !! 必須留喺呢度（清單載入後才激活）——唔可以搬上 init !!
-                // 原因：health 每拍會調整／改變專案列（更新／建立／刪除卡）——早註冊＝對未載入清單盲建卡（project_list_refresh 建立路線）
-                await registry().sc_ai_projects().health_hook_register();
-
                 // 項目觀察器重掛（動態——清單加減／重繪後新卡要重新盯；init 內置 disconnect 防重）
                 project_item_observer_instance.init();
             }
@@ -204,34 +196,6 @@ class _sc_ai_projects {
             after: async function () {
                 // 項目觀察器重掛（清單節點郁過——重新盯；init 內置 disconnect 防重）
                 project_item_observer_instance.init();
-            }
-        });
-    }
-
-    // 激活健康更新反應（清單載入後呼叫；重入已防——只認第一次）
-    async health_hook_register() {
-        // 判定：已激活 → 唔重複登記（load_project_list 每次清單載入都派；只認第一次）
-        if (this.health_hook_registered) {
-            return;
-        }
-
-        this.health_hook_registered = true;
-
-        // 接駁（health plugin 根——登記健康更新反應）
-        const health_instance = registry().sc_ai_health();
-
-        // 接駁（project 域 act 橋——反應同步用）
-        const project_instance = await this.project();
-        const project_list_refresh_instance = await project_instance.act().project_list_refresh();
-
-        // 健康更新 hook 反應（通訊由 chats 發起——登記喺 health 側；每輪執行）
-        health_instance.register_hook("health_updated", {
-            before: function () {
-
-            },
-            after: async function (health_result) {
-                // 刷新專案列（health_result 直入——更新／補缺／刪除／刷狀態全交 project_list_refresh）
-                await project_list_refresh_instance.project_list_refresh(health_result);
             }
         });
     }

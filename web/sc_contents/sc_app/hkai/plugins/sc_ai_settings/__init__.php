@@ -38,9 +38,6 @@ $plugin->add_request_action("settings_reset_instructions", __DIR__ . "/request/i
 // 註冊 request action（system env——手動更新環境檔：只准重新產生，內容不可編輯）
 $plugin->add_request_action("settings_refresh_system_env", __DIR__ . "/request/instructions/settings_refresh_system_env.php");
 
-// 註冊 request action（server status——server 起咗未快查；URL /request/hkai/server_status/）
-$plugin->add_request_action("server_status", __DIR__ . "/request/server/server_status.php");
-
 // 註冊 request action（load settings——side menu 動態載入）
 $plugin->add_request_action("fetch_settings", __DIR__ . "/request/settings/fetch_settings.php");
 

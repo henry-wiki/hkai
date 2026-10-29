@@ -5,13 +5,13 @@ namespace sc\app\hkai\plugins\sc_ai_chats\prompt\request;
 // == sc_ai_chats prompt append_failed_message_html：prompt_send 私有輔助（trait——prompt_send 掛入；檔＝動作：RECOVERABLE 回應附加訊息 HTML（同一渲染源）） ==
 // == 只 prompt_send 用 ==
 // == 2026-09-27 自 prompt_send.php 分獨立檔（one file one action） ==
-// == 2026-10-08 補 chat_created／chat_url（與成功路徑同一契約——唔補＝新對話已入庫但前端唔換 URL） ==
+// == 2026-10-08 補 is_new_chat_row／chat_url（與成功路徑同一契約——唔補＝新對話已入庫但前端唔換 URL） ==
 
 trait append_failed_message_html
 {
 
     // RECOVERABLE 回應附加訊息 HTML（資料已入 DB = 已送出；渲染源與 message_list_fetch 相同——重載前後一致）
-    private function append_failed_message_html($proc_result, $input_data, $failed_record, $chat_created)
+    private function append_failed_message_html($proc_result, $input_data, $failed_record, $is_new_chat_row)
     {
         $message_id = $failed_record["message_id"];
         $existing_chat_row   = $failed_record["existing_chat_row"];
@@ -31,7 +31,7 @@ trait append_failed_message_html
         $proc_result["message_id"]   = (int)$message_id;
 
         // 新對話事實＋對話 URL（前端換 URL 唯一依據；同成功路徑 prompt_send 同一契約）
-        $proc_result["chat_created"] = $chat_created;
+        $proc_result["is_new_chat_row"] = $is_new_chat_row;
         $proc_result["chat_url"]     = sc_ai_chats()->chat()->build_chat_url($input_data["project_slug"], "normal", $existing_chat_row["chat_sid"]);
 
         $proc_result["html"]["new_message"] = $message_render;

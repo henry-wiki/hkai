@@ -14,23 +14,14 @@ class _project_item_fetch {
             .on("click.sc_ai_projects_item_fetch", ".sc_project_card", this.project_item_fetch.bind(this));
     }
 
-    // 切換專案（換 URL（無痕）——換完由劫持派 on_url_change → 交 URL 鏈；換主交 act/project）
-    async project_item_fetch(event) {
+    // 切換專案（只換 URL——換主交 URL 鏈 detect_project_slug_change，避免重複請求）
+    project_item_fetch(event) {
         event.preventDefault();
 
         const j_project_link = jQuery(event.currentTarget);
 
-        // 目標（卡帶 data-project_slug——歸檔＝archive@{project_slug}／正常＝純值；由後台出，前端零拆解連結）
-        const project_slug = j_project_link.attr("data-project_slug");
-
-        // 換 URL（無痕轉向——加 history 記錄；換完由劫持派 on_url_change → 交 URL 鏈）
+        // 換 URL（無痕轉向——加 history 記錄；換完由劫持派 on_url_change → detect_project_slug_change 接手換主）
         sc_url.silent_redirect_url(j_project_link.attr("href"));
-
-        // 橋接駁（同域 act——新方式）
-        const project_instance = await registry().sc_ai_projects().project();
-        const project_item_fetch_instance = await project_instance.act().project_item_fetch();
-
-        project_item_fetch_instance.switch_project(project_slug);
     }
 }
 

@@ -24,6 +24,8 @@ class view_Class
     use render_chat_message_item;
     use render_message_body;
     use get_user_prompt;
+    use get_user_attachments;
+    use render_prompt_send_result;
 
     private static $instance = null;
 

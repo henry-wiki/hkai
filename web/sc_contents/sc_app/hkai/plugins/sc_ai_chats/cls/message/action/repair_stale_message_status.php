@@ -38,7 +38,7 @@ trait repair_stale_message_status
                 continue;
             }
 
-            $archived_status = sc_ai_chats()->message()->read_archived_message_status($chat_id, $message_id);
+            $archived_status = sc_ai_chats()->archive()->file()->read_archived_message_status($chat_id, $message_id);
 
             // 判定：有歸檔 → 抄歸檔尾行（檔案＝SSOT）
             if ($archived_status !== "") {

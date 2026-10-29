@@ -4,12 +4,12 @@
 extractor.py — 逐張圖片抽取編排（一次一張；完成才下一張）。
 
 職責：
-- 讀 job.json → 逐張：狀態 running → basic／visual／qr／ocr → 寫 meta json → 狀態 done
-- 任何一張失敗：記 failed（唔阻其餘）
-- cancel()：由 main 嘅訊號處理呼叫——running／pending → cancelled
+- 讀箱內 meta.json → 逐張：basic／visual／qr／ocr → 寫 <圖名>.meta.json 喺圖旁邊
+- 已有 <圖名>.meta.json ＝ 已完成（斷點續跑跳過）
+- 全部處理完成（含個別失敗）→ 箱內 meta.json status：pending → polling
 
-上游：main（run）
-下游：job_store、pipeline（basic／visual／ocr／qr）、runtime.sc_logger
+上游：main（run，<box_dir> 由 bridge 傳入）
+下游：box_store（箱／meta／附件清單）、pipeline（basic／visual／ocr／qr）、runtime.sc_logger
 """
 
 import json
@@ -19,7 +19,7 @@ from typing import Any
 
 import cv2
 
-from . import context, job_store
+from . import box_store, context
 from .pipeline import basic, ocr, qr, visual
 from .runtime import sc_logger
 
@@ -28,39 +28,40 @@ META_VERSION = 1
 
 
 class extractor_class:
-    """一次 job 的抽取器（一個 message 一個 job 目錄）。"""
+    """一次抽取（box_dir＝紙箱：polling|archive/<slug>/<sid>/<prompt_id>）。"""
 
-    def __init__(self, job_dir: Path) -> None:
-        self.job_dir: Path = job_dir
-        self.job_data: dict[str, Any] = {}
+    def __init__(self, box_dir: Path) -> None:
+        self.box_dir: Path = box_dir
+        self.job_files: list[dict[str, Any]] = []
 
     def run(self) -> int:
-        """執行整份 job；回成功張數（失敗照繼續）。"""
-        self.job_data = job_store.read_job(self.job_dir)
+        """執行整箱圖片抽取；回成功張數（失敗照繼續）。"""
+        meta_data = box_store.read_meta(self.box_dir)
 
-        # 判定：job.json 缺失／壞 → 唔做
-        if self.job_data == {}:
-            sc_logger.log("JOB_INVALID", "job.json missing or invalid: " + str(self.job_dir))
+        # 判定：meta 讀唔到 → 唔做
+        if meta_data is None:
+            sc_logger.log("BOX_INVALID", "meta.json invalid: " + str(self.box_dir))
             return 0
 
-        job_files = self.job_data.get("files", [])
+        self.job_files = box_store.list_attachment_files(self.box_dir, meta_data)
+        message_id = int(meta_data.get("message_id", 0))
 
-        # 判定：冇檔案 → 唔做
-        if isinstance(job_files, list) is False or len(job_files) < 1:
-            sc_logger.log("JOB_EMPTY", "no files in job: " + str(self.job_dir))
+        # 判定：冇圖片 → 直接跳過（正常路徑）＋放行
+        if len(self.job_files) < 1:
+            sc_logger.log("JOB_EMPTY", "no image attachment: message_id=" + str(message_id))
+            _ = box_store.write_status(self.box_dir, "polling")
             return 0
 
         success_count = 0
 
-        for job_file_item in job_files:
+        for job_file_item in self.job_files:
             file_index = int(job_file_item.get("idx", 0))
             file_path_text = str(job_file_item.get("path", ""))
+            file_path = Path(file_path_text)
+            result_path = file_path.with_suffix(".meta.json")
 
-            current_status = job_store.read_file_status(self.job_dir, file_index)
-            current_state = str(current_status.get("state", "pending"))
-
-            # 判定：已完成／已取消 → 跳過（支援斷點續跑）
-            if current_state in ("done", "cancelled"):
+            # 判定：已有抽取結果 → 跳過（斷點續跑）
+            if result_path.is_file() is True:
                 continue
 
             is_success = self._process_one(file_index, file_path_text)
@@ -69,50 +70,14 @@ class extractor_class:
             if is_success is True:
                 success_count += 1
 
-        self.job_data["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        job_store.write_job(self.job_dir, self.job_data)
+        # 全部圖片處理完成（含個別失敗）→ 箱狀態 pending → polling（通知交 PHP）
+        _ = box_store.write_status(self.box_dir, "polling")
 
         return success_count
-
-    def cancel(self) -> None:
-        """取消：running／pending → cancelled（已完成者不動）。"""
-        job_files = self.job_data.get("files", [])
-
-        # 判定：未載入 job → 讀一次
-        if self.job_data == {}:
-            self.job_data = job_store.read_job(self.job_dir)
-            job_files = self.job_data.get("files", [])
-
-        # 判定：files 格式唔啱 → 唔做
-        if isinstance(job_files, list) is False:
-            return
-
-        for job_file_item in job_files:
-            file_index = int(job_file_item.get("idx", 0))
-            current_status = job_store.read_file_status(self.job_dir, file_index)
-            current_state = str(current_status.get("state", "pending"))
-
-            # 判定：已完成／已失敗 → 保留原狀
-            if current_state in ("done", "failed"):
-                continue
-
-            current_status["state"] = "cancelled"
-            job_store.write_file_status(self.job_dir, file_index, current_status)
-
-        self.job_data["cancelled_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        job_store.write_job(self.job_dir, self.job_data)
 
     def _process_one(self, file_index: int, file_path_text: str) -> bool:
         """處理一張圖；成功回 True。"""
         file_path = Path(file_path_text).resolve()
-
-        status_data: dict[str, Any] = {
-            "idx": file_index,
-            "state": "running",
-            "path": str(file_path),
-            "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-        job_store.write_file_status(self.job_dir, file_index, status_data)
 
         sc_logger.log("IMAGE_STARTED", "idx=" + str(file_index), {"path": str(file_path)})
 
@@ -120,33 +85,37 @@ class extractor_class:
 
         try:
             meta_data = self._analyze_image(file_index, file_path)
-            meta_path = self._write_meta(file_path, meta_data)
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
-
-            status_data["state"] = "done"
-            status_data["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-            status_data["elapsed_ms"] = elapsed_ms
-            status_data["meta_path"] = str(meta_path)
-            status_data["ocr_chars"] = len(str(meta_data.get("summary_text", "")))
-            job_store.write_file_status(self.job_dir, file_index, status_data)
+            meta_data["elapsed_ms"] = elapsed_ms
+            meta_path = self._write_meta(file_path, meta_data)
 
             sc_logger.log(
                 "IMAGE_DONE",
                 "idx=" + str(file_index),
-                {"elapsed_ms": elapsed_ms, "ocr_chars": status_data["ocr_chars"]},
+                {"elapsed_ms": elapsed_ms, "meta_path": str(meta_path)},
             )
 
             return True
         except Exception as error:  # noqa: BLE001 —— 單張失敗唔可以拖死整份 job
             elapsed_ms = int((time.perf_counter() - start_time) * 1000)
 
-            status_data["state"] = "failed"
-            status_data["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
-            status_data["elapsed_ms"] = elapsed_ms
-            status_data["error"] = type(error).__name__ + ": " + str(error)
-            job_store.write_file_status(self.job_dir, file_index, status_data)
+            failure_data: dict[str, Any] = {
+                "version": META_VERSION,
+                "state": "failed",
+                "idx": int(file_index),
+                "error": type(error).__name__ + ": " + str(error),
+                "elapsed_ms": elapsed_ms,
+                "extracted_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            }
 
-            sc_logger.log("IMAGE_FAILED", status_data["error"], {"idx": file_index})
+            # 失敗都要落檔（狀態睇得到；亦避免無限重試同一張）
+            _ = self._write_meta(file_path, failure_data)
+
+            sc_logger.log(
+                "IMAGE_FAILED",
+                type(error).__name__ + ": " + str(error),
+                {"idx": file_index, "elapsed_ms": elapsed_ms},
+            )
 
             return False
 
@@ -157,24 +126,24 @@ class extractor_class:
         basic_info = basic.read_basic_info(file_path)
         image_array = cv2.imread(str(file_path), cv2.IMREAD_COLOR)
 
+        # 判定：解碼失敗（壞檔／非圖片）→ 記 failed（唔可以靜靜當 done）
+        if image_array is None:
+            raise ValueError("image decode failed: " + file_path.name)
+
         visual_info: dict[str, Any] = {}
         ocr_info: dict[str, Any] = {"engine": "", "text": "", "lines": [], "elapsed_ms": 0}
         qr_list: list[dict[str, Any]] = []
 
-        # 判定：解碼成功 → 跑視覺／QR／OCR
-        if image_array is not None:
-            visual_info = visual.read_visual_info(image_array)
-            qr_list = qr.read_qr(image_array)
-            ocr_info = ocr.read_ocr(image_array)
+        # 逐項防護——單項失敗唔拖死整張圖
+        visual_info = self._run_visual_safe(image_array)
+        qr_list = self._run_qr_safe(image_array)
+        ocr_info = self._run_ocr_safe(image_array)
 
         summary_text = str(ocr_info.get("text", "")).strip()
 
         meta_data: dict[str, Any] = {
             "version": META_VERSION,
-            "message_id": int(self.job_data.get("message_id", 0)),
-            "chat_id": int(self.job_data.get("chat_id", 0)),
-            "chat_sid": str(self.job_data.get("chat_sid", "")),
-            "project_slug": str(self.job_data.get("project_slug", "")),
+            "state": "done",
             "idx": int(file_index),
             "file": basic_info,
             "visual": visual_info,
@@ -186,9 +155,35 @@ class extractor_class:
 
         return meta_data
 
+    def _run_visual_safe(self, image_array: Any) -> dict[str, Any]:
+        """視覺分析（失敗＝空 dict＋log；唔拖死整張圖）。"""
+        try:
+            return visual.read_visual_info(image_array)
+        except Exception as error:  # noqa: BLE001 —— 單項防護
+            sc_logger.log("VISUAL_FAILED", type(error).__name__ + ": " + str(error))
+            return {}
+
+    def _run_qr_safe(self, image_array: Any) -> list[dict[str, Any]]:
+        """QR 解碼（失敗＝空清單＋log）。"""
+        try:
+            return qr.read_qr(image_array)
+        except Exception as error:  # noqa: BLE001 —— 單項防護
+            sc_logger.log("QR_FAILED", type(error).__name__ + ": " + str(error))
+            return []
+
+    def _run_ocr_safe(self, image_array: Any) -> dict[str, Any]:
+        """OCR（失敗＝空結果＋log；summary_text 留空）。"""
+        empty_ocr: dict[str, Any] = {"engine": "", "text": "", "lines": [], "elapsed_ms": 0}
+
+        try:
+            return ocr.read_ocr(image_array)
+        except Exception as error:  # noqa: BLE001 —— 單項防護
+            sc_logger.log("OCR_FAILED", type(error).__name__ + ": " + str(error))
+            return empty_ocr
+
     def _assert_allowed_path(self, file_path: Path) -> None:
-        """只准讀附件目錄之下嘅檔案（防任意路徑）。"""
-        allowed_root = context.ATTACHMENTS_DIR.resolve()
+        """只准讀 data/messages 之下嘅檔案（防任意路徑；紙箱附件住 <box>/attachments/）。"""
+        allowed_root = context.MESSAGES_DIR.resolve()
 
         # 判定：唔喺附件目錄之下 → 拒絕
         if allowed_root not in file_path.parents:
@@ -199,7 +194,7 @@ class extractor_class:
         meta_path = image_path.with_suffix(".meta.json")
         temp_path = image_path.with_suffix(".meta.json.tmp")
 
-        temp_path.write_text(json.dumps(meta_data, ensure_ascii=False, indent=2), encoding="utf-8")
-        temp_path.replace(meta_path)
+        _ = temp_path.write_text(json.dumps(meta_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        _ = temp_path.replace(meta_path)
 
         return meta_path

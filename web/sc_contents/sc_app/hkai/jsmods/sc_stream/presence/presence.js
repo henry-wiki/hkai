@@ -87,6 +87,39 @@ class _sc_presence {
         return this;
     }
 
+    // 由 conn 狀態驅動（bridge 起了→開；換 port→重開）
+    async ensure_open(base_url) {
+        const meta_element = document.querySelector("meta[name='stream-config']");
+
+        // 判定：有 meta 且有新位址 → 寫入（下次 init 用新位址）
+        if (meta_element !== null && base_url) {
+            const stream_config = registry().sc_stream().get_config();
+
+            stream_config.enabled  = true;
+            stream_config.base_url = base_url;
+
+            meta_element.setAttribute("content", JSON.stringify(stream_config));
+        }
+
+        this.auto_reconnect = true;
+
+        // 判定：未連線 → 開
+        if (this.event_source === null) {
+            this.init();
+
+            return this;
+        }
+
+        // 判定：位址有變 → 關閉重開
+        if (base_url && this.event_source.url !== base_url + "/presence") {
+            this.close();
+
+            this.init();
+        }
+
+        return this;
+    }
+
     // 註冊連線狀態監聽（listener 收 "connected"／"disconnected"）
     register_status_listener(status_listener) {
         this.status_listeners.push(status_listener);

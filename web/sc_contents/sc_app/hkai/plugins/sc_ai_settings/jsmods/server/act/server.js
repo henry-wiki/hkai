@@ -2,123 +2,8 @@
 // 職責：server（fetch 分頁內容＋test／start／restart／stop 表單流程＋狀態 icon／按鈕 loading／動作後重載）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
-// server 啟動監視：每 1 秒查一次，最多 60 次
-const SERVER_WATCH_INTERVAL_MS = 1000;
-const SERVER_WATCH_MAX_ATTEMPTS = 60;
-
 class _server {
-    constructor() {
-        // server 啟動監視（頁面載入——每秒查一次）
-        this.server_watch_running = false;
-        this.server_watch_attempts = 0;
-        this.server_watch_timer = null;
-
-        // presence 斷線監聽（只註冊一次）
-        this.presence_listener_registered = false;
-    }
-
-    // 域 init（server 域召集時呼叫——註冊斷線監聽＋起啟動監視）
-    init() {
-        this.register_presence_listener();
-        this.watch_server_started();
-
-        return this;
-    }
-
-    // 註冊 presence 斷線監聽（斷線 → 停 SSE、改由 status 輪詢接手）
-    register_presence_listener() {
-        // 判定：已註冊 → 唔重複
-        if (this.presence_listener_registered === true) {
-            return;
-        }
-
-        this.presence_listener_registered = true;
-
-        const thisObject = this;
-
-        registry().sc_presence().register_status_listener(function (status_text) {
-            // 判定：斷線 → 交返 status 輪詢
-            if (status_text === "disconnected") {
-                thisObject.handle_server_disconnected();
-            }
-        });
-    }
-
-    // server 斷線：停 presence（唔自動重連）→ 重新每秒查狀態
-    handle_server_disconnected() {
-        registry().sc_presence().stop();
-
-        this.watch_server_started();
-    }
-
-    // 頁面載入：每秒檢查 server 起咗未（起咗即停——之後 presence 接手長期監視）
-    watch_server_started() {
-        // 判定：已經監視緊 → 唔重複
-        if (this.server_watch_running === true) {
-            return;
-        }
-
-        this.server_watch_running = true;
-        this.server_watch_attempts = 0;
-
-        this.check_server_started();
-    }
-
-    // 查一次；未起 → 1 秒後再查（最多 SERVER_WATCH_MAX_ATTEMPTS 次）
-    async check_server_started() {
-        this.server_watch_attempts = this.server_watch_attempts + 1;
-
-        let bridge_check = null;
-
-        try {
-            bridge_check = await registry().shared().sc_request().post_json("/request/hkai/server_status/", {});
-        } catch (request_error) {
-            bridge_check = null;
-        }
-
-        const server_status = bridge_check ? bridge_check.server_status : "stopped";
-
-        // 判定：已運行／啟動中 → 起 presence 接手監視，收工
-        if (server_status !== "stopped") {
-            this.init_presence_when_server_started();
-            this.stop_watch_server_started();
-
-            return;
-        }
-
-        // 判定：查夠次數 → 收工
-        if (this.server_watch_attempts >= SERVER_WATCH_MAX_ATTEMPTS) {
-            this.stop_watch_server_started();
-
-            return;
-        }
-
-        const thisObject = this;
-
-        // 未起 → 1 秒後再查
-        this.server_watch_timer = window.setTimeout(function () {
-            thisObject.server_watch_timer = null;
-            thisObject.check_server_started();
-        }, SERVER_WATCH_INTERVAL_MS);
-    }
-
-    // server 已起：初始化連線總管＋presence（之後由 SSE 連線接手長期監視）
-    init_presence_when_server_started() {
-        registry().sc_stream().init();
-        registry().sc_presence().init();
-    }
-
-    // 停止監視（清計時器＋重設狀態）
-    stop_watch_server_started() {
-        // 判定：有計時器 → 清
-        if (this.server_watch_timer !== null) {
-            window.clearTimeout(this.server_watch_timer);
-            this.server_watch_timer = null;
-        }
-
-        this.server_watch_running = false;
-        this.server_watch_attempts = 0;
-    }
+    constructor() {}
 
     // 載入（POST section；回傳 Server 分頁內容 HTML——header 注入 modal__header；失敗回 ""）
     async fetch_server_settings() {
@@ -199,11 +84,30 @@ class _server {
         // 成功：用實際埠更新頁面 stream 設定
         this.update_stream_base_url(result.host, result.port);
 
-        // server 已起 → 起 presence（連線監視由佢接手）
-        this.init_presence_when_server_started();
+        // 成功：即刻以實際位址開 presence（唔靠 meta 舊值／下一 tick）
+        await registry().sc_presence().ensure_open("http://" + result.host + ":" + result.port);
 
         // 完成（成功）→ 重載分頁（狀態／按鈕／日誌由後端重畫）
         await this.reload_server_section();
+    }
+
+    // 清頁面 stream 設定（server 已停——enabled=false、base_url 空）
+    clear_stream_base_url() {
+        const meta_element = document.querySelector("meta[name='stream-config']");
+
+        // 判定：頁面冇設定 meta → 唔做
+        if (!meta_element) {
+            return;
+        }
+
+        try {
+            const stream_config = JSON.parse(meta_element.getAttribute("content") || "{}");
+            stream_config.enabled  = false;
+            stream_config.base_url = "";
+            meta_element.setAttribute("content", JSON.stringify(stream_config));
+        } catch (parse_error) {
+            console.error("clear stream base_url failed: " + parse_error.message);
+        }
     }
 
     // 更新頁面 stream 設定（server 實際 host／port——message_stream 下次開連線即用）
@@ -222,6 +126,7 @@ class _server {
 
         try {
             const stream_config = JSON.parse(meta_element.getAttribute("content") || "{}");
+            stream_config.enabled  = true;
             stream_config.base_url = "http://" + server_host + ":" + server_port;
             meta_element.setAttribute("content", JSON.stringify(stream_config));
         } catch (parse_error) {
@@ -248,9 +153,11 @@ class _server {
             return;
         }
 
-        // 判定：成功 → 用實際埠更新頁面 stream 設定
+        // 判定：成功 → 用實際埠更新頁面 stream 設定＋即刻開 presence
         if (result.ok === true) {
             this.update_stream_base_url(result.host, result.port);
+
+            await registry().sc_presence().ensure_open("http://" + result.host + ":" + result.port);
         }
 
         // 完成（成功／後端拒絕）→ 重載分頁（狀態／按鈕／日誌由後端重畫）
@@ -274,6 +181,12 @@ class _server {
             this.set_server_status(j_modal, "running");
             return;
         }
+
+        // 停止：即刻關 presence（唔等 conn 下一 tick，避免舊連線盲重連）
+        registry().sc_presence().stop();
+
+        // 停止：清頁面 stream 設定（enabled=false、base_url 空）
+        this.clear_stream_base_url();
 
         // 完成（成功／後端拒絕＝未運行）→ 重載分頁（狀態／按鈕／日誌由後端重畫）
         await this.reload_server_section();

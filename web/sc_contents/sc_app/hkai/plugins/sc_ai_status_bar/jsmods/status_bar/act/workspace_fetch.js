@@ -17,6 +17,10 @@ class _workspace_fetch {
                 // 模型值回填（sb_model＝composer 現況（客戶端狀態——後端唔知）——區塊換返後由既有同步補返）
                 const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
                 sync_status_items_instance.sync_model();
+
+                // Git 值回填（區塊換返＝git 變返佔位——同 model 一樣，換完即重取）
+                const refresh_git_item_instance = await status_bar_domain.act().refresh_git_item();
+                refresh_git_item_instance.refresh_git_item();
             },
             error: async function (response_data) {
                 // 失敗（維持現狀——等下次 URL 變化再攞）

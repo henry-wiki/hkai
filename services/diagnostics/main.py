@@ -38,10 +38,10 @@ class diagnostics_class:
     def get_config_list(self, project_path: str) -> dict[str, Any]:
         return self.config_list.get_config_list(project_path)
 
-    def get_git_status(self, project_path: str) -> dict[str, Any]:
+    def get_git_status(self, project_path: str, fresh: bool = False) -> dict[str, Any]:
         # 快取未過期 → 即回（唔再全樹掃描——health 每 13 秒一輪嘅自我保護）
         cached_entry = self.git_status_cache.get(project_path)
-        if cached_entry is not None:
+        if cached_entry is not None and fresh is False:
             cached_at, cached_result = cached_entry
             # 快取仲新鮮 → 直接返回
             if (time.monotonic() - cached_at) < GIT_STATUS_CACHE_SECONDS:

@@ -13,7 +13,7 @@ trait render_input_stack
     {
         $queue_list = $this->render_empty_queue_list();
         
-        // 判定：已選對話 → 掃等待列砌完整 UI（與 submit 共用同一 get_queue_lines＋render_queue_list）
+        // 判定：已選對話 → 掃等待列砌完整 UI（與 submit 共用同一 get_queue_items＋render_queue_list）
         if ((string)$chat_sid !== "") {
             $selected_chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);
             

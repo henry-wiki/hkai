@@ -32,20 +32,34 @@ trait handle_queue_dispatch
         $chat_id = (int)$chat_row["chat_id"];
 
         // ① 進場：對話空閒即隊頭派工入對話
-        $shift_result = sc_ai_chats()->queue()->shift_queue_message($chat_id);
+        $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+
+        // 推帶（唯一入口——內部先驗證、後前移；處理中＝留隊）
+        try {
+            $shift_result = sc_ai_chats()->queue()->dequeue_prompt_message_to_poll($project_slug, $chat_sid);
+        } catch (\Throwable $dequeue_error) {
+            hkai()->runtime()->logger()->error("queue_dispatch 推帶失敗 chat_sid=" . $chat_sid . " error=" . $dequeue_error->getMessage());
+
+            return sc_response()->json(["ok" => false, "error" => "failed to push prompt"], 500);
+        }
 
         $response_data = [];
         $response_data["ok"]   = true;
         $response_data["html"] = ["queue_list" => sc_ai_chats()->prompt()->render_queue_list($chat_id)];
 
-        // 判定：有訊息進場 → 帶新訊息氣泡（前端 insert——同送出回應同一渲染源）
-        if ($shift_result !== null) {
-            $message_row = $shift_result["message_row"];
-
-            $response_data["chat_id"]    = (int)$message_row["chat_id"];
-            $response_data["message_id"] = (int)$message_row["message_id"];
-            $response_data["html"]["new_message"] = sc_ai_chats()->message()->view()->get_chat_message_slot($message_row, [], true);
+        // 判定：留隊（前任務處理中）→ 只更新隊列，冇新氣泡
+        if ($shift_result["dispatched"] === false) {
+            return sc_response()->json($response_data);
         }
+
+        // 最後開關：開回覆（測試時可 // 停用——箱照入 polling，唔叫 AI）
+        sc_ai_chats()->queue()->dispatch_polling_job();
+
+        $message_row = $shift_result["message_row"];
+
+        $response_data["chat_id"]    = (int)$message_row["chat_id"];
+        $response_data["message_id"] = (int)$message_row["message_id"];
+        $response_data["html"]["new_message"] = sc_ai_chats()->message()->view()->get_chat_message_slot($message_row, [], true);
 
         return sc_response()->json($response_data);
     }

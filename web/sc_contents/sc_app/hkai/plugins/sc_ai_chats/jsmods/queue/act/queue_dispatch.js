@@ -49,10 +49,10 @@ class _queue_dispatch {
             queue_list_instance.refresh_queue_list(result_html.queue_list);
         }
     }
-    // 等待列 chip 回收（排隊期身份＝queue_uid——未進場即未成 DB 訊息，行一去即乾淨）
-    async queue_cancel(queue_uid, ui_context) {
+    // 等待列 chip 回收（排隊期身份＝queue_item_id——未進場即未成 DB 訊息，行一去即乾淨）
+    async queue_cancel(queue_item_id, ui_context) {
         const request_data = {};
-        request_data.queue_uid = queue_uid;
+        request_data.queue_item_id = queue_item_id;
 
         // 橋接駁（同域 req 橋——新方式）
         const queue_instance_cancel = await registry().sc_ai_chats().queue();

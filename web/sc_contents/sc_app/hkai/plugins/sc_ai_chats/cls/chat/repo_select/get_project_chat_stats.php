@@ -18,8 +18,9 @@ trait get_project_chat_stats
 
         // 逐對話累加等待列行數（queue 檔——只讀檔）
         foreach ($chat_rows as $chat_row_item) {
-            $queue_lines = sc_ai_chats()->queue()->get_queue_lines($chat_row_item["chat_id"]);
-            $queue_count += count($queue_lines);
+            $project_slug = sc_ai_chats()->poll()->get_project_slug_by_chat((int)$chat_row_item["chat_id"]);
+            $queue_items  = sc_ai_chats()->queue()->get_queue_items($project_slug, (string)$chat_row_item["chat_sid"]);
+            $queue_count += count($queue_items);
         }
 
         return [

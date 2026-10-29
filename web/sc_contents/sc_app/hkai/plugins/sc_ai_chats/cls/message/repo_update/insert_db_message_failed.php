@@ -60,7 +60,10 @@ trait insert_db_message_failed
             return 0;
         }
 
+        sc_ai_health()->stream()->mark_target_updated("chat");
+
         return $last_message_id;
+
     }
 
 }

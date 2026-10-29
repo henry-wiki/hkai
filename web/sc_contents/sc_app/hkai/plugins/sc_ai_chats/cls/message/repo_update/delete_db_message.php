@@ -7,13 +7,16 @@ namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_update;
 
 trait delete_db_message
 {
-    // 刪除 DB：整則訊息（message_response 列 ＋ messages 列 ＋ 重算 chat count——同一事務，中途失敗整體 rollback）
+    // 刪除 DB：整則訊息（附件列＋磁盤檔 ＋ message_response 列 ＋ messages 列 ＋ 重算 chat count——同一事務）
     public function delete_db_message($message_id, $chat_id)
     {
         $current_time = date("Y-m-d H:i:s");
 
         $connection = sc_db()->connection("sqlite");
         $connection->transaction(function ($db) use ($message_id, $chat_id, $current_time) {
+            // 附件列（磁盤檔隨箱刪——箱內或 storage 目錄已由 delete_poll_files／delete_archive_files 清走）
+            $db->statement("DELETE FROM attachments WHERE message_id = ?", [(int)$message_id]);
+
             $db->statement("DELETE FROM message_response WHERE message_id = ?", [$message_id]);
             $db->statement("DELETE FROM messages WHERE message_id = ?", [$message_id]);
 
@@ -29,6 +32,8 @@ trait delete_db_message
                 [$current_time, $chat_id]
             );
         });
+
+        sc_ai_health()->stream()->mark_target_updated("chat");
     }
 
 }

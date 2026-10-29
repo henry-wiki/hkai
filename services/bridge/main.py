@@ -43,7 +43,7 @@ from .runtime import process, sc_env
 # ==========================================
 def main() -> None:
     """主程序邏輯：處理參數與啟動 Server"""
-    # .env 讀入（一次；daemon_wake 之後用 sc_env.get_env）
+    # .env 讀入（一次；daemon_wake 之後用 sc_env.get_env）——同場補回 Windows 系統變數
     sc_env.init_env()
 
     # 啟動即記錄自己 pid ＋母親 pid＋建立時間

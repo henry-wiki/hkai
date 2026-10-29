@@ -27,4 +27,7 @@ sc_ai_health()->health()->add_health_report("conn", function () {
 // 註冊 request action（health——GET 健康狀態端點；URL /request/hkai/fetch_health/）
 $plugin->add_request_action("fetch_health", __DIR__ . "/request/health/fetch_health.php");
 
+// 註冊 request action（health 串流——SSE；URL /request/hkai/health_stream/）
+$plugin->add_request_action("health_stream", __DIR__ . "/request/health/health_stream.php");
+
 // server_status 已搬去 sc_ai_settings（server 域負責）

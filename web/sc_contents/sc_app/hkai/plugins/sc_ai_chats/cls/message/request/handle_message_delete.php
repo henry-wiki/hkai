@@ -34,13 +34,7 @@ trait handle_message_delete
         // 診斷 log：定位成功
         hkai()->runtime()->logger()->info("message_delete target: chat_id=" . $chat_id . " message_id=" . $message_id);
 
-        // 運行中保護：先精準終止該訊息的 child（快狠準——唔會誤殺同對話其他訊息）
-        $kill_result = sc_ai_chats()->process()->kill_message_children($chat_id, $message_id);
-
-        // 診斷 log：殺 child 結果（[pid => 成功]）
-        hkai()->runtime()->logger()->info("message_delete killed children: " . json_encode($kill_result));
-
-        // 無痕移除（DB 列＋訊息檔案；對話已空即連對話清——與排隊回收共用）
+        // 停止＋硬刪（停止走共用入口 handle_prompt_stop——喺 delete_message 內一次過做）
         $remove_result = sc_ai_chats()->message()->delete_message($message_row);
 
         // 診斷 log：完成（chat_deleted ＝ 對話有冇連帶清）

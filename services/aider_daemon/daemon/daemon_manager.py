@@ -27,7 +27,6 @@ from ..runtime import process_list
 from ..runtime import lifecycle
 from ..runtime import sc_config
 from ..runtime import process_status
-import lifecycle_guard
 from ..runtime import sc_logger
 
 
@@ -211,9 +210,6 @@ class daemon_manager_class:
         if self._daemon_conf_data.get("daemon_warm_workers", False):
             self._prewarm_warm_workers()
 
-        # BUILD 監看（開機基準值——變咗即自我退出，等新版本再拉起）
-        self._build_watch = lifecycle_guard.build_watch_class(lifecycle_guard.find_site_root(self._daemon_conf_data_path))
-
         # 主迴圈：單一實例驗證 → 重讀配置 → 收訊號／回收／監督 → 調度 pending → 休眠
         while True:
             try:
@@ -226,13 +222,6 @@ class daemon_manager_class:
                 # 判定：daemon 設定檔已被刪（建置／清理）→ 連子程序退出，不留孤兒
                 if self._daemon_conf_data_path.is_file() is False:
                     sc_logger.log("daemon conf removed, exit with children")
-                    process_status.unregister("aider_daemon", os.getpid())
-                    lifecycle.exit("self exit", 0)
-
-                # 判定：BUILD 已變（站台已重新發佈）→ 記錄後連子程序退出，等新版本再拉起
-                build_watch_result = self._build_watch.check()
-                if build_watch_result["changed"] is True:
-                    sc_logger.log("BUILD changed " + build_watch_result["previous"] + " -> " + build_watch_result["current"] + ", exit with children")
                     process_status.unregister("aider_daemon", os.getpid())
                     lifecycle.exit("self exit", 0)
 
@@ -354,7 +343,7 @@ class daemon_manager_class:
 
     def _process_pending_asks(self) -> None:
         """
-        掃描 messages/polling/*/*/msg_conf.json → 調度 worker（**非阻塞**——本方法立即返回）。
+        掃描 messages/polling/**/meta.json → 調度 worker（**非阻塞**——本方法立即返回）。
 
         規則：
         - 同時最多 daemon_max_workers 個 worker（預設 3——由 PHP 靜態設定控制）

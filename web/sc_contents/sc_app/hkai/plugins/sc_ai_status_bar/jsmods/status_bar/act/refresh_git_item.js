@@ -1,23 +1,35 @@
-// jsmods/action/refresh_git_item.js —— Git 狀態刷新落 sb_git（action 層——一 action 一檔）
-// 職責：refresh_git_item（project_slug → projects tab_git 域 git_status → apply_git_status；60 秒 interval 重跑）
+// jsmods/status_bar/act/refresh_git_item.js —— Git 狀態刷新（act 層——一 action 一檔）
+// 職責：refresh_git_item（project_slug → projects tab_git 域 git_status → apply_git_status）
+// 上游：status bar obs:url_changed（切換專案／對話）；下游：git_status req＋git_status_item 渲染
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _refresh_git_item {
     constructor() {
-        // Git 刷新 interval id（start_git_refresh 建立）
-        this.git_refresh_timer_id = null;
+        this.refreshing = false;
     }
 
     // Git 狀態 → sb_git（來源：POST /request/hkai/git_status/——唯讀）
     async refresh_git_item() {
-        // registry 取值（靜態——直回單例）
+        // 判定：已有請求在途 → 唔重複發（init 與 url_changed 同刻只跑一次）
+        if (this.refreshing === true) {
+            return;
+        }
+
+        this.refreshing = true;
+
+        try {
+            await this.fetch_and_apply();
+        } finally {
+            this.refreshing = false;
+        }
+    }
+
+    // 實際取 git 狀態並套用（單飛包住的主體）
+    async fetch_and_apply() {
         const projects = registry().sc_ai_projects();
 
-        // 動態載入（callback——status item render）
         const status_bar_domain = await registry().sc_ai_status_bar().status_bar();
         const status_item_render_instance = await status_bar_domain.act().status_item_render();
-
-        // 動態載入（callback——git status item）
         const git_status_item_instance = await status_bar_domain.act().git_status_item();
 
         // 判定：item 不存在 → 不做（plugin 未渲染）
@@ -26,30 +38,38 @@ class _refresh_git_item {
         }
 
         const project_instance = await projects.project();
-        const project_slug = project_instance.get_project_slug();
+        let project_slug = project_instance.get_project_slug();
+
+        // 判定：專案域未就緒 → 由 URL 第一段取
+        if (!project_slug) {
+            const path_segments = location.pathname.split("/").filter(function (path_segment) { return path_segment !== ""; });
+
+            project_slug = path_segments[0] || "";
+        }
 
         // 判定：無選取專案 → 維持預設
         if (!project_slug) {
-            status_item_render_instance.set_item("sb_git", "—");
+                status_item_render_instance.set_item("sb_git", "—");
             status_item_render_instance.set_item_class("sb_git", "");
+
             return;
         }
 
-        // 橋接駁（tab_git 域 req 橋——取 git 狀態）
         const tab_git_instance = await projects.tab_git();
         const git_status_instance = await tab_git_instance.req().git_status();
 
         const git_status_result = await git_status_instance.git_status(project_slug);
 
-        git_status_item_instance.apply_git_status(git_status_result);
-    }
+        // 判定：取唔到（null／ok 非 true）→ 保留現有顯示（唔清成「—」）
+        if (!git_status_result) {
+            return;
+        }
 
-    // 定時刷新 Git 狀態（60 秒——build 模式 aider 改檔後狀態會變）
-    start_git_refresh() {
-        const thisObject = this;
-        thisObject.git_refresh_timer_id = setInterval(function () {
-            thisObject.refresh_git_item();
-        }, 60000);
+        if (git_status_result.ok !== true) {
+            return;
+        }
+
+        git_status_item_instance.apply_git_status(git_status_result);
     }
 }
 

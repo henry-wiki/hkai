@@ -198,11 +198,11 @@ class msg_main_class:
             output_file.write(status + "\n")
 
     def get_msg_conf_files(self) -> list[Path]:
-        """掃描 messages/polling/*/*/msg_conf.json → 按建立時間排序回傳路徑清單（最舊優先）。"""
+        """掃描 messages/polling/**/meta.json → 按建立時間排序回傳路徑清單（最舊優先）。"""
         from ..context import daemon
         daemon_messages_dir = daemon().get_daemon_conf_data()["daemon_messages_dir"]
         return sorted(
-            Path(daemon_messages_dir).glob("*/*/msg_conf.json"),
+            Path(daemon_messages_dir).rglob("meta.json"),
             key=lambda p: p.stat().st_birthtime,
         )
 
