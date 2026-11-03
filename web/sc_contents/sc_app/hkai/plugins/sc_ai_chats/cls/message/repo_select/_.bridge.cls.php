@@ -12,7 +12,6 @@ class repo_select_Class
     use get_message_row;
     use get_message_response_brief_rows;
     use get_message_response_rows_by_message_id;
-    use join_response_answer_contents;
 
     private static $instance = null;
 

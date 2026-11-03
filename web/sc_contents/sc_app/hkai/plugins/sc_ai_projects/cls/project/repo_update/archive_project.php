@@ -21,11 +21,10 @@ trait archive_project
         $connection = sc_db()->connection("sqlite");
 
         $connection->statement(
-            "UPDATE projects SET project_status = 'archived' WHERE project_id = ?",
-            [$project_id]
+            "UPDATE projects SET project_status = 'archived', project_updated_at = ? WHERE project_id = ?",
+            [date("Y-m-d H:i:s"), (int)$project_id]
         );
 
-        sc_ai_health()->stream()->mark_target_updated("project");
     }
 
 }

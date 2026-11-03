@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\prompt\view;
 
 // == sc_ai_chats prompt render_chat_prompt：prompt 域動作（trait——掛入 prompt_Class；檔＝動作：prompt 區塊內裏整包（三格——交前端換入；外層 .sc_composer 長駐，喺 render_message_body）） ==
-// == 2026-09-27 自 prompt/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait render_chat_prompt
 {

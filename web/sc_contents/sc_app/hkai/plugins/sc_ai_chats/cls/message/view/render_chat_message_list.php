@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\view;
 
 // == sc_ai_chats message render_chat_message_list：message 域動作（trait——掛入 view_Class；檔＝動作） ==
-// == 2026-09-27 自 message/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait render_chat_message_list
 {

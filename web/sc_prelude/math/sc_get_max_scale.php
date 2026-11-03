@@ -3,7 +3,8 @@
 /**
  * 取得多個數字的最大小數位數
  * 
- * @param string ...$numbers 要檢查的數字（已清理過的數值字串）
+ * 參數：逐一傳入數字字串（內部以 func_get_args() 收集）
+ *
  * @return int 最大小數位數
  */
 function sc_get_max_scale()

@@ -32,7 +32,7 @@ trait get_project_rows
         return $project_rows_by_slug[$needle] ?? null;
     }
 
-    // 讀取專案列（Home 第一＋其餘 active 專案——依最近活動排序）
+    // 讀取專案列（Home 第一＋其餘全部專案〔含歸檔〕——依最近活動排序；顯示由 CSS 決定）
     public function get_project_rows()
     {
         // 第一支：Home（project_slug＝home）
@@ -41,8 +41,7 @@ trait get_project_rows
         // 第二支：其餘專案（project_status＝active；home 排除；最近對話更新優先）
         $active_project_rows = sc_db()->select(
             "SELECT * FROM projects "
-            . "WHERE project_status = 'active' "
-            . "AND project_slug != ? "
+            . "WHERE project_slug != ? "
             . "ORDER BY COALESCE(NULLIF(chat_updated_at, ''), project_updated_at) DESC",
             [sc_get_config("hkai.default_project_slug")]
         );

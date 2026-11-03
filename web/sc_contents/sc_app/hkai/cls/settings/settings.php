@@ -3,7 +3,7 @@
 namespace sc\app\hkai\cls\settings;
 
 // == settings_Class：hkai app 層用戶設定（singleton——經 hkai()->settings() 取得） ==
-// == 檔案：出廠 web/sc_config/hkai/settings.json（唯讀）＋用戶 data/settings.json（覆蓋、可寫） ==
+// == 檔案：出廠 web/sc_contents/sc_app/hkai/cls/settings/settings.json（唯讀）＋用戶 web/sc_contents/sc_app/hkai/cls/settings/settings.json（覆蓋、可寫） ==
 // == API：get("group.key", default)／get_group(group)／set("group.key", value)（原子寫） ==
 // == 上游：i18n（general.language）、sc_ai_settings general 分頁；下游：sc_get_config（兩個檔路徑）
 
@@ -62,7 +62,7 @@ class settings_Class
         return $effective_settings[$settings_group_key];
     }
 
-    // 寫單一設定（只寫 data/settings.json；必須 group.key）
+    // 寫單一設定（只寫 web/sc_contents/sc_app/hkai/cls/settings/settings.json；必須 group.key）
     public function set($setting_key, $setting_value)
     {
         $setting_parts = explode(".", $setting_key, 2);

@@ -10,8 +10,8 @@ const setup_instance = setup();
 class _refresh_setup_process {
     constructor() {}
 
-    // 交走目前格嘅選擇（撳「下一步」嗰刻——同 serialize() 同義：嗰格具名 field 一律打包交去；唔等回應·唔阻切格）
-    async refresh_setup_process() {
+    // 收集目前格嘅具名 field（名＋值一對——同 serialize() 同義）
+    collect_current_fields() {
         const active_section_id = setup_instance.get_current_section_id();
         const j_section_element = setup_instance.get_section_element(active_section_id);
         const j_value_fields = j_section_element.find("input[name], textarea[name], select[name]");
@@ -37,6 +37,13 @@ class _refresh_setup_process {
 
             value_pairs.push([j_value_field.attr("name"), j_value_field.val()]);
         });
+
+        return value_pairs;
+    }
+
+    // 交走目前格嘅選擇（切格時——收集後交後台；唔等回應）
+    async refresh_setup_process() {
+        const value_pairs = this.collect_current_fields();
 
         // 判定：一個 field 都冇 → 唔交
         if (value_pairs.length === 0) {

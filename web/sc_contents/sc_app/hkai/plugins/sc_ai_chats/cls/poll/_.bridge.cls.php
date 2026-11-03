@@ -10,12 +10,13 @@ class poll_Class
 {
     use action\delete_poll_files;
     use action\finalize_poll_jobs;
-    use action\finalize_terminal_jobs;
     use action\finalize_poll_jobs_by_identity;
     use action\finalize_stale_job;
     use action\finalize_abnormal_jobs;
-    use action\read_extract_state;
-    use action\derive_extract_state;
+    use action\reset_partial_response;
+    use action\revive_dead_worker_messages;
+
+
     use status\append_msg_status;
 
     private static $instance = null;

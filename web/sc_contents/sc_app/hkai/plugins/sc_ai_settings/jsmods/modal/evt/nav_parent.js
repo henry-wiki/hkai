@@ -1,4 +1,4 @@
-// jsmods/bind/nav_parent.js —— 選單父項開合綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/modal/evt/nav_parent.js —— 選單父項開合綁定（bind 層——一檔一事）
 // 職責：nav_parent（.settings_nav_parent 點擊 → 展開／收合，不換頁）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

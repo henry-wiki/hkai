@@ -50,12 +50,35 @@ class launcher_Class
         $previous_cwd = getcwd();
         chdir($python_script_dir);
 
+        // TEMP TRACE（追溯 %SystemDrive%——查完移除）
+        $this->sd_trace("php_launcher_exec:before", $python_script_dir);
+
         $output_lines = [];
         $exit_code    = 0;
         exec($command . " 2>&1", $output_lines, $exit_code);
 
+        // TEMP TRACE（追溯 %SystemDrive%——查完移除）
+        $this->sd_trace("php_launcher_exec:after", $python_script_dir);
+
         chdir($previous_cwd);
 
         return ["ok" => ($exit_code === 0), "exit_code" => $exit_code, "output" => $output_lines];
+    }
+
+    // TEMP TRACE（追溯 %SystemDrive%——查完移除）：記 cwd／SystemDrive 有無／資料夾是否已出現
+    private function sd_trace($trace_tag, $trace_dir)
+    {
+        $trace_file  = dirname($trace_dir) . "/_tmp/sd_trace.log";
+        $trace_folder = $trace_dir . "/%SystemDrive%";
+        $system_drive = getenv("SystemDrive");
+        $folder_state = is_dir($trace_folder) ? "YES" : "no";
+        $trace_line   = date("Y-m-d H:i:s") . " | " . $trace_tag
+            . " | pid=" . getmypid()
+            . " | cwd=" . $trace_dir
+            . " | SystemDrive=" . ($system_drive === false ? "<missing>" : $system_drive)
+            . " | folder=" . $folder_state . "
+";
+
+        @file_put_contents($trace_file, $trace_line, FILE_APPEND | LOCK_EX);
     }
 }

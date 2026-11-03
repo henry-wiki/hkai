@@ -23,6 +23,9 @@ class setting_Class
     
     // 檢查表（what to check——key＝<單元名>（如 initialization__timezone／key_settings__openrouter）·值＝Closure（直呼檢查單元——F12 跳得到）；由 __construct 砌）
     private $check_items = [];
+
+    // 分組表（group id => 檢查項 codes；次序＝介面次序）
+    private $setting_groups = [];
     
     public static function getInstance()
     {
@@ -41,6 +44,10 @@ class setting_Class
             return setting\timezone()->setup_check();
         };
         
+        $this->check_items["key_settings__deepseek"] = function () {
+            return setting\provider()->deepseek()->setup_check();
+        };
+
         $this->check_items["key_settings__openrouter"] = function () {
             return setting\provider()->openrouter()->setup_check();
         };
@@ -56,6 +63,13 @@ class setting_Class
         $this->check_items["key_settings__artificial_analysis"] = function () {
             return setting\benchmark()->artificial_analysis()->setup_check();
         };
+
+        // 分組（介面顯示次序＋組員——新增設定項只加一行；組別標題由 i18n 出）
+        $this->setting_groups = [
+            "general"   => ["initialization__timezone"],
+            "model_api" => ["key_settings__deepseek", "key_settings__openrouter", "key_settings__kilocode"],
+            "benchmark" => ["key_settings__llm_stats", "key_settings__artificial_analysis"],
+        ];
         
     }
     
@@ -91,32 +105,38 @@ class setting_Class
     {
         $section_lines   = [];
         $section_lines[] = "<div class='setup_section-main'>";
-                        
-            // 逐項出殼（init 態——唔跑檢查；交前端逐項查、換真卡）
-            $check_item_codes = array_keys($this->check_items);
-            
-            foreach ($check_item_codes as $check_item_code) {
-                $section_lines[] = setup()->view()->get_check_item_template($check_item_code);
-            }
-            
-            // 主題靜態行（固定預設——無檢查）
-            $section_lines[] = "<div class='check_item pass' data-status='pass'>";
-            $section_lines[] = "<div class='mark'>✓</div>";
-            $section_lines[] = "<div class='cinfo'>";
-            $theme_name_text = setup()->i18n()->get("section.setting.theme_name");
-            $theme_desc_text = setup()->i18n()->get("section.setting.theme_desc");
 
-            $section_lines[] = "<div class='cname'>" . $theme_name_text . "</div>";
-            $section_lines[] = "<div class='cdesc'>" . $theme_desc_text . "</div>";
-            $section_lines[] = "</div>";
-            $section_lines[] = "</div>";
-            
+            // 逐組（標題＋組員殼——組員次序照 setting_groups）
+            foreach ($this->setting_groups as $setting_group_id => $setting_group_codes) {
+                $group_title_text = setup()->i18n()->get("setting.group." . $setting_group_id);
+
+                $section_lines[] = "<div class='setup_group-head'>" . $group_title_text . "</div>";
+
+                // 逐個組員出殼（init 態——唔跑檢查；交前端逐項查、換真卡）
+                foreach ($setting_group_codes as $check_item_code_item) {
+                    $section_lines[] = setup()->view()->get_check_item_template($check_item_code_item);
+                }
+
+                // 判定：general 組 → 主題靜態行（固定預設——無檢查）
+                if ($setting_group_id === "general") {
+                    $section_lines[] = "<div class='check_item pass' data-status='pass'>";
+                    $section_lines[] = "<div class='mark'>✓</div>";
+                    $section_lines[] = "<div class='cinfo'>";
+                    $theme_name_text = setup()->i18n()->get("section.setting.theme_name");
+                    $theme_desc_text = setup()->i18n()->get("section.setting.theme_desc");
+
+                    $section_lines[] = "<div class='cname'>" . $theme_name_text . "</div>";
+                    $section_lines[] = "<div class='cdesc'>" . $theme_desc_text . "</div>";
+                    $section_lines[] = "</div>";
+                    $section_lines[] = "</div>";
+                }
+            }
+
         $section_lines[] = "</div>";
-        
+
         return $section_lines;
     }
-    
-    // 出本格底列（兩組——左＝重新檢查＋報數／右＝上一步·下一步；每格獨立決定出咩掣）
+
     public function build_footer($section_nav)
     {
         $prev_section_id = $section_nav["prev_section_id"];

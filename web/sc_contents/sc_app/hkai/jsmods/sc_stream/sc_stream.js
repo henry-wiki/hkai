@@ -28,9 +28,16 @@ class _sc_stream {
         this.warned_full = false;
     }
 
-    // bootstrap 自動呼叫：開跨 tab 同步（只做一次）
-    init() {
+    // bootstrap 自動呼叫：開跨 tab 同步＋presence（只做一次）
+    async init() {
         this.watch_tab_counts();
+
+        const stream_config = this.get_config();
+
+        // 判定：已啟用且有 base_url → 開 presence
+        if (stream_config.enabled === true && stream_config.base_url) {
+            await registry().sc_presence().ensure_open(stream_config.base_url);
+        }
 
         return this;
     }
@@ -67,6 +74,22 @@ class _sc_stream {
         delete this.connections[connection_id];
 
         this.broadcast_count();
+    }
+
+    // 開狀態線（唯一入口——開頁／換對話都經呢度；身份由當前頁算）
+    async open_state_stream() {
+        const project_instance = await registry().sc_ai_projects().project();
+        const project_slug = project_instance.get_project_slug();
+
+        const chat_instance = await registry().sc_ai_chats().chat();
+        const chat_sid = chat_instance.get_chat_sid();
+
+        const view_meta = document.querySelector("meta[name='view-id']");
+        const view_id = (view_meta === null) ? "" : view_meta.getAttribute("content");
+
+        const state_stream_module = await import("./state/state_stream.js");
+
+        await state_stream_module.state_stream().open(project_slug, chat_sid, view_id);
     }
 
     // 讀頁面 stream 設定（meta stream-config——PHP 由 hkai_config.json 輸出）

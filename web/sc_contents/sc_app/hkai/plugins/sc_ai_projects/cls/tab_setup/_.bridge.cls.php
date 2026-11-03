@@ -17,11 +17,7 @@ class tab_setup_Class
     use action\has_ref_file;
     use action\run_checklist;
     use view\build_notice_pane;
-    use view\build_tab_setup_body;
-    use view\build_tab_setup_foot;
-    use view\build_tab_setup_head;
     use view\render_check_item;
-    use view\render_setup_panel;
 
     private static $git_installed_cache = null;
 

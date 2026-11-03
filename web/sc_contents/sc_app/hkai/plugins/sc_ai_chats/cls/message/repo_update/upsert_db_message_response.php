@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_update;
 
 // == sc_ai_chats message repo_update upsert_db_message_response：repo_update 子域動作（trait——合成入 repo_update_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/repo_update.php 分獨立檔；2026-09-27 歸 message 域（寫 message_response 表——訊息級） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/chat/repo_update/ 分獨立檔；2026-09-27 歸 message 域（寫 message_response 表——訊息級） ==
 // == 2026-10-05 新制：內部先掃段（get_response_sections——poll 對照＋讀檔）再 upsert；DB 非 poll 先凍結 ==
 // == 2026-10-06 終態收邊：訊息已終態＋段仲 poll（daemon 收尾後遲到寫入等）→ 按訊息終態收 completed／aborted＋補 finished ==
 
@@ -43,7 +43,7 @@ trait upsert_db_message_response
         foreach ($response_sections as $response_section_item) {
 
             $_poll_file   = $response_section_item["poll_file"];
-            $_poll_status = (string)$response_section_item["poll_status"];
+            $_poll_status = (string)($response_section_item["poll_status"] ?? "poll");
 
             // 段有效狀態（預設照原文）
             $_poll_status_effective = $_poll_status;
@@ -79,13 +79,23 @@ trait upsert_db_message_response
             }
             $response_content = (string)$response_section_item["response_content"];
 
-            // 段起訖（poll 對照——Python 唯一事實）：起＝poll_start_at；已收＝poll_update_at（凍結基準）；未完結＝空
-            $response_started_at  = (string)($response_section_item["poll_start_at"] ?? "");
+            // 段起訖（poll 對照——Python 唯一事實）：起＝start_at；已收＝update_at（凍結基準）；未完結＝空
+            $response_started_at  = (string)($response_section_item["start_at"] ?? "");
             $response_finished_at = "";
+
+            // 判定：舊記錄（Python 舊 key）→ 用 poll_start_at
+            if ($response_started_at === "") {
+                $response_started_at = (string)($response_section_item["poll_start_at"] ?? "");
+            }
 
             // 判定：段有效狀態已收（completed 或終態收邊）→ 記完成時間
             if ($_poll_status_effective !== "poll") {
-                $response_finished_at = (string)($response_section_item["poll_update_at"] ?? "");
+                $response_finished_at = (string)($response_section_item["update_at"] ?? "");
+
+                // 判定：舊記錄（Python 舊 key）→ 用 poll_update_at
+                if ($response_finished_at === "") {
+                    $response_finished_at = (string)($response_section_item["poll_update_at"] ?? "");
+                }
             }
 
             // ① 基本行 datapairs（identity＋created／status）
@@ -133,6 +143,8 @@ trait upsert_db_message_response
                 );
             });
         }
-    }
 
+        // polling 每拍寫檔 → 暫時停用上游時間同步（2026-10-31 用戶指示）
+        // $this->touch_upstream_times($message_id, false);
+    }
 }

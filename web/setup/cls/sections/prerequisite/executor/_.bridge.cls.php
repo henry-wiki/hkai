@@ -77,15 +77,4 @@ class prerequisite_executor_Class
         return \sc\setup\sections\prerequisite\environment__goose_executable_Class::getInstance();
     }
 
-    /**
-     * Aider 套件目錄（executor 域——經單元橋按需 require 單元檔）
-     *
-     * @return \sc\setup\sections\prerequisite\environment__aider_pylibs_dir_Class
-     */
-    public function aider_pylibs_dir()
-    {
-        require_once __DIR__ . "/environment__aider_pylibs_dir.php";
-
-        return \sc\setup\sections\prerequisite\environment__aider_pylibs_dir_Class::getInstance();
-    }
 }

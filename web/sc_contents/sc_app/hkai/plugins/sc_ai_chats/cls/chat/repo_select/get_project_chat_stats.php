@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\repo_select;
 
 // == sc_ai_chats chat get_project_chat_stats：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/repo_select.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/chat/repo_select/ 分獨立檔（one file one function） ==
 
 trait get_project_chat_stats
 {

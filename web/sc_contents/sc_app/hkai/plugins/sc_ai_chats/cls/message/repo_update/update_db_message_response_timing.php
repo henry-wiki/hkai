@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_update;
 
 // == sc_ai_chats message repo_update update_db_message_response_timing：repo_update 子域動作（trait——合成入 repo_update_Class；檔＝動作） ==
-// == 2026-09-27 自 message/repo_update.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/message/repo_update/_.bridge.cls.php 分獨立檔（one file one function） ==
 
 trait update_db_message_response_timing
 {
@@ -15,6 +15,8 @@ trait update_db_message_response_timing
             "UPDATE message_response SET response_started_at = ?, response_finished_at = ? WHERE message_id = ? AND response_type = ?",
             [$response_started_at, $response_finished_at, $message_id, $response_type]
         );
+        // 下游有變 → 同步上游時間（message → chat → project）
+        $this->touch_upstream_times($message_id);
     }
 
 }

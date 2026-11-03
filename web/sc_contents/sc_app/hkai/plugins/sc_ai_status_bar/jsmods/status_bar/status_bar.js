@@ -28,6 +28,50 @@ class _status_bar {
         await this.act().init();
         await this.req().init();
     }
+
+    // chat 區由清單 DOM 即時對齊（零請求——active 卡嘅標題；冇 active＝預設值）
+    refresh_chat_from_list() {
+        const j_active_chat = jQuery(".sc_chat_list .sc_chat_card--active");
+        const j_chat_text = jQuery(".sc_statusbar--chat .sc_statusbar__item--chat .sc-text");
+
+        // 判定：狀態欄文字節點唔存在 → 唔動作
+        if (j_chat_text.length < 1) {
+            return;
+        }
+
+        // 判定：冇 active 卡 → 回預設值
+        if (j_active_chat.length < 1) {
+            j_chat_text.text("—");
+
+            return;
+        }
+
+        const active_chat_title = String(j_active_chat.first().find(".sc_chat_card__title").text() || "");
+
+        j_chat_text.text(active_chat_title);
+    }
+
+    // 專案區由清單 DOM 即時對齊（零請求——同 refresh_chat_from_list 同構）
+    refresh_project_from_list() {
+        const j_active_project = jQuery(".sc_project_list .sc_project_card--active");
+        const j_project_text = jQuery(".sc_statusbar--project .sc-text");
+
+        // 判定：狀態欄文字節點唔存在 → 唔動作
+        if (j_project_text.length < 1) {
+            return;
+        }
+
+        // 判定：冇 active 卡 → 回預設值
+        if (j_active_project.length < 1) {
+            j_project_text.text("—");
+
+            return;
+        }
+
+        const active_project_name = String(j_active_project.first().find(".sc_project_card__name").text() || "");
+
+        j_project_text.text(active_project_name);
+    }
 }
 
 // 連接（出入口掛上 prototype）
@@ -51,12 +95,10 @@ class _status_bar_evt_bridge {
     // 綁定召集（開域一次——逐條拎 instance 再 init）
     async init() {
         (await this.changed_message_state()).init();
-        (await this.changed_chat_options()).init();
         (await this.clicked_status_item()).init();
         (await this.clicked_about_copyright()).init();
     }
     async changed_message_state()   { return (await import("./evt/changed_message_state.js")).changed_message_state(); }
-    async changed_chat_options()    { return (await import("./evt/changed_chat_options.js")).changed_chat_options(); }
     async clicked_status_item()     { return (await import("./evt/clicked_status_item.js")).clicked_status_item(); }
     async clicked_about_copyright() { return (await import("./evt/clicked_about_copyright.js")).clicked_about_copyright(); }
 }
@@ -71,12 +113,11 @@ class _status_bar_act_bridge {
     async tick_clock()              { return (await import("./act/tick_clock.js")).tick_clock(); }
     async status_item_render()      { return (await import("./act/status_item_render.js")).status_item_render(); }
     async conn_status_item()        { return (await import("./act/conn_status_item.js")).conn_status_item(); }
-    async refresh_git_item()        { return (await import("./act/refresh_git_item.js")).refresh_git_item(); }
-    async git_status_item()         { return (await import("./act/git_status_item.js")).git_status_item(); }
     async open_project_git_modal()  { return (await import("./act/open_project_git_modal.js")).open_project_git_modal(); }
     async project_fetch()           { return (await import("./act/project_fetch.js")).project_fetch(); }
     async chat_fetch()              { return (await import("./act/chat_fetch.js")).chat_fetch(); }
-    async workspace_fetch()         { return (await import("./act/workspace_fetch.js")).workspace_fetch(); }
+    async refresh_git_item()        { return (await import("./act/refresh_git_item.js")).refresh_git_item(); }
+    async git_status_item()         { return (await import("./act/git_status_item.js")).git_status_item(); }
 }
 
 // req（出街工作）
@@ -87,11 +128,12 @@ class _status_bar_req_bridge {
     }
     async project_status_bar_fetch()   { return (await import("./req/project_status_bar_fetch.js")).project_status_bar_fetch(); }
     async chat_status_bar_fetch()      { return (await import("./req/chat_status_bar_fetch.js")).chat_status_bar_fetch(); }
-    async workspace_status_bar_fetch() { return (await import("./req/workspace_status_bar_fetch.js")).workspace_status_bar_fetch(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）
 class _status_bar_obs_bridge {
     constructor() {}
     async url_changed_observer() { return (await import("./obs/url_changed_observer.js")).url_changed_observer(); }
+    async chat_observer() { return (await import("./obs/chat_observer.js")).chat_observer(); }
+    async project_observer() { return (await import("./obs/project_observer.js")).project_observer(); }
 }

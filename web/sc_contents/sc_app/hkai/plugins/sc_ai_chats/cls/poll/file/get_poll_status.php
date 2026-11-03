@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\poll\file;
 
 // == sc_ai_chats poll file get_poll_status：file 子域動作（trait——合成入 file_Class；檔＝動作） ==
-// == 2026-09-27 自 poll/file.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/poll/file/_.bridge.cls.php 分獨立檔（one file one function） ==
 
 trait get_poll_status
 {

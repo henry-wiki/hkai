@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_update;
 
 // == sc_ai_chats message repo_update update_db_message_status：repo_update 子域動作（trait——合成入 repo_update_Class；檔＝動作） ==
-// == 2026-09-27 自 message/repo_update.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/message/repo_update/_.bridge.cls.php 分獨立檔（one file one function） ==
 
 trait update_db_message_status
 {
@@ -42,8 +42,10 @@ trait update_db_message_status
 
             // 舊桶 -1、新桶 +1（同一個事務——計數同行）
             $db->statement("UPDATE chats SET " . $old_count_column . " = " . $old_count_column . " - 1 WHERE chat_id = ?", [$message_chat_id]);
-            $db->statement("UPDATE chats SET " . $new_count_column . " = " . $new_count_column . " + 1 WHERE chat_id = ?", [$message_chat_id]);
+            $db->statement("UPDATE chats SET " . $new_count_column . " = " . $new_count_column . " + 1, chat_updated_at = ? WHERE chat_id = ?", [$current_time, $message_chat_id]);
         });
+
+        // 狀態改動 → 通知監視（chat／project gate）
     }
 
     // status → 計數欄（四桶：completed／failed／cancelled 各自；其餘＝未完成＝polling_msg）

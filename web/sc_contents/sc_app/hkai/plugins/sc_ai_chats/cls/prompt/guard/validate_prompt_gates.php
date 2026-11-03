@@ -16,10 +16,18 @@ trait validate_prompt_gates
         $prompt_input["model_id"]         = $context["model_id"];
         $prompt_input["reasoning_effort"] = $context["reasoning_effort"];
 
-        // 第一關：伺服器就緒（bridge 唔活＝E_SERVER_DOWN）
-        $server_status = hkai()->process()->server()->get_server_status();
+        // 第一關：伺服器就緒（bridge 唔活 → 先試啟動——與開頁同一支 start_server）
+        $server_instance = hkai()->process()->server();
+        $server_status   = $server_instance->get_server_status();
 
-        // 判定：bridge 唔活 → 記錄統一錯誤結構
+        // 判定：bridge 唔活 → 確保啟動後再查一次
+        if ($server_status["is_alive"] !== true) {
+            $server_instance->ensure_server();
+
+            $server_status = $server_instance->get_server_status();
+        }
+
+        // 判定：bridge 仍然唔活 → 記錄統一錯誤結構（訊息未送出）
         if ($server_status["is_alive"] !== true) {
             $context["error"] = [
                 "ok"      => false,

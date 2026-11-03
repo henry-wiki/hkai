@@ -13,9 +13,9 @@ ACP 協定客戶端（acp_client singleton——get_instance() 取得）。
 一次工單一條連線、完即關。
 
 事件正規化（SDK update 類別 → 中立 kind；呼叫端唔需要認識 acp 套件）：
-    AgentThoughtChunk        → "thought"（思考）     {"text", "message_id"}
-    AgentMessageChunk        → "text"（主回答）      {"text", "message_id"}
-    ToolCallStart／Progress  → "tool"（工具活動）    {"tool_call_id", "title", "message_id"}
+    AgentThoughtChunk        → "thought"（思考）     {"text", "agent_turn_id"}
+    AgentMessageChunk        → "text"（主回答）      {"text", "agent_turn_id"}
+    ToolCallStart／Progress  → "tool"（工具活動）    {"tool_call_id", "title", "agent_turn_id"}
     UsageUpdate              → "usage"（用量）       {"used", "size", "cost_usd"}
     其餘                      → "other"              {"update_dump"}
 
@@ -30,6 +30,7 @@ import asyncio
 import contextlib
 import subprocess
 import sys
+import sd_trace
 from collections.abc import Awaitable, Callable
 from typing import TypedDict, cast
 
@@ -246,6 +247,8 @@ class acp_client:
         if sys.platform == "win32":
             subprocess_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
+        sd_trace.probe("goose_acp_spawn:before", project_path)
+
         agent_process = await asyncio.create_subprocess_exec(
             *agent_command,
             cwd=project_path,
@@ -255,6 +258,8 @@ class acp_client:
             stderr=asyncio.subprocess.PIPE,
             **subprocess_kwargs,
         )
+
+        sd_trace.probe("goose_acp_spawn:after", project_path)
 
         return agent_process
 

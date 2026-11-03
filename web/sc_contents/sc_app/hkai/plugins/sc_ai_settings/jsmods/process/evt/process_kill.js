@@ -1,4 +1,4 @@
-// jsmods/bind/process_kill.js —— Process KILL 鈕綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/process/evt/process_kill.js —— Process KILL 鈕綁定（bind 層——一檔一事）
 // 職責：process_kill（[data-process_kill] 點擊 → 終止程序流程）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

@@ -1,4 +1,4 @@
-// jsmods/callback/git_status_item.js —— Git 狀態結果套上 sb_git（callback 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/act/git_status_item.js —— Git 狀態結果套上 sb_git（callback 層——一檔一事）
 // 職責：git_status_item（git_status 結果 → sb_git 文字／顏色／tooltip 組裝）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

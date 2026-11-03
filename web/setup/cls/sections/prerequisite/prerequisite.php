@@ -102,7 +102,6 @@ class prerequisite_Class
         $group_python["items"][] = "environment__pip";
         $group_python["items"][] = "environment__python_packages";
         $group_python["items"][] = "environment__goose_executable";
-        $group_python["items"][] = "environment__aider_pylibs_dir";
         $this->check_groups[] = $group_python;
 
         // F 組：檔案與權限
@@ -169,10 +168,6 @@ class prerequisite_Class
             $state_value["value"] = $value;
         }
         else if($check_item_code === "environment__env_writable")
-        {
-            $state_value["value"] = $value;
-        }
-        else if($check_item_code === "environment__aider_pylibs_dir")
         {
             $state_value["value"] = $value;
         }

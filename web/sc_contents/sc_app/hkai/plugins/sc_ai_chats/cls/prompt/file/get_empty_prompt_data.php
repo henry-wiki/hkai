@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\prompt\file;
 
 // == sc_ai_chats prompt get_empty_prompt_data：prompt 域動作（trait——掛入 prompt_Class；檔＝動作） ==
-// == 2026-09-27 自 poll/prompt.php 分獨立檔；2026-09-27 歸 prompt 域（polling 訊息嘅 prompt 檔讀寫） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_health/cls/monitor/prompt/prompt.php 分獨立檔；2026-09-27 歸 prompt 域（polling 訊息嘅 prompt 檔讀寫） ==
 
 trait get_empty_prompt_data
 {

@@ -143,12 +143,75 @@ class setup_Class
 
         return \sc\setup\python\python_Class::getInstance();
     }
+    // 舊安裝搬遷掃描（單元——cls/database/database_migration_source.php）
+    public function database_migration_source()
+    {
+        require_once __DIR__ . "/database/database_migration_source.php";
+
+        return \sc\setup\database\database_migration_source_Class::getInstance();
+    }
+
+    // 資料庫版本檔（單元——cls/database/database_version.php）
+    public function database_version()
+    {
+        require_once __DIR__ . "/database/database_version.php";
+
+        return \sc\setup\database\database_version_Class::getInstance();
+    }
+
+    // 資料庫 migration 記錄與升級（單元——cls/database/database_migrations.php）
+    public function database_migrations()
+    {
+        require_once __DIR__ . "/database/database_migrations.php";
+
+        return \sc\setup\database\database_migrations_Class::getInstance();
+    }
+
+    // 資料庫管理資料（單元——cls/database/database_meta.php）
+    public function database_meta()
+    {
+        require_once __DIR__ . "/database/database_meta.php";
+
+        return \sc\setup\database\database_meta_Class::getInstance();
+    }
+
+    // 資料庫匯入（單元——cls/database/database_importer.php）
+    public function database_importer()
+    {
+        require_once __DIR__ . "/database/database_importer.php";
+
+        return \sc\setup\database\database_importer_Class::getInstance();
+    }
+
+    // 升級匯入暫存（複製來源 DB／.env——cls/migrate/migrate_staging.php）
+    public function staging()
+    {
+        require_once __DIR__ . "/migrate/migrate_staging.php";
+
+        return \sc\setup\migrate\migrate_staging_Class::getInstance();
+    }
+
     // 版本（唯一來源＝repo 根 VERSION 檔——bump 版本只改嗰度）
     public function get_version()
     {
         $version = sc_get_config("core.version");
 
-        return trim(file_get_contents($version));
+        // 判定：檔唔存在 → 空
+        if (is_file($version) !== true) {
+            return "";
+        }
+
+        $version_lines = file($version, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        // 判定：冇內容 → 空
+        if ($version_lines === false || count($version_lines) === 0) {
+            return "";
+        }
+
+        // 版本＝最後一行（每行一版本——最後一行係目前版本）
+        $version_last_line = trim((string)$version_lines[count($version_lines) - 1]);
+
+        return $version_last_line;
     }
 
     public function get_section_instance($section_id)

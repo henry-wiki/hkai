@@ -14,11 +14,11 @@ trait handle_fetch_general
         $modal_header   = [];
         $modal_header[] = "<div class='modal__title'>General</div>";
 
-        // General 偏好清單（聲明式一檔表——加項／改選項＝只改呢份表；讀＝hkai()->settings()->get〔出廠默認＋data/settings.json 覆蓋〕／寫 settings_save_general）
+        // General 偏好清單（聲明式一檔表——加項／改選項＝只改呢份表；讀＝hkai()->settings()->get〔出廠默認＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon 覆蓋〕／寫 settings_save_general）
         // 有 options＝已開放（出下拉）；淨 label＝未開放（右欄暫示「努力製作中」）
         // 次序：語言／外觀（介面語言、主題）
 
-        // 設定（hkai()->settings()——出廠＋data/settings.json；本頁＝general 組語言）
+        // 設定（hkai()->settings()——出廠＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon；本頁＝general 組語言）
         $language = hkai()->settings()->get("general.language", "zh-HK");
 
         $general_rows = [];

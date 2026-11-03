@@ -434,21 +434,21 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 24px;
-    min-height: 100%;
-    padding: 32px 24px;
+    gap: 12px;
+    min-height: 0;
+    padding: 8px 24px 4px;
     text-align: center;
 }
 .check_hero__icon {
-    width: 96px;
-    height: 96px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
 }
 .check_hero__desc {
     max-width: 430px;
     margin: 0;
     color: var(--modal_text_mute);
-    line-height: 1.9;
+    line-height: 1.7;
 }
 
 /* welcome 格語言選擇（hero 底——pill 掣；預設＝偵測語言） */
@@ -485,6 +485,23 @@ body {
 }
 
 
+/* welcome 群組（垂直居中一版睇完——flex 群組、內容自然高） */
+.setup_section-main--center {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.setup_welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 760px;
+}
+
 /* 檢查組（前置檢查六組——組標題＋徽章；徽章跟實況計數） */
 .check_group {
     margin-bottom: 14px;
@@ -520,4 +537,111 @@ body {
 .check_group-badge.warn {
     background: var(--modal_warn_dim);
     color: var(--modal_warn);
+}
+
+/* == 資料庫來源（Database 格——模式選擇＋舊庫路徑） == */
+.setup_db_source {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--modal_line);
+    border-radius: 6px;
+}
+
+.setup_db_source-title {
+    margin: 0 0 8px;
+    font-weight: 600;
+}
+
+.setup_db_source-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 6px;
+    cursor: pointer;
+}
+
+.setup_db_source-path {
+    margin: 8px 0 0;
+}
+
+.setup_db_source-input {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--modal_line);
+    border-radius: 4px;
+    background: var(--modal_bg2);
+    color: inherit;
+    font: inherit;
+}
+
+.setup_db_source-path.is-hidden {
+    display: none;
+}
+
+.setup_db_source-status {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--modal_text_mute);
+}
+
+.setup_db_source-status.pass {
+    color: var(--modal_ok);
+}
+
+.setup_db_source-status.warn {
+    color: var(--modal_warn);
+}
+
+.setup_db_source-status.fail {
+    color: var(--modal_danger);
+}
+
+/* 升級覆核：唯讀資料列（標籤＋值；一框到底、行間分隔線） */
+.setup_review {
+    border: 1px solid var(--border-color, #2a2f3a);
+    border-radius: 8px;
+    max-width: 520px;
+    margin: 12px auto 8px;
+}
+
+.setup_review-row {
+    display: flex;
+    gap: 16px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color, #2a2f3a);
+}
+
+.setup_review-row:last-child {
+    border-bottom: 0;
+}
+
+.setup_review-label {
+    min-width: 140px;
+    opacity: .7;
+}
+
+.setup_review-value {
+    word-break: break-all;
+}
+
+.setup_review-note {
+    max-width: 520px;
+    margin: 0 auto;
+    opacity: .7;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* 設定分組標題（模型 API 等——只做視覺分組，無互動） */
+.setup_group-head {
+    margin: 14px 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    opacity: .6;
+}
+
+.setup_group-head:first-child {
+    margin-top: 0;
 }

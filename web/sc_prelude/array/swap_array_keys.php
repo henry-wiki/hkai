@@ -25,7 +25,12 @@ Array
 	)
 
 
-**/
+**
+ * 將「欄位 => 值清單」陣列轉成「逐行關聯陣列」
+ *
+ * @param array $array 以欄位名為 key、值清單為 value 的陣列
+ * @return array|null 轉換後嘅逐行陣列；空輸入回 null
+ */
 
 function swap_array_keys($array=array())
 {

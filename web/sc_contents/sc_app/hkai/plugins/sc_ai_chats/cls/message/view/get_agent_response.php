@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\view;
 
 // == sc_ai_chats message get_agent_response：message 域動作（trait——掛入 view_Class；檔＝動作） ==
-// == 2026-09-27 自 message/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 // == 2026-10-05 改食 DB 列（response_type／response_index 直配——舊扁平列＝0 號索引段、同一條路）
 
 trait get_agent_response

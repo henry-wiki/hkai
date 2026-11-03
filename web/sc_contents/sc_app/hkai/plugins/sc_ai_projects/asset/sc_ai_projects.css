@@ -495,8 +495,8 @@
     background: rgba(143,184,232,0.16);
 }
 
-/* 歸檔語境整區底（.sc_project_list.archive——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
-.sc_project_list.archive {
+/* 歸檔語境整區底（.sc_project_list.archived——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
+.sc_project_list.archived {
     background-image: linear-gradient(180deg, rgba(240,179,94,0.09), rgba(240,179,94,0.03));
 }
 
@@ -619,4 +619,17 @@
 	margin-top: 8px;
 	font-size: 11.5px;
 	color: var(--modal_text_dim);
+}
+
+/* 專案清單一次過出齊（正常＋歸檔）——顯示由語境 class 決定（data-status 為準） */
+.sc_project_list .sc_project_card[data-status='archived'] {
+    display: none;
+}
+
+.sc_project_list.archived .sc_project_card[data-status='archived'] {
+    display: flex;
+}
+
+.sc_project_list.archived .sc_project_card[data-status='active'] {
+    display: none;
 }

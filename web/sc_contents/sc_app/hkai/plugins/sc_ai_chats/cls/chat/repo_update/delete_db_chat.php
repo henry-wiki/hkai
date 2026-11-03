@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\repo_update;
 
 // == sc_ai_chats chat delete_db_chat：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/repo_update.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/chat/repo_update/ 分獨立檔（one file one function） ==
 
 trait delete_db_chat
 {
@@ -22,6 +22,8 @@ trait delete_db_chat
             // → 對話列
             $db->statement("DELETE FROM chats WHERE chat_id = ?", [$chat_id]);
         });
+
+        // 對話刪除 → 通知監視（chat／project gate）
     }
 
 }

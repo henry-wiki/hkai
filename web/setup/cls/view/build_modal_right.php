@@ -20,6 +20,11 @@ trait build_modal_right
             $section_instance = setup()->sections()->prerequisite();
             $section_content  = $section_instance->build_section();
         }
+        // 判定：upgrade_review 格 → 用 upgrade_review 單元
+        elseif ($active_section_id === "upgrade_review") {
+            $section_instance = setup()->sections()->upgrade_review();
+            $section_content  = $section_instance->build_section();
+        }
         // 判定：database 格 → 用 database 單元
         elseif ($active_section_id === "database") {
             $section_instance = setup()->sections()->database();

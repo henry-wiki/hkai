@@ -1,4 +1,4 @@
-// jsmods/bind/changed_message_state.js —— .sc_thread__viewport 狀態變動觀察（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/evt/changed_message_state.js —— .sc_thread__viewport 狀態變動觀察（bind 層——一檔一事）
 // 職責：changed_message_state（MutationObserver .sc_thread__viewport → 同步 sb_state）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

@@ -70,6 +70,18 @@ class database_Class
             $state_value["value"] = $value;
         }
 
+        // 資料庫來源模式（default／import——原樣記入）
+        if($check_item_code === "source_mode")
+        {
+            $state_value["value"] = $value;
+        }
+
+        // 資料庫來源舊安裝目錄（原樣記入）
+        if($check_item_code === "source_dir")
+        {
+            $state_value["value"] = $value;
+        }
+
         return $state_value;
     }
 }

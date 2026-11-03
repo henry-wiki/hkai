@@ -40,14 +40,15 @@ trait get_response_sections
 
             $poll_list_entry_item["response_content"] = $response_content;
 
-            // 段狀態＝訊息狀態（唯一來源＝msg_status；poll_list 只記時間／長度，唔代判完成）
-            if ($message_poll_status === "completed") {
-                $poll_list_entry_item["poll_status"] = "completed";
-            } elseif (in_array($message_poll_status, ["failed", "cancelled"])) {
-                $poll_list_entry_item["poll_status"] = "aborted";
-            } else {
-                $poll_list_entry_item["poll_status"] = "poll";
+            // 段狀態＝poll_list entry（Python 唯一寫入者）；舊記錄 fallback poll_status
+            $entry_status = (string)($poll_list_entry_item["status"] ?? "");
+
+            // 判定：舊記錄（冇 status 欄）→ 用 poll_status
+            if ($entry_status === "") {
+                $entry_status = (string)($poll_list_entry_item["poll_status"] ?? "poll");
             }
+
+            $poll_list_entry_item["poll_status"] = $entry_status;
 
             $response_section_list[] = $poll_list_entry_item;
         }

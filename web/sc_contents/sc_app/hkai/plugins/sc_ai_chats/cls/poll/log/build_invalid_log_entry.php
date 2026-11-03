@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\poll\log;
 
 // == sc_ai_chats poll\log build_invalid_log_entry：log 子域動作（trait——直接合成入 poll_Class（log 子域）；檔＝動作） ==
-// == 2026-09-27 自 cls/poll/build_invalid_log_entry.php 搬入（log 子域） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/poll/log/build_invalid_log_entry.php 搬入（log 子域） ==
 
 trait build_invalid_log_entry
 {

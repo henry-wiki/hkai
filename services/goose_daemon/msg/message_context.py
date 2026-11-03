@@ -33,6 +33,7 @@ POLLING_MSG_FILE_TYPES = {
     "stream_log": "jsonl",
     "error_log": "jsonl",
     "poll_list": "jsonl",
+    "turn_list": "jsonl",
     "summarize": "txt",
     "summarize_result": "txt",
     "summarize_thinking": "txt",

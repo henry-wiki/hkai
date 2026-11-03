@@ -24,6 +24,11 @@ class _chat {
 
     // 對話網址（chat_sid 空字串 → 專案根＝未選擇對話）
     build_chat_url(project_slug, chat_sid) {
+        // 判定：slug 空（DOM attr 未同步）→ 由目前 URL 第一段補（防 "//" 被當 protocol-relative）
+        if (!project_slug) {
+            project_slug = new URL(location.href).pathname.split("/")[1] || "home";
+        }
+
         // 判定：未選擇對話 → 專案根
         if (!chat_sid) {
             return "/" + project_slug + "/";
@@ -72,13 +77,20 @@ class _chat {
         return "";
     }
 
-    // 依 message_poll jobs 逐個對話同步狀態屬性（已搬 chat/act/chat_activity.js::chat_list_status_refresh——data-status 純 CSS 閘）
 
     // 開域召集（橋各自 init）
     async bind_events() {
         await this.evt().init();
         await this.act().init();
         await this.req().init();
+
+        // 向 sc_state_watch 登記 polling 通知（收到「有變」自行掃描）
+        const polling_state_observer_instance = await this.obs().polling_state_observer();
+        await polling_state_observer_instance.init();
+
+        // chat state 唯一消費者（新增／消失／換卡都由 state 通知帶動）
+        const chat_state_observer_instance = await this.obs().chat_state_observer();
+        await chat_state_observer_instance.init();
     }
 
 }
@@ -124,7 +136,6 @@ class _chat_act_bridge {
     init() {
 
     }
-    async chat_activity() { return (await import("./act/chat_activity.js")).chat_activity();   }
     async chat_archive() { return (await import("./act/chat_archive.js")).chat_archive();      }
     async chat_restore() { return (await import("./act/chat_restore.js")).chat_restore();      }
     async chat_delete() { return (await import("./act/chat_delete.js")).chat_delete();         }
@@ -157,6 +168,8 @@ class _chat_req_bridge {
 class _chat_obs_bridge {
     constructor() {}
     async page_loaded_observer() { return (await import("./obs/page_loaded_observer.js")).page_loaded_observer(); }
-    async chat_item_observer() { return (await import("./obs/chat_item_observer.js")).chat_item_observer(); }
     async url_changed_observer() { return (await import("./obs/url_changed_observer.js")).url_changed_observer(); }
+    async polling_state_observer() { return (await import("./obs/polling_state_observer.js")).polling_state_observer(); }
+    async chat_card_observer() { return (await import("./obs/chat_card_observer.js")).chat_card_observer(); }
+    async chat_state_observer() { return (await import("./obs/chat_state_observer.js")).chat_state_observer(); }
 }

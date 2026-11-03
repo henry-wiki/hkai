@@ -1,4 +1,4 @@
-// jsmods/bind/server_refresh.js —— Server 重新整理鈕綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/server/evt/server_refresh.js —— Server 重新整理鈕綁定（bind 層——一檔一事）
 // 職責：server_refresh（[data-btn='server_refresh'] 點擊 → 重載 server 分頁內容：狀態／按鈕／日誌一次過重畫）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

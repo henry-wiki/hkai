@@ -34,7 +34,9 @@ class environment__python_executable_Class
     // 安裝步驟資料（標題／行值——值由本單元自決：記錄值／未填＝留空字眼）
     public function get_install_step_data()
     {
-        $python_executable_recorded_value = setup()->state()->get_setting_setup_process("prerequisite", "environment__python_executable");
+        // 值＝與檢查相同嘅有效值（狀態檔 → 偵測／.env 預設）
+        $install_step_check = $this->setup_check();
+        $python_executable_recorded_value = (string)($install_step_check["input"]["value"] ?? "");
 
         $install_step_value = $python_executable_recorded_value;
 

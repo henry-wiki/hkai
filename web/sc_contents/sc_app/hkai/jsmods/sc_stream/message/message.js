@@ -1,20 +1,16 @@
-// jsmods/sc_stream/message/message.js —— SSE 加速器（後端有新內容即觸發一次 poll）
-// 職責：message_stream（單例）——start(stream_url, change_event_names, on_change)／stop()／fire_change()
-// 設計：只收「現成 SSE URL＋事件名＋回呼」——唔知 project_slug／message_id，URL 由 caller 砌
-// 設計：SSE 只做「有更新」訊號，唔直接改 DOM（渲染永遠由 message_poll 唯一負責——避免同 writer／markdown 打架）
-//       bridge 死咗／唔 enabled → 完全唔開 EventSource，純 poll 照舊；poll 永遠係 fallback
-//       開／關連線要向 sc_stream 登記（同 presence 一齊計瀏覽器 6 條上限）
+// jsmods/sc_stream/message/message.js —— SSE 連線（單例）
+// 職責：start(stream_url, event_names, on_event)——開線；每個事件原樣交 (name, payload) 俾 caller
+//       stop()——關線；done 事件 → 交 caller 後自動關線
+// 設計：唔知 project_slug／message_id（URL 由 caller 砌）；唔改 DOM（渲染交 caller）
 
 class _message_stream {
     constructor() {
         this.event_source = null;
         this.stream_url = null;
-        this.on_change = null;
-        this.throttle_timer_id = null;
-        this.throttle_ms = 400;
+        this.on_event = null;
 
-        // 邊啲事件叫 on_change（由 caller 傳入——域知識唔寫死喺本模組）
-        this.change_event_names = [];
+        // 邊啲事件要交俾 caller（由 caller 傳入）
+        this.event_names = [];
 
         // sc_stream 登記編號（關閉時除名）
         this.connection_id = null;
@@ -25,50 +21,54 @@ class _message_stream {
         return this;
     }
 
-    // 啟動（同一條 URL 已連 → 唔重開）；事件名同回呼由 caller 傳入
-    start(stream_url, change_event_names, on_change) {
-        // 判定：冇 URL（未啟用／未設定）→ 唔開（純 poll）
+    // 啟動（同一條 URL 已連 → 只換回呼）
+    start(stream_url, event_names, on_event) {
+        console.log("[stream] start 敲門", stream_url);
+
+        // 判定：冇 URL（未啟用／未設定）→ 唔開
         if (stream_url === "") {
+            console.log("[stream] 無 URL → 唔開");
+
             return false;
         }
 
         // 判定：同一條連線已經開緊 → 只換回呼
         if (this.event_source && this.stream_url === stream_url) {
-            this.change_event_names = change_event_names;
-            this.on_change = on_change;
+            console.log("[stream] 同 URL 已開 → 唔重開，只換 callback");
+
+            this.event_names = event_names;
+            this.on_event = on_event;
+
             return true;
         }
 
         this.stop();
 
+        console.log("[stream] 開新連線", stream_url);
+
         this.connection_id = registry().sc_stream().open("stream");
 
-        // 判定：連線額滿（其他 tab／presence 用晒）→ 唔開，純 poll
+        // 判定：連線額滿（其他 tab／presence 用晒）→ 唔開
         if (this.connection_id === null) {
+            console.log("[stream] 連線額滿 → 唔開");
+
             return false;
         }
 
         this.stream_url = stream_url;
-        this.change_event_names = change_event_names;
-        this.on_change = on_change;
+        this.event_names = event_names;
+        this.on_event = on_event;
 
         this.event_source = new EventSource(stream_url);
 
         const thisObject = this;
 
-        // 有更新（事件名由 caller 傳入）→ 觸發一次 poll
-        for (let event_index = 0; event_index < change_event_names.length; event_index++) {
-            this.event_source.addEventListener(change_event_names[event_index], function () {
-                thisObject.fire_change();
-            });
+        // 逐個事件掛監聽：原樣交 name＋payload
+        for (let event_index = 0; event_index < event_names.length; event_index++) {
+            thisObject._listen(event_names[event_index]);
         }
 
-        // 終態（done）→ 只關連線；唔叫 poll（完成後再叫＝無限重啟 tasks: []）
-        this.event_source.addEventListener("done", function () {
-            thisObject.stop();
-        });
-
-        // 錯誤（bridge 死／403）→ 關掉，純 poll 接手
+        // 錯誤（bridge 死／403）→ 關線
         this.event_source.addEventListener("error", function () {
             thisObject.stop();
         });
@@ -76,50 +76,52 @@ class _message_stream {
         return true;
     }
 
-    // 停止（清 EventSource 同節流計時器）
+    // 單一事件監聽（parse JSON → 交 caller；done 之後關線）
+    _listen(event_name) {
+        const thisObject = this;
+
+        this.event_source.addEventListener(event_name, function (event_message) {
+            let event_payload = {};
+
+            try {
+                event_payload = JSON.parse(event_message.data || "{}");
+            } catch (parse_error) {
+                console.log("[stream] payload 解析失敗", event_name, parse_error.message);
+
+                return;
+            }
+
+            console.log("[stream] 收到", event_name, event_payload);
+
+            // 判定：有回呼 → 交出去
+            if (thisObject.on_event !== null) {
+                thisObject.on_event(event_name, event_payload);
+            }
+
+            // 判定：終態事件 → 關線
+            if (event_name === "done") {
+                thisObject.stop();
+            }
+        });
+    }
+
+    // 停止（清 EventSource；登記除名）
     stop() {
         // 判定：有連線 → 關
         if (this.event_source) {
             this.event_source.close();
         }
 
-        // 判定：有節流計時器 → 清
-        if (this.throttle_timer_id) {
-            clearTimeout(this.throttle_timer_id);
-        }
-
         this.event_source = null;
-        this.throttle_timer_id = null;
         this.stream_url = null;
-        this.change_event_names = [];
-        this.on_change = null;
+        this.event_names = [];
+        this.on_event = null;
 
         // 判定：有登記 → 除名
         if (this.connection_id !== null) {
             registry().sc_stream().close(this.connection_id);
             this.connection_id = null;
         }
-    }
-
-    // 觸發（節流——最多每 throttle_ms 一次）
-    fire_change() {
-        const thisObject = this;
-
-        // 判定：已有排程 → 唔重複排
-        if (this.throttle_timer_id) {
-            return;
-        }
-
-        this.throttle_timer_id = setTimeout(function () {
-            thisObject.throttle_timer_id = null;
-
-            const on_change = thisObject.on_change;
-
-            // 判定：有回呼 → 叫一次 poll
-            if (on_change) {
-                on_change();
-            }
-        }, this.throttle_ms);
     }
 }
 

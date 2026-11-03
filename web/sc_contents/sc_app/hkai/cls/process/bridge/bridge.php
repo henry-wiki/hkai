@@ -3,7 +3,7 @@
 namespace sc\app\hkai\cls\process\bridge;
 
 // == bridge_Class：bridge 通訊 client（singleton——經 hkai()->process()->bridge() 取得） ==
-// == 職責：request（對 bridge 發 HTTP JSON）＋ notify_server_new_prompt（POST /daemon/add_message/——喚醒與否由 bridge 決定）
+// == 職責：request（對 bridge 發 HTTP JSON）＋ post_fire_and_forget（單向通知——唔等回應）
 // == 上游：所有要問 bridge 嘅 PHP（程序掃描／prompt 派發／health）；下游：bridge HTTP 端點
 // == 設定：server_settings（host／port）由 hkai()->runtime() 讀
 
@@ -109,44 +109,4 @@ class bridge_Class
         return true;
     }
 
-    // 通知 bridge 有新訊息（POST /daemon/add_message/——喚醒與否由 bridge 決定；PHP 不檢查、不喚醒）
-    // 回傳 true = bridge 已收到（HTTP 200）；false = bridge 未運行／路由不存在／HTTP 錯誤（訊息仍已落地）
-    public function notify_server_new_prompt($chat_id, $message_id, $agent = "")
-    {
-        $runtime_configs = hkai()->runtime()->get_runtime_configs();
-        $server_settings = $runtime_configs["server_settings"] ?? [];
-        
-        $server_host = (string)($server_settings["host"] ?? "127.0.0.1");
-        $server_port = (int)($server_settings["port"] ?? 0);
-        $add_message_url = "http://" . $server_host . ":" . $server_port . "/daemon/add_message/";
-        
-        $payload = [];
-        $payload["chat_id"]    = (int)$chat_id;
-        $payload["message_id"] = (int)$message_id;
-        $payload["agent"]      = (string)$agent;
-        
-        $curl_handle = curl_init($add_message_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_POST, true);
-        curl_setopt($curl_handle, CURLOPT_POSTFIELDS, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        curl_setopt($curl_handle, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, 300);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, 5);
-        $response_body = curl_exec($curl_handle);
-        $http_code     = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
-        curl_close($curl_handle);
-        
-        // 判定：連唔上（bridge 未運行）→ false
-        if ($response_body === false) {
-            return false;
-        }
-        
-        // 判定：HTTP 非 200（路由不存在／bridge 未更新／內部錯誤）→ 寫 log、回 false（不可靜默當成功）
-        if ($http_code !== 200) {
-            hkai()->runtime()->logger()->warn("aider_daemon add_message http " . $http_code . " (bridge may be outdated)");
-            return false;
-        }
-        
-        return true;
-    }
 }

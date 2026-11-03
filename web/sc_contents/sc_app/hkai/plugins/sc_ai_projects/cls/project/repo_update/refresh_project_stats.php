@@ -19,6 +19,5 @@ trait refresh_project_stats
 
         sc_db()->connection("sqlite")->affectingStatement($refresh_sql, [(int)$project_id]);
 
-        sc_ai_health()->stream()->mark_target_updated("project");
     }
 }

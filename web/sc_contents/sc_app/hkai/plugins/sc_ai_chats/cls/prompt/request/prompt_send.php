@@ -93,11 +93,14 @@ trait prompt_send
     public function build_prompt_send_response($context)
     {
         $response_json = [];
+        $prompt_id = $context["prompt_id"];
+
         $response_json["ok"]               = true;
         $response_json["project_slug"]     = $context["project_slug"];
         $response_json["chat_sid"]         = $context["chat_sid"];
         $response_json["chat_id"]           = $context["chat_id"];
         $response_json["message_id"]        = $context["new_message_id"];
+        $response_json["prompt_id"]        = $prompt_id;
         $response_json["is_new_chat_row"]       = $context["is_new_chat_row"];
         $response_json["chat_url"]              = sc_ai_chats()->chat()->build_chat_url($context["project_slug"], "normal", $context["chat_sid"]);
 

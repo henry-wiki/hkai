@@ -110,7 +110,6 @@ trait set_draft_meta
             return false;
         }
 
-        sc_ai_health()->stream()->mark_target_updated("prompt");
 
         return true;
     }
@@ -139,6 +138,7 @@ trait set_draft_meta
         $meta_template["is_new_chat"]       = 1;
         $meta_template["message_id"]        = 0;
         $meta_template["updated_by"]        = null;
+        $meta_template["viewer_id"]         = "";
         $meta_template["attachments"]       = [];
         $meta_template["created_at"]        = $now_milliseconds;
         $meta_template["updated_at"]        = $now_milliseconds;

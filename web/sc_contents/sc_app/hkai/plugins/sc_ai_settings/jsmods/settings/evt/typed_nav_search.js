@@ -1,4 +1,4 @@
-// jsmods/bind/typed_nav_search.js —— 選單搜尋過濾綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/settings/evt/typed_nav_search.js —— 選單搜尋過濾綁定（bind 層——一檔一事）
 // 職責：typed_nav_search（.modal__search_input 輸入 → keyword 過濾 settings nav 按鈕）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

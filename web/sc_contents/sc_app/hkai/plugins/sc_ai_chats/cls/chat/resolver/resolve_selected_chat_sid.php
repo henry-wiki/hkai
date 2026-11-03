@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\resolver;
 
 // == sc_ai_chats chat resolve_selected_chat_sid：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/resolver.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/chat/resolver/ 分獨立檔（one file one function） ==
 
 trait resolve_selected_chat_sid
 {

@@ -19,6 +19,11 @@ class _evt_prompt_send {
         const j_send_button   = jQuery(event.currentTarget);
         const j_dock_textarea = jQuery("#sc_input");
 
+        // 判定：已送出中（loading）→ 唔再收第二次（防連按造成空草稿上帶）
+        if (j_send_button.attr("data-state") === "loading") {
+            return;
+        }
+
         const request_data = {};
         request_data.message_id = 0;
         request_data.content    = j_dock_textarea.val().trim();

@@ -79,18 +79,6 @@ class main_Class
         return $this->available_providers;
     }
 
-    // provider bundle（單一來源 getter——完整結構：provider_id → reset_instance；providers 清單由 caller 衍生）
-    public function get_provider_bundle()
-    {
-        return $this->provider_bundle;
-    }
-
-    // reset 例項（provider_id → reset_instance——由 provider_bundle 直取；request_Class 分派用）
-    public function get_provider_reset_instance($provider_id)
-    {
-        return isset($this->provider_bundle[$provider_id]) ? $this->provider_bundle[$provider_id]["reset_instance"] : null;
-    }
-
     // provider 實例解析入口（provider_id → 例項——動態分派；repo 域分派用）
     public function get_provider_instance($provider_id)
     {

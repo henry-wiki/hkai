@@ -47,7 +47,7 @@ class _message_list_fetch {
                 // 容器層「未選專案」空狀態（節點長駐——有專案載入即隱藏；唔移除——返 home 要再用）
                 jQuery(".sc_thread > .sc_empty_state").prop("hidden", true);
 
-                // 模板錨點（固定結構——唯一來源＝chat/view.php；換訊息唔可以抺佢）
+                // 模板錨點（固定結構——唯一來源＝web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php；換訊息唔可以抺佢）
                 const j_scroll_anchor = j_messages.children("#sc_scroll_anchor");
 
                 // 清舊訊息（只抺內容——錨點同常駐空狀態節點保留；後台插入嘅空狀態一併清）

@@ -14,7 +14,7 @@ trait project_list_fetch
         // 目前選取的專案 slug（由前端帶入 select_project_slug——空＝未選（home——冇 active））
         $selected_project_slug = trim($input_data["select_project_slug"] ?? "");
         
-        // 備註：未指定專案＝冇 active（home——唔自動揀；自動選取（首個）待未來需求——get_default_project 保留唔叫）
+        // 備註：未指定專案＝冇 active（home——唔自動揀）
         
         // 專案段解析（歸檔旗標＋純 slug——單一來源）
         $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug($selected_project_slug);
@@ -28,14 +28,9 @@ trait project_list_fetch
         // 瀏覽高亮：語境形（archive@<project_slug>）→ 純 slug 作 active（路徑共用）
         $selected_project_slug = $resolved_project_slug["project_slug"];
 
-        // 判定：歸檔語境 → 已歸檔清單；普通語境 → 正常清單
-        $project_list_html = "";
-        if ($is_archive === true) {
-            $project_list_html = sc_ai_projects()->project()->render_archived_project_list($selected_project_slug);
-        } else {
-            $project_list_html = sc_ai_projects()->project()->render_project_list($selected_project_slug);
-        }
-        
+        // 清單一律出齊（正常＋歸檔；顯示由 CSS 按 .sc_project_list.archived 決定）
+        $project_list_html = sc_ai_projects()->project()->render_project_list($selected_project_slug);
+
         // 選取專案嘅路徑（topnav 路徑列用——前端 .text() 注入；未選 → 空）
         $selected_project_row = sc_ai_projects()->project()->get_project_row($selected_project_slug);
         $project_path = "";

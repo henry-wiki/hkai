@@ -26,6 +26,14 @@ trait enqueue_prompt_from_draft
             throw new \RuntimeException("queue draft meta invalid: " . $draft_meta_file);
         }
 
+        // 判定：草稿冇文字又冇附件 → 例外（空項目唔准上帶）
+        $draft_prompt_text = trim((string)($draft_meta["prompt_text"] ?? ""));
+        $draft_attachments = $draft_meta["attachments"] ?? [];
+
+        if ($draft_prompt_text === "" && count($draft_attachments) < 1) {
+            throw new \RuntimeException("queue draft empty: " . $draft_meta_file);
+        }
+
         // 身份由箱內 meta 取（唔用外部傳入）
         $prompt_id = (string)($draft_meta["prompt_id"] ?? "");
 

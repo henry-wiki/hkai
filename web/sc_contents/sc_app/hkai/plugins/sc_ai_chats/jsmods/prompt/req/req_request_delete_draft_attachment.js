@@ -1,4 +1,4 @@
-// jsmods/prompt/req/request_request_delete_draft_attachment.js —— 刪草稿附件（連線側——一 req 一檔）
+// jsmods/prompt/req/req_request_delete_draft_attachment.js —— 刪草稿附件（連線側——一 req 一檔）
 // 職責：前端 × 掣 → 後端刪檔＋meta 同步
 
 class _req_request_delete_draft_attachment {

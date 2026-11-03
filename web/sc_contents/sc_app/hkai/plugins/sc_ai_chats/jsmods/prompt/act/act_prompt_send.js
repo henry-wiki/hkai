@@ -1,7 +1,7 @@
 // jsmods/prompt/act/act_prompt_send.js —— 發送訊息流程（act 層——一檔一事）
 // 職責：prompt_send（接線 handler——送出＋回呼；驗證歸後台——E_VALIDATION_FATAL 錯誤卡）
 // 本機側程序同檔：prompt_before_send（發送前）／prompt_send_success（已收下——含 RECOVERABLE 已記錄→入畫面）／prompt_send_error（未收下——還原輸入＋提示）
-// 包含：append_render_message（訊息模板 insert——queue_dispatch 共用）／replace_slots（槽位替換）；主按鈕兩態交 prompt 域 prompt_send_button_toggle()（唯一決策者）
+// 包含：append_render_message（訊息模板 insert——queue_dispatch 共用）／replace_slots（槽位替換）；主按鈕兩態交 prompt 域 prompt_send_button_state().refresh()（唯一決策者）
 // 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _act_prompt_send {
@@ -29,8 +29,8 @@ class _act_prompt_send {
         // 撳送出即入 loading（flush／提交期間都有反饋）
         ui_context.j_send_button.attr("data-state", "loading");
 
-        const prompt_send_button_toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
-        prompt_send_button_toggle_instance.prompt_send_button_toggle();
+        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
+        prompt_send_button_state_instance.refresh();
 
         // 最後一次草稿保存（清走未到期節流＋即寫一次——後端只憑 meta 取內容）
         const prompt_draft_save_instance = await prompt_instance.act().prompt_draft_save();
@@ -55,28 +55,28 @@ class _act_prompt_send {
         });
     }
 
-    // 發送前程序：清空輸入＋按鈕 loading（交 before callback 執行）
+    // 發送前程序：按鈕 loading（輸入保留——收下後才清，避免空白草稿搶先覆蓋）
     async prompt_before_send(ui_context, request_data) {
         const j_send_button = ui_context.j_send_button;
-        const j_dock_textarea = ui_context.j_dock_textarea;
 
-        j_dock_textarea.val("");
-        // 清空＝程式改值（唔觸發 input）——經返輸入管道對賬（autoGrow 還原高度；同停止／錯誤還原同一條路）
-        j_dock_textarea.trigger("input");
         j_send_button.attr("data-state", "loading");
 
         // 撳發送即刷新主按鈕（loading＝進行中 → Stop 即出；唯一決策者判）
         // 橋接駁（同域 act——新方式）
         const prompt_instance = await registry().sc_ai_chats().prompt();
-        const prompt_send_button_toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
+        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
 
-        prompt_send_button_toggle_instance.prompt_send_button_toggle();
+        prompt_send_button_state_instance.refresh();
     }
 
     // 本機側成功程序：已收下訊息入畫面（html.new_message 氣泡／html.queue_list 整排替換／is_new_chat_row 換 URL）＋send 按鈕復原
     async prompt_send_success(ui_context, request_data, response_data) {
         const j_send_button = ui_context.j_send_button;
         const result_html   = response_data.html || {};
+
+        // 已收下 → 清空輸入（程式改值後經 input 管道對賬——autoGrow 還原高度）
+        ui_context.j_dock_textarea.val("");
+        ui_context.j_dock_textarea.trigger("input");
 
         // 附件已送出 → 清空 chips（失敗時保留——錯誤路徑唔清）
         const prompt_instance_attach = await registry().sc_ai_chats().prompt();
@@ -131,9 +131,9 @@ class _act_prompt_send {
 
         // 刷新主按鈕兩態（依 DOM 真旗標——RECOVERABLE 已記錄失敗＝即回 Send；正常送出＝接落追蹤）
         const prompt_instance = await registry().sc_ai_chats().prompt();
-        const prompt_send_button_toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
+        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
 
-        prompt_send_button_toggle_instance.prompt_send_button_toggle();
+        prompt_send_button_state_instance.refresh();
 
         // 開串流（獨立動作；base_url 自動取；SSE 事件由 message_stream 直接叫 message_poll）
         const poll_chat_sid = response_data.chat_sid;
@@ -141,7 +141,7 @@ class _act_prompt_send {
         const message_instance_stream = await registry().sc_ai_chats().message();
         const message_stream_instance = await message_instance_stream.act().message_stream();
 
-        const stream_started = await message_stream_instance.open(response_data.project_slug, response_data.message_id, 0);
+        const stream_started = await message_stream_instance.open(response_data.project_slug, response_data.chat_sid, response_data.prompt_id, 0);
 
         // 判定：串流開唔到（未啟用／冇 base_url）→ 退化成直接起 poll
         if (stream_started !== true) {

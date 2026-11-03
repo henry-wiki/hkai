@@ -1,5 +1,5 @@
 // jsmods/sc_markdown/sc_markdown.js —— Markdown 渲染模組（shared module——供各 plugin 使用）
-// 職責：純文字 → markdown → 消毒 → HTML；code block 高亮；mermaid 圖表（委託 sc_markdown_mermaid.js）——通用原語：只管「拋入嘅嘢點處理、回咩」；零訊息／業務知識（訊息側接駁住各業務側——例：sc_ai_chats/message/act/message_render.js）
+// 職責：純文字 → markdown → 消毒 → HTML；code block 高亮；mermaid 圖表（委託 sc_markdown_mermaid.js）——通用原語：只管「拋入嘅嘢點處理、回咩」；零訊息／業務知識（訊息側接駁住各業務側——例：web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/jsmods/message/act/message_render.js）
 // 來源：CDN 傳統 script（header.php 宣告）→ 全域 window.marked / window.DOMPurify / window.hljs
 
 import sc_markdown__mermaid from "./sc_markdown_mermaid.js";

@@ -70,8 +70,6 @@ class _sc_ai_chats {
     // 觀察器綁定（obs 家族——頁面旗標／URL 變化觀察器起一次＋obs 信號嘅反應註冊；對話項觀察器係動態，掛點喺 load_chat_list——見 chat_hook_register）
     async obs_hook_register() {
         const chat_instance = await this.chat();
-        const chat_activity_instance   = await chat_instance.act().chat_activity();
-        const chat_item_fetch_instance = await chat_instance.act().chat_item_fetch();
         const chat_list_fetch_instance = await chat_instance.act().chat_list_fetch();
 
         const message_instance = await this.message();
@@ -126,23 +124,6 @@ class _sc_ai_chats {
 
 
 
-        // 對話項變動反應（chat 域觀察器派 obs:chat_item_updated → 逐項抓新內容換入＋即時排位；觀察器住 chat/obs/chat_item_observer.js）
-        this.register_hook("obs:chat_item_updated", {
-            after: async function (affected_chat_items) {
-                // 逐粒受變更項 → 取身份（chat_sid）→ 抓新內容換入（只換 children——節點身份保留）
-                for (let item_index = 0; item_index < affected_chat_items.length; item_index++) {
-                    const affected_chat_sid = jQuery(affected_chat_items[item_index]).attr("data-chat_sid");
-
-                    await chat_item_fetch_instance.chat_item_fetch(affected_chat_sid);
-                }
-
-                // 次序交唯一排位者（內容換完後——最後一下）
-                chat_activity_instance.chat_list_rank_refresh();
-            }
-        });
-
-
-
     }
 
     // URL 變化註冊（反應＋觀察器——一次性；先註冊反應再起觀察器）
@@ -157,20 +138,30 @@ class _sc_ai_chats {
 
 
                 const chat_instance = await registry().sc_ai_chats().chat();
+
+                // 切換（對話／專案）→ 先收所有串流（舊 chat 事件一律作廢）
+                const message_instance = await registry().sc_ai_chats().message();
+                const message_stream_instance = await message_instance.act().message_stream();
+
+                await message_stream_instance.stop();
+
                 const detect_project_slug_change_instance    = await chat_instance.act().detect_project_slug_change();
                 const detect_chat_list_context_change_instance = await chat_instance.act().detect_chat_list_context_change();
                 const detect_chat_sid_change_instance        = await chat_instance.act().detect_chat_sid_change();
 
 
-                detect_project_slug_change_instance.detect_project_slug_change(goto_url, prev_url);
-                detect_chat_list_context_change_instance.detect_chat_list_context_change(goto_url, prev_url);
-                detect_chat_sid_change_instance.detect_chat_sid_change(goto_url, prev_url);
+                await detect_project_slug_change_instance.detect_project_slug_change(goto_url, prev_url);
+                await detect_chat_list_context_change_instance.detect_chat_list_context_change(goto_url, prev_url);
+                await detect_chat_sid_change_instance.detect_chat_sid_change(goto_url, prev_url);
 
-                // 重開 health_stream（URL 變＝舊連線參數已過時；open_stream 內部先關舊線）
-                const health_instance = await registry().sc_ai_health().health();
-                const act_fetch_health_instance = await health_instance.act().act_fetch_health();
+                // 重開串流（狀態線／草稿線／訊息線——身份全部由當前頁重算）
+                await registry().sc_stream().open_state_stream();
 
-                await act_fetch_health_instance.open_stream();
+                const prompt_domain = await registry().sc_ai_chats().prompt();
+
+                await prompt_domain.open_stream();
+
+                await message_stream_instance.start_for_page();
             }
         });
 
@@ -198,9 +189,6 @@ class _sc_ai_chats {
                 // 原因：載入清單期間 SSE 可能已推 chat 變動——清單未載入就套用＝對空白 DOM 盲建卡
                 const chats_instance = registry().sc_ai_chats();
 
-                // 對話項觀察器重掛（動態——清單加減／重繪後新卡要重新盯；init 內置 disconnect 防重）
-                const chat_item_observer_instance = await chat_instance.obs().chat_item_observer();
-                chat_item_observer_instance.init();
             },
             failed: function () {
                 // 失敗（清單維持現狀）→ 只收遮罩（激活健康更新／重掛觀察器＝成功先做）
@@ -208,14 +196,6 @@ class _sc_ai_chats {
             }
         });
 
-        // 切換對話 hook 反應（切換完成——對話項觀察器重掛；同 load_chat_list 同形）
-        this.register_hook("chat_item_switch", {
-            after: async function () {
-                // 對話項觀察器重掛（清單節點郁過——重新盯；init 內置 disconnect 防重）
-                const chat_item_observer_instance = await chat_instance.obs().chat_item_observer();
-                chat_item_observer_instance.init();
-            }
-        });
     }
 
     // 訊息側 hook 註冊（訊息載入 hook＋觀察器重掛＋跳底＋歷史 markdown 還原——暫時分組，令 root 好睇）
@@ -271,9 +251,9 @@ class _sc_ai_chats {
                 }
 
 
-                // 起 poll 接手（回應直接拋入 message_poll 域——偵測＋判定喺嗰邊）
-                const message_poll_instance = await message_instance.act().message_poll();
-                message_poll_instance.message_poll_detect(hook_data);
+                // 起串流接手（回應中卡片由 SSE 直接貼字——唔再起 poll）
+                const message_stream_instance = await message_instance.act().message_stream();
+                await message_stream_instance.start_for_page();
 
                 registry().sc_loading().stop_loading(j_sc_workspace);
 
@@ -304,6 +284,11 @@ class _sc_ai_chats {
                 const prompt_input_height_observer_instance = await prompt_instance.obs().prompt_input_height_observer();
 
                 prompt_input_height_observer_instance.init();
+
+                // 主按鈕狀態觀察接駁（viewport 工作中／排隊／輸入 → 即時切 Start／Stop）
+                const prompt_state_observer_instance = await prompt_instance.obs().prompt_state_observer();
+
+                prompt_state_observer_instance.init();
 
                 // 草稿還原（composer 已入畫面——文字／附件／model／chat_mode 一次過回填）
                 const prompt_draft_restore_instance = await prompt_instance.evt().prompt_draft_restore();

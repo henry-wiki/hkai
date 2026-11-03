@@ -1,4 +1,4 @@
-// jsmods/action/refresh_model_display.js —— 模型顯示欄刷新（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_providers/jsmods/model_selector/act/refresh_model_display.js —— 模型顯示欄刷新（action 層——一 action 一檔）
 // 職責：refresh_model_display（.sc_composer__model_picker 顯示：provider＋model＋effort；未選 → has_model 提示）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

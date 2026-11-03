@@ -10,10 +10,8 @@ class attachment_Class
 {
     use guard\detect_image_mime_type;
     use guard\webp_to_jpg_or_gif_to_png;
+    use action\insert_message_attachments;
     use action\store_uploaded_image;
-    use action\get_rows_by_ids;
-    use action\get_attachment_diskpath;
-    use action\bind_to_message;
     use action\delete_by_project;
     use action\save_extract_result;
     use action\backfill_extract_results;

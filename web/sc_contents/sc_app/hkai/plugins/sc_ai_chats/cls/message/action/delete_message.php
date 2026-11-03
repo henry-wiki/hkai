@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\action;
 
 // == sc_ai_chats message delete_message：message 域動作（trait——掛入 message_Class；檔＝動作） ==
-// == 2026-09-27 自 message/action.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/message/action/ 分獨立檔（one file one function） ==
 
 trait delete_message
 {

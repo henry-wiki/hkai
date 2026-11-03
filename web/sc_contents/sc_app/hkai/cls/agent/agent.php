@@ -102,25 +102,10 @@ class agent_Class
         return $agent_item["daemon"] ?? "";
     }
 
-    // agent 顯示名（manifest label；缺 → agent 名本身）
-    public function get_agent_label($agent)
-    {
-        $agents_config = $this->get_agents_config();
-        $agent_item    = $agents_config[$agent] ?? [];
-
-        return $agent_item["label"] ?? $agent;
-    }
-
     // 現行 agent 對應嘅 daemon 名（舊名保留——等於 get_agent_daemon(get_agent())）
     public function get_daemon_engine()
     {
         return $this->get_agent_daemon($this->get_agent());
-    }
-
-    // 現行 agent 清單（舊名保留——等於 get_agents()）
-    public function get_daemon_engines()
-    {
-        return $this->get_agents();
     }
 
     // 現行 agent 寫入（存 runtime.json 動態層；manifest 留出廠值；同時寫舊 key 過渡）
@@ -132,12 +117,6 @@ class agent_Class
         $runtime_configs["daemon_engine"] = $this->get_agent_daemon($agent);
 
         $this->save_runtime_configs($runtime_configs);
-    }
-
-    // 舊名（daemon 名寫入——換算成 agent 名後委派 write_agent）
-    public function write_daemon_engine($daemon_engine)
-    {
-        $this->write_agent($this->get_agent_name_by_daemon($daemon_engine));
     }
 
     // daemon 名 → agent 名（舊資料換算；查唔到 → 空字串）

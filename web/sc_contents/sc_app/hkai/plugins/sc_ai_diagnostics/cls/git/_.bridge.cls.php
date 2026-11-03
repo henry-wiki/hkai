@@ -8,7 +8,6 @@ namespace sc\app\hkai\plugins\sc_ai_diagnostics\git;
 class git_Class
 {
     use config_list\run_get_config_list;
-    use repo_ghosts\run_clean_repo_ghosts;
     use status\get_git_status_item;
     use status\run_git_status;
 

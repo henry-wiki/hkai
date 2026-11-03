@@ -33,7 +33,11 @@ trait archive_msg_files
         // 判定：搬移失敗（尾寫鎖檔）→ 等 1 秒重試最後一次（再失敗＝下輪 finalize 自動重試）
         if ($is_message_dir_renamed === false) {
             sleep(1);
-            @rename($message_dir, $archived_dir);
+            $is_message_dir_renamed = @rename($message_dir, $archived_dir);
+        }
+
+        // 判定：搬移成功 → 離開 polling 目錄，通知監視（chat／project gate）
+        if ($is_message_dir_renamed === true) {
         }
 
         // 歸檔後順手清理：清舊記錄檔（history_Class——cooldown 1 小時自守；同屬記錄生命週期）

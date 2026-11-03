@@ -32,7 +32,6 @@ class prompt_Class
     use request\agent_switch;
     use file\get_empty_prompt_data;
     use meta\get_prompt_meta;
-    use file\parse_polling_json_file;
     use request\prepare_prompt_request;
     use request\resolve_prompt_from_draft;
     use guard\validate_prompt_processable;

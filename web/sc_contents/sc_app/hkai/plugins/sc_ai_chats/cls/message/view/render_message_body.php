@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\view;
 
 // == sc_ai_chats message render_message_body：message 域動作（trait——掛入 view_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/view.php 分獨立檔；2026-09-27 歸 message 域（訊息渲染） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔；2026-09-27 歸 message 域（訊息渲染） ==
 
 trait render_message_body
 {
@@ -100,7 +100,7 @@ trait render_message_body
                 $outputLines[] = "<div class='sc_composer' data-loaded='0'></div>";
             $outputLines[] = "</div>";
             // 主區底 status bar（sc_ai_status_bar plugin 產生——workspace region；嵌喺 .sc_workspace 內，唔係 fixed footer）
-            $outputLines[] = sc_ai_status_bar()->status_bar()->render_region("workspace");
+            $outputLines[] = sc_ai_status_bar()->status_bar()->render_workspace_region();
         $outputLines[] = "</div>";
         
         return implode("\r\n", $outputLines);

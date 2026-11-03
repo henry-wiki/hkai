@@ -33,7 +33,10 @@ class _req_prompt_fetch {
         payload.project_slug = project_slug;
         const chat_instance = await chats.chat();
 
-        payload.chat_sid     = chat_instance.get_chat_sid();
+        // 判定：caller 明確指定 chat_sid（空＝新對話）→ 用指定值；否則用 URL 值
+        const is_chat_sid_specified = (callbacks && typeof callbacks.chat_sid === "string");
+
+        payload.chat_sid = (is_chat_sid_specified === true) ? callbacks.chat_sid : chat_instance.get_chat_sid();
 
         // before 程序（經 before_load callback——存在但唔強求執行）
         if (

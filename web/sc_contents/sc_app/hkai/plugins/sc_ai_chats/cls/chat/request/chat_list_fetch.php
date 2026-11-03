@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\request;
 
 // == sc_ai_chats chat chat_list_fetch：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 歸 request 層（POST 端點）；自 chat/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 歸 request 層（POST 端點）；自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait chat_list_fetch
 {
@@ -16,7 +16,7 @@ trait chat_list_fetch
         $project_slug   = isset($input_data["project_slug"]) ? $input_data["project_slug"] : "";
         $input_chat_sid = isset($input_data["chat_sid"]) ? $input_data["chat_sid"] : null;
 
-        // 清單語境旗標（歸檔兩源：對話歸檔＝archive／archive@<chat_sid>；專案歸檔＝archive@<project_slug>／archive——前端據此上 .sc_chat_list.archive／.sc_sidebar--chats.archive；旗標由後台出）
+        // 清單語境旗標（歸檔兩源：對話歸檔＝archive／archive@<chat_sid>；專案歸檔＝archive@<project_slug>／archive——前端據此上 .sc_chat_list.archived／.sc_sidebar--chats.archived；旗標由後台出）
         $is_archive = "0";
         if (sc_ai_chats()->chat()->is_archive_chat_segment($input_chat_sid)) {
             $is_archive = "1";
@@ -67,22 +67,20 @@ trait chat_list_fetch
             return sc_response()->json(["ok" => false, "error" => "project not found"]);
         }
         
-        // 判定：URL 對話段係歸檔語境（archive／archive@<chat_sid>）→ 歸檔清單（archive chat list——判定位喺 is_archive_chat_segment 唯一住處）
-        if (sc_ai_chats()->chat()->is_archive_chat_segment($input_chat_sid)) {
-            // 瀏覽高亮：語境形（archive@<chat_sid>）→ 取純 sid 作 active；純關鍵字（archive——列面）→ 冇高亮
-            $selected_chat_sid = null;
-            if (strpos($input_chat_sid, "@") !== false) {
-                $selected_chat_sid = sc_ai_chats()->chat()->get_bare_chat_sid($input_chat_sid);
-            }
+        // 清單一律出齊（正常＋歸檔；顯示由 CSS 按 .sc_chat_list.archived 決定）
+        $resolved_chat_sid = $input_chat_sid;
 
-            $chat_list_html = sc_ai_chats()->chat()->render_archived_chat_list($project_slug, $selected_chat_sid);
-        } else {
-            // 目前對話解析（caller 未指定＝兜底揀預設；caller 有指定但無效 → null——清單照出、冇一個 active）
-            $selected_chat_sid = sc_ai_chats()->chat()->resolve_selected_chat_sid($project_row, $input_chat_sid);
-            
-            $chat_list_html = sc_ai_chats()->chat()->render_chat_list($project_slug, $selected_chat_sid);
+        // 判定：歸檔語境形（archive@<chat_sid>）→ 剝走前綴，取純 sid 作高亮用
+        if (sc_ai_chats()->chat()->is_archive_chat_segment($input_chat_sid)) {
+            $resolved_chat     = sc_ai_chats()->chat()->resolve_chat_sid($input_chat_sid);
+            $resolved_chat_sid = $resolved_chat["chat_sid"];
         }
-        
+
+        // 目前對話解析（無效 → null——清單照出、冇一個 active）
+        $selected_chat_sid = sc_ai_chats()->chat()->resolve_selected_chat_sid($project_row, $resolved_chat_sid);
+
+        $chat_list_html = sc_ai_chats()->chat()->render_chat_list($project_slug, $selected_chat_sid);
+
         // header kicker（歸檔語境＝歸檔題示；否則＝目前專案名——連清單同一回應更新）
         $chat_header_kicker = sc_html_encode($project_row["project_name"]);
 

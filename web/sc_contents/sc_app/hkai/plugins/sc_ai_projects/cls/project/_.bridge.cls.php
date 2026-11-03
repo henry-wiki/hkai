@@ -9,7 +9,7 @@ class project_Class
 {
     use action\ensure_home_project;
     use init\get_initial_data;
-    use init\get_selected_project_slug;
+    use init\get_project_slug;
     use init\has_project;
     use init\initial;
     use repo_select\get_archived_project_rows;
@@ -22,7 +22,6 @@ class project_Class
     use repo_update\restore_project;
     use repo_update\update_project;
     use request\handle_project_restore;
-    use resolver\get_default_project;
     use resolver\normalize_project_path;
     use resolver\resolve_project_slug;
     use slug\add_reserved_slugs;
@@ -31,8 +30,8 @@ class project_Class
     use slug\is_slug_taken;
     use view\project_list_fetch;
     use view\project_item_fetch;
-    use view\render_archived_project_list;
     use view\render_project_item;
+    use view\get_project_item_html;
     use view\render_project_list;
     use view\render_project_sidebar;
 

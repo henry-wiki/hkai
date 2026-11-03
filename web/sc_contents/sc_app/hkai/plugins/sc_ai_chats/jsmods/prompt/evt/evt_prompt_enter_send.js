@@ -35,10 +35,10 @@ class _evt_prompt_enter_send {
         event.preventDefault();
 
         const prompt_instance = await registry().sc_ai_chats().prompt();
-        const toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
+        const send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
 
         // 判定：冇可送內容（冇字又冇附件）→ 唔送
-        if (toggle_instance.has_sendable_input() === false) {
+        if (send_button_state_instance.has_sendable_input() === false) {
             return;
         }
 

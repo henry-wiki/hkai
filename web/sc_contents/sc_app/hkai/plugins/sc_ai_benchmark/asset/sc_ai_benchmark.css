@@ -48,7 +48,7 @@
     display: none;
 }
 
-/* overlay/modal/header/close 基座——jsmods/sc_modal/sc_modal.css.css 通用基座（.modal__overlay / .modal__window / .modal__header / .modal__close） */
+/* overlay/modal/header/close 基座——jsmods/sc_modal/sc_modal.css 通用基座（.modal__overlay / .modal__window / .modal__header / .modal__close） */
 
 /* 側欄＝基座 .modal__navigation（搜尋框＋ .modal__navigation-content 清單——樣式全交 sc_modal.css）；bench_source 掣（選中＝左 2px 光棒＋主色暗底——同 settings 左選單同款） */
 .side_bench_source_item {

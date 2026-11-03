@@ -49,6 +49,9 @@ trait handle_message_poll
 
         $chat_id    = (int)$chat_row["chat_id"];
         $project_id = (int)$chat_row["project_id"];
+
+        // 對賬：DB 非終態但目錄已歸檔 → 補回終態（否則前端永遠「處理中」）
+        sc_ai_chats()->message()->repair_stale_message_status($chat_id);
         
         // 前端最後見到嘅訊息（目錄已歸檔時，用嚟補交終態結果）
         $last_message_id = isset($request_data["last_message_id"]) ? (int)$request_data["last_message_id"] : 0;
@@ -206,7 +209,23 @@ trait handle_message_poll
         }
         
         // 本拍回應：chat_sid（本批屬邊個對話——前端據此丟棄切換後嘅舊批）＋tasks（含 status）＋等待列 UI
-        $response_data = ["ok" => true, "chat_sid" => $chat_sid, "tasks" => $tasks, "html" => ["queue_list" => $queue_list]];
+        // 進度計數（由 polling 目錄直接數——同 render／SSE 同一來源；前端據此設定／移除 bar）
+        $polling_dir = sc_get_config("hkai.messages_polling_dir");
+
+        $chat_polling_files    = glob($polling_dir . "/*/" . $chat_sid . "/*/meta.json");
+        $chat_polling_count    = is_array($chat_polling_files) ? count($chat_polling_files) : 0;
+
+        $project_polling_count = 0;
+
+        $project_slug_for_polling = sc_ai_chats()->poll()->get_project_slug_by_chat($chat_id);
+
+        // 判定：有專案 slug → 數全專案
+        if ($project_slug_for_polling !== "") {
+            $project_polling_files = glob($polling_dir . "/" . $project_slug_for_polling . "/*/*/meta.json");
+            $project_polling_count = is_array($project_polling_files) ? count($project_polling_files) : 0;
+        }
+
+        $response_data = ["ok" => true, "chat_sid" => $chat_sid, "tasks" => $tasks, "html" => ["queue_list" => $queue_list], "polling_count" => $chat_polling_count, "project_polling_count" => $project_polling_count];
 
         return sc_response()->json($response_data);
     }

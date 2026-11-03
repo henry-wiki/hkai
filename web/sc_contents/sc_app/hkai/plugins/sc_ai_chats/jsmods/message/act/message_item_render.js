@@ -11,7 +11,7 @@ class _message_item_render {
 
     // 逐條渲染（外殼階段＋內容階段——一個入口做齊；回傳渲染條數）
     async message_item_render(message_entries) {
-        // 窗口容器＋模板錨點（固定結構——唯一來源＝chat/view.php；外殼插喺錨點前）
+        // 窗口容器＋模板錨點（固定結構——唯一來源＝web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php；外殼插喺錨點前）
         const j_messages = jQuery(".sc_thread__viewport");
         const j_scroll_anchor = j_messages.children("#sc_scroll_anchor");
 

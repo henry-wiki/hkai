@@ -17,14 +17,6 @@ trait get_msg_conf_data
         return sc_ai_chats()->poll()->file()->read_msg_conf_file($conf_file);
     }
 
-    // 讀 msg_conf（目錄名已知：messages/polling/{project_slug}/{message_id}——掃描入口，免查 chat 列）
-    public function get_msg_conf_data_by_slug($project_slug, $message_id)
-    {
-        $conf_file = sc_ai_chats()->poll()->get_poll_file_by_slug($project_slug, $message_id, "conf");
-
-        return sc_ai_chats()->poll()->file()->read_msg_conf_file($conf_file);
-    }
-
     // 讀 conf 檔（單一讀取來源——兩個入口共用；缺失／唔合法 → null）
     public function read_msg_conf_file($conf_file)
     {

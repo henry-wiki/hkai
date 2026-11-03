@@ -10,8 +10,16 @@ trait record_section
     // 過程檔記錄（切格時交走目前格嘅選擇——只寫過程檔）
     public function record_section()
     {
-        // ── payload：formdata[section_id][check_item_code][value]（固定三層·可多項——逐層過）
         $posted_formdata = $_POST["formdata"];
+
+        $this->save_formdata_values($posted_formdata);
+
+        $this->respond_json(["ok" => true], 200);
+    }
+
+    // 共用：逐 section／逐項記入過程檔（record_section 同 validate_section 共用）
+    private function save_formdata_values($posted_formdata)
+    {
 
         // 逐個 section 過（key＝section_id）
         foreach ($posted_formdata as $check_item_section_id => $check_item_section_items) {
@@ -26,6 +34,15 @@ trait record_section
 
             // 逐個 check item 過（key＝check_item_code）
             foreach ($check_item_section_items as $check_item_code => $check_item_data) {
+                // 判定：格式唔對（非 array／冇 value）→ 跳（避免 fatal）
+                if (is_array($check_item_data) === false) {
+                    continue;
+                }
+
+                if (array_key_exists("value", $check_item_data) === false) {
+                    continue;
+                }
+
                 // 值（三層最底）
                 $check_item_value = trim($check_item_data["value"]);
 
@@ -48,7 +65,5 @@ trait record_section
                 setup()->state()->set_setting_setup_process_v2($check_item_section_id, $check_item_code, $check_item_state_value);
             }
         }
-
-        $this->respond_json(["ok" => true], 200);
     }
 }

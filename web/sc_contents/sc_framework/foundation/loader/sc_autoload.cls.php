@@ -256,7 +256,7 @@ class sc_autoload_Class
         }
         
         // 映射 3【裸名】（2026-09-21 使用者 IDEA——極端縮短）：只剩 class 名＝{class}.php
-        // 例：sc_ai_projects\tab_general_form\view_Class → cls/tab_general_form/view.php
+        // 例：sc_ai_projects\tab_general_form\view_Class → web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php
         // 僅目錄直映（namespace 段即目錄名）——不掃描：各域皆有 view.php 時掃描順序會跨域誤載，
         //     直映則 FQN→路徑一一對應、零歧義；無段名的 plugin 根 class → cls/{class}.php（照樣末位後備）
         $namespace_subdirs = array_slice($parts, $plugin_index + 2);

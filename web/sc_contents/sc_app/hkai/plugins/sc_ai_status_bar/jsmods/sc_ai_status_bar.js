@@ -1,6 +1,6 @@
 // plugins/sc_ai_status_bar/jsmods/sc_ai_status_bar.js —— status bar 根入口（唯一入口——出入口掛喺 prototype；對齊 sc_ai_chats 形）
 // 用途：registry().sc_ai_status_bar()（單例）；域接駁：(await registry().sc_ai_status_bar().status_bar()).act().<動作>() 咁叫
-// 職責：① 啟動編排（init——bootstrap 呼叫；域召集＋四區首輪 fetch＋時鐘＋健康反應）② 對外 API 轉發（set_state／set_item 系／sync_model——跨 plugin 用家）
+// 職責：① 啟動編排（init——bootstrap 呼叫；域召集＋四區首輪 fetch＋時鐘＋健康反應）② 對外 API 轉發（set_state／set_item 系——跨 plugin 用家）
 // 契約：1 域（status_bar）；域動作住 status_bar/status_bar.js 檔尾（bridge class——每條自載）
 
 import { _domain_hooks } from "./_common/_domain_hooks.js";
@@ -37,17 +37,38 @@ class _sc_ai_status_bar {
         // URL 變化觀察器（一次性——訂閱 sc_http；只報真變化）
         (await status_bar_domain.obs().url_changed_observer()).init();
 
+        // 對話選取觀察器（DOM——卡片變 active 即重取 chat 區；唔靠 URL）
+        (await status_bar_domain.obs().chat_observer()).init();
+
+        // 專案選取觀察器（DOM——卡片變 active 即對齊 project 區；唔靠 URL）
+        (await status_bar_domain.obs().project_observer()).init();
+
         // 出值（唯一路徑——URL 變化與首載共用；init 只接線，唔出值）
         this.register_hook("obs:url_changed", {
             after: async function (goto_url, prev_url) {
-                await refresh_status_bar_regions(status_bar_domain);
+                await refresh_status_bar_regions(status_bar_domain, true, true);
             }
         });
 
-        // 首載出值（chats 置 body data-loaded=1 時派 obs:page_loaded——只做一次）
+        // 對話選取反應（卡片 active 一變 → 由清單 DOM 即時對齊 chat 區——零請求）
+        this.register_hook("obs:chat_active", {
+            after: async function () {
+                status_bar_domain.refresh_chat_from_list();
+            }
+        });
+
+        // 專案選取反應（卡片 active 一變 → 由清單 DOM 即時對齊 project 區——零請求）
+        this.register_hook("obs:project_active", {
+            after: async function () {
+                status_bar_domain.refresh_project_from_list();
+            }
+        });
+
+        // 首載（chats 置 body data-loaded=1 時派 obs:page_loaded——只做一次）
+        // project／chat 兩區開頁已由 PHP render 帶出——唔再 fetch（之後變化交 observer／URL 變化）
         registry().sc_ai_chats().register_hook("obs:page_loaded", {
             after: async function () {
-                await refresh_status_bar_regions(status_bar_domain);
+                await refresh_status_bar_regions(status_bar_domain, false, false);
             }
         });
     }
@@ -84,12 +105,6 @@ class _sc_ai_status_bar {
         return status_item_render_instance.set_item_tooltip(item_id, text);
     }
 
-    async sync_model() {
-        const status_bar_domain = await this.status_bar();
-        const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
-        return sync_status_items_instance.sync_model();
-    }
-
 }
 
 // 連接（出入口掛上 prototype——唯一入口；動態載入＝用先載）
@@ -109,18 +124,23 @@ export const sc_ai_status_bar = (function (instance) {
     };
 })(new _sc_ai_status_bar());
 
-// 出值（status bar 四區一次過重取：三區 fetch＋model＋git＋時鐘起錶）
-async function refresh_status_bar_regions(status_bar_domain) {
-    const project_fetch_instance   = await status_bar_domain.act().project_fetch();
-    const chat_fetch_instance      = await status_bar_domain.act().chat_fetch();
-    const workspace_fetch_instance = await status_bar_domain.act().workspace_fetch();
+// 出值（status bar 分區重取：fetch＋時鐘起錶）
+// include_project：要唔要重取 project 區（首載＝false——開頁已由 PHP render 帶出）
+// include_chat：要唔要重取 chat 區（首載＝false——交 chat_observer 單一負責）
+async function refresh_status_bar_regions(status_bar_domain, include_project, include_chat) {
+    // 判定：要 project 區 → 抓
+    if (include_project === true) {
+        const project_fetch_instance = await status_bar_domain.act().project_fetch();
 
-    project_fetch_instance.project_fetch();
-    chat_fetch_instance.chat_fetch();
-    workspace_fetch_instance.workspace_fetch();
+        project_fetch_instance.project_fetch();
+    }
 
-    const sync_status_items_instance = await status_bar_domain.act().sync_status_items();
-    await sync_status_items_instance.sync_model();
+    // 判定：要 chat 區 → 抓
+    if (include_chat === true) {
+        const chat_fetch_instance = await status_bar_domain.act().chat_fetch();
+
+        chat_fetch_instance.chat_fetch();
+    }
 
     const refresh_git_item_instance = await status_bar_domain.act().refresh_git_item();
     refresh_git_item_instance.refresh_git_item();

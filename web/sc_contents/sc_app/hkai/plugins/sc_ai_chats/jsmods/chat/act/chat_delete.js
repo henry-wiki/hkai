@@ -48,16 +48,30 @@ class _chat_delete {
     async chat_delete_success(ui_context, result) {
         const j_chat_item = ui_context.j_chat_item;
 
-        // 判定：被刪嘅係作用中對話 → 清單移除該列＋無痕切走（唔可以留喺已刪嘅對話上面）
-        if (j_chat_item.hasClass("sc_chat_card--active")) {
-            // 清單移除該列（切換唔再重繪清單——本機自己落手）
+        const target_chat_sid = String(j_chat_item.attr("data-chat_sid") || "");
+
+        // 橋接駁（同域 act——新方式）
+        const chat_instance = await registry().sc_ai_chats().chat();
+
+        // 判定：目標就係目前瀏覽緊嘅對話 → 轉去專案根（清單移除＋訊息窗清空＋URL 換）
+        if (target_chat_sid !== "" && target_chat_sid === chat_instance.get_chat_sid()) {
             j_chat_item.remove();
 
-            // 橋接駁（同域 act——新方式）
-            const chat_instance = await registry().sc_ai_chats().chat();
-            const chat_item_switch_instance = await chat_instance.act().chat_item_switch();
+            const project_instance = await registry().sc_ai_projects().project();
+            const project_slug = project_instance.get_project_slug();
 
-            await chat_item_switch_instance.chat_item_switch(result.next_chat_sid);
+            sc_url.shallow_replace_url("/" + project_slug + "/");
+
+            const chat_item_switch_instance = await chat_instance.act().chat_item_switch();
+            await chat_item_switch_instance.chat_item_switch("");
+
+            const message_instance = await registry().sc_ai_chats().message();
+            const message_list_fetch_instance = await message_instance.act().message_list_fetch();
+            await message_list_fetch_instance.message_list_fetch();
+
+            const prompt_instance = await registry().sc_ai_chats().prompt();
+            const prompt_fetch_instance = await prompt_instance.act().prompt_fetch();
+            await prompt_fetch_instance.prompt_fetch();
 
             return;
         }

@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\repo_update;
 
 // == sc_ai_chats chat insert_db_chat：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/repo_update.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/chat/repo_update/ 分獨立檔（one file one function） ==
 
 trait insert_db_chat
 {
@@ -54,7 +54,6 @@ trait insert_db_chat
             return null;
         }
 
-        sc_ai_health()->stream()->mark_target_updated("chat");
 
         return $chat_row;
 

@@ -34,9 +34,9 @@ class _project_list_fetch {
 
                 // 清單歸檔語境 class（後台出旗標——歸檔視覺由 CSS 發揮；URL 變時重取跟隨更新）
                 if (response_data.is_archive === true) {
-                    jQuery(".sc_project_list").addClass("archive");
+                    jQuery(".sc_project_list").addClass("archived");
                 } else {
-                    jQuery(".sc_project_list").removeClass("archive");
+                    jQuery(".sc_project_list").removeClass("archived");
                 }
 
                 // topnav 路徑列同步（顯示選取專案路徑——空＝placeholder）

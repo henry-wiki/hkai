@@ -13,7 +13,7 @@ class hkai_Class
     
     private $hkai_configs = [];
     
-    // 固定路徑（initial() 一次推導——storage_dir ＋ sc_config/hkai/hkai_config.json SSOT）
+    // 固定路徑（initial() 一次推導——storage_dir ＋ web/sc_config/hkai/hkai_config.jsonon SSOT）
     
     public static function getInstance()
     {
@@ -48,7 +48,7 @@ class hkai_Class
     }
 
     /**
-     * settings 域（用戶偏好——出廠＋data/settings.json 覆蓋）
+     * settings 域（用戶偏好——出廠＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon 覆蓋）
      *
      * @return \sc\app\hkai\cls\settings\settings_Class
      */
@@ -86,6 +86,7 @@ class hkai_Class
     {
         return process\process_Class::getInstance();
     }
+
     
     // 初始化（__init__.php 載入語境時呼叫一次——manifest 設定＋sqlite 連線）
     public function initial()

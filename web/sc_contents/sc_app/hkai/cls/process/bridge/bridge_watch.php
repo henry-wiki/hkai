@@ -49,13 +49,12 @@ class bridge_watch_Class
     // 等 bridge 心跳出現（每 0.25 秒掃 process_status；拉起之後寫嘅 heartbeat＝已就緒）
     public function wait_heartbeat_started($server_wait_timeout_sec, $not_before_time)
     {
-        $process_status_dir = sc_get_config("hkai.process_status_dir");
-        $max_attempts       = (int)($server_wait_timeout_sec * 4);
+        $max_attempts = (int)($server_wait_timeout_sec * 4);
 
         for ($attempt_index = 0; $attempt_index < $max_attempts; $attempt_index++) {
             usleep(250000);
 
-            $heartbeat_paths = glob($process_status_dir . "/bridge.*.json");
+            $heartbeat_paths = hkai()->process()->list_bridge_heartbeat_files();
 
             foreach ($heartbeat_paths as $heartbeat_path) {
                 clearstatcache(true, $heartbeat_path);

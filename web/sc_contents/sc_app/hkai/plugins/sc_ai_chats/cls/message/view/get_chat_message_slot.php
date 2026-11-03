@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\view;
 
 // == sc_ai_chats message get_chat_message_slot：message 域動作（trait——掛入 view_Class；檔＝動作） ==
-// == 2026-09-27 自 message/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait get_chat_message_slot
 {
@@ -32,8 +32,25 @@ trait get_chat_message_slot
         $is_live_message = $show_log === true || !sc_ai_chats()->fsm()->is_terminal_status($message_status);
         $working_value   = $is_live_message === true ? "1" : "0";
 
+        // 最大回應輪次（SSE 開線用——前端讀 data-response_index）
+        $response_index_max = 0;
+
+        // 逐段：取最大輪次
+        foreach ($message_response_rows as $message_response_row) {
+            $message_response_index = (int)($message_response_row["response_index"] ?? 0);
+
+            // 判定：更大輪次 → 記低
+            if ($message_response_index > $response_index_max) {
+                $response_index_max = $message_response_index;
+            }
+        }
+
+        $message_prompt_id = isset($message_row["prompt_id"]) ? $message_row["prompt_id"] : "";
+
         $message_wrapper_attrs = [];
         $message_wrapper_attrs[] = "data-message_id   ='". (isset($message_row["message_id"]) ? $message_row["message_id"] : null) ."'";
+        $message_wrapper_attrs[] = "data-prompt_id    ='" . $message_prompt_id . "'";
+        $message_wrapper_attrs[] = "data-response_index='" . $response_index_max . "'";
         $message_wrapper_attrs[] = "data-start_at     ='" . (isset($message_row["message_created_at"]) ? $message_row["message_created_at"] : null) . "'";
         $message_wrapper_attrs[] = "data-status       ='" . (isset($message_row["message_status"]) ? $message_row["message_status"] : null) . "'";
         $message_wrapper_attrs[] = "data-working      ='" . $working_value . "'";
@@ -49,11 +66,12 @@ trait get_chat_message_slot
         $template[] = "<div class='user_message' data-slot='user_message'></div>";
         $template[] = "<div class='agent_message' data-slot='agent_message'></div>";
         
-        // 活動日誌區（只限即時訊息——預設載入畫面唔顯示；完成後仍保留）
-        if ($is_live_message === true) {
-            $message_chat_id     = (int)($message_row["chat_id"] ?? 0);
-            $message_log_entries = sc_ai_chats()->poll()->log()->parse_activity_events($message_chat_id, (int)($message_row["message_id"] ?? 0));
+        // 活動日誌區（即時訊息，或有日誌記錄嘅訊息——完成後仍保留）
+        $message_chat_id     = (int)($message_row["chat_id"] ?? 0);
+        $message_log_entries = sc_ai_chats()->poll()->log()->parse_activity_events($message_chat_id, (int)($message_row["message_id"] ?? 0));
 
+        // 判定：即時訊息 → 出活動日誌區（載入歷史訊息唔出）
+        if ($is_live_message === true) {
             $template[] = "<div class='log_message'>";
                 $template[] = "<div class='activity_monitor' data-log_index='" . count($message_log_entries) . "'>";
                     $template[] = "<div class='activity_state_icon'><span class='loading-dots'></span></div>";
@@ -61,23 +79,28 @@ trait get_chat_message_slot
                         // 最新一條活動記錄（uid＝md5(time+event+status+message)——前端據此判「已存在」）
                         $log_entry_item = [];
 
-                        // 判定：有記錄 → 取最後一條
+                        // 判定：有記錄 → 取最後一條做狀態
                         if (count($message_log_entries) > 0) {
                             $log_entry_item = $message_log_entries[count($message_log_entries) - 1];
                         }
 
                         $log_entry_level   = strtolower((string)($log_entry_item["level"] ?? "info"));
-                        $log_entry_message = (string)($log_entry_item["message"] ?? "");
-                        $log_entry_uid     = (string)($log_entry_item["activity_uid"] ?? "");
-                        $log_entry_event   = (string)($log_entry_item["event"] ?? "");
 
-                        $log_line_attrs  = "data-activity_uid='" . $log_entry_uid . "'";
-                        $log_line_attrs .= " data-log_event='" . sc_html_encode($log_entry_event) . "'";
-                        $log_line_attrs .= " data-log_status='" . sc_html_encode($log_entry_level) . "'";
+                        // 逐條記錄 → 各一行（每條保留自己嘅階段）
+                        foreach ($message_log_entries as $message_log_entry_item) {
+                            $log_line_level   = strtolower((string)($message_log_entry_item["level"] ?? "info"));
+                            $log_line_message = (string)($message_log_entry_item["message"] ?? "");
+                            $log_line_uid     = (string)($message_log_entry_item["activity_uid"] ?? "");
+                            $log_line_event   = (string)($message_log_entry_item["event"] ?? "");
 
-                        $template[] = "<div class='activity_line activity_level_" . $log_entry_level . "' " . $log_line_attrs . ">";
-                            $template[] = sc_html_encode($log_entry_message);
-                        $template[] = "</div>";
+                            $log_line_attrs  = "data-activity_uid='" . $log_line_uid . "'";
+                            $log_line_attrs .= " data-log_event='" . sc_html_encode($log_line_event) . "'";
+                            $log_line_attrs .= " data-log_status='" . sc_html_encode($log_line_level) . "'";
+
+                            $template[] = "<div class='activity_line activity_level_" . $log_line_level . "' " . $log_line_attrs . ">";
+                                $template[] = sc_html_encode($log_line_message);
+                            $template[] = "</div>";
+                        }
                     $template[] = "</div>";
                 $template[] = "</div>";
             $template[] = "</div>";
@@ -87,7 +110,15 @@ trait get_chat_message_slot
         $total_elapsed_caption = sc_html_encode(hkai()->i18n()->get("message.total_elapsed"));
         // 判定：即時訊息 → 以現時起算（poll 每輪更新、前端每秒遞增）
         if ($is_live_message === true) {
-            $message_elapsed_sec  = max(0, time() - (int)strtotime((string)(isset($message_row["message_created_at"]) ? $message_row["message_created_at"] : null)));
+            // 基準：本次嘗試起點（started_at 有值——恢復後重設）／否則建立時間
+            $message_attempt_start = (string)(isset($message_row["message_started_at"]) ? $message_row["message_started_at"] : "");
+
+            // 判定：未重設過 → 用建立時間
+            if ($message_attempt_start === "") {
+                $message_attempt_start = (string)(isset($message_row["message_created_at"]) ? $message_row["message_created_at"] : "");
+            }
+
+            $message_elapsed_sec  = max(0, time() - (int)strtotime($message_attempt_start));
             $message_elapsed_text = sc_ai_chats()->message()->view()->format_elapsed_sec($message_elapsed_sec);
 
             $template[] = "<div class='total_elapsed' data-elapsed_sec='{$message_elapsed_sec}' data-elapsed_ts='0'>";

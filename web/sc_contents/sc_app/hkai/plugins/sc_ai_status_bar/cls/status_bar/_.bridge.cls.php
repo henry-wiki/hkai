@@ -10,10 +10,10 @@ class status_bar_Class
 {
     use request\project_status_bar_fetch;
     use request\chat_status_bar_fetch;
-    use request\workspace_status_bar_fetch;
     use state\update;
-    use state\get_states;
-    use render\render_region;
+    use render\render_project_region;
+    use render\render_chat_region;
+    use render\render_workspace_region;
 
     private $groups = [];
     private $item_states = [];
@@ -65,13 +65,7 @@ class status_bar_Class
         $this->groups["workspace"] = [
             "subs" => [
                 "left" => [
-                    "items" => [
-                        "sb_model" => [
-                            "icon"     => "",
-                            "default"  => "—",
-                            "priority" => 20,
-                        ],
-                    ],
+                    "items" => [],
                 ],
                 "right" => [
                     "items" => [
@@ -126,7 +120,7 @@ class status_bar_Class
     }
 
     // 外部貢獻：加入 status item（region_key 如 "main/left"／"project"；item 只接受 array 或 Closure）
-    // 用法：sc_ai_status_bar()->status_bar()->add_status_item("workspace/left", function () { return sc_ai_diagnostics()->git()->get_git_status_item(); });
+    // 用法：sc_ai_status_bar()->status_bar()->add_status_item("chat", function () { return [...]; });
     // 語意：array＝靜態定義；Closure＝render 時求值——回 array＝config item（plugin 砌殼）；回字串＝完整 item HTML（provider 全權決定內容）
     public function add_status_item($region_key, $item)
     {
@@ -324,7 +318,22 @@ class status_bar_Class
         $previous_request_uri   = $_SERVER["REQUEST_URI"];
         $_SERVER["REQUEST_URI"] = $page_uri;
 
-        $region_html = $this->render_region($region_key);
+        $region_html = "";
+
+        // 判定：project 區
+        if ($region_key === "project") {
+            $region_html = $this->render_project_region();
+        }
+
+        // 判定：chat 區
+        if ($region_key === "chat") {
+            $region_html = $this->render_chat_region();
+        }
+
+        // 判定：workspace 區
+        if ($region_key === "workspace") {
+            $region_html = $this->render_workspace_region();
+        }
 
         // 情境還原（交還請求自身嘅 URL 情境）
         $_SERVER["REQUEST_URI"] = $previous_request_uri;

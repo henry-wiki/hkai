@@ -39,14 +39,16 @@ from .acp_client import PromptImage, SessionCallbacks, SessionRequest
 PERMISSION_WAIT_TIMEOUT_SEC = 60
 
 
+
 class StreamState(TypedDict):
     """本輪串流翻譯狀態（跨回呼共享）。"""
 
     response_index: int
-    current_message_id: str
+    current_agent_turn_id: str
     first_content_seen: bool
     stream_opened_logged: bool
     usage: dict[str, object]
+    tool_signatures: dict[str, str]
 
 
 def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
@@ -182,10 +184,11 @@ def build_callbacks(session_request: SessionRequest) -> SessionCallbacks:
     # 串流翻譯狀態（跨回呼共享——同一輪回應嘅翻譯狀態）
     stream_state: StreamState = {
         "response_index":       0,
-        "current_message_id":   "",
+        "current_agent_turn_id":   "",
         "first_content_seen":   False,
         "stream_opened_logged": False,
         "usage":                {},
+        "tool_signatures":      {},
     }
 
     return {
@@ -217,7 +220,7 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
         _ = message_log().append_response_replay(stream_state["response_index"], str(update_payload.get("text", "")))
         return
 
-    message_id = str(update_payload.get("message_id", ""))
+    agent_turn_id = str(update_payload.get("agent_turn_id", ""))
 
     # 首個內容（thought／text）→ 連通（replying——只發一次）
     is_content_update = update_kind in ("thought", "text")
@@ -226,13 +229,39 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
         _ = message_log().append_info_log(EVENT_CONNECTION_ESTABLISHED, "goose output arrived")
         _ = message_status().apply(EVENT_CONNECTION_ESTABLISHED)
 
-    # 判定：新 message id（上一輪已有內容）→ 段落 index 前進（每輪一對檔）
-    if message_id != "" and stream_state["current_message_id"] != "" and message_id != stream_state["current_message_id"]:
+    # 三個條件各自具名（唔壓成一行）
+    has_incoming_turn_id = agent_turn_id != ""
+    has_previous_turn_id = stream_state["current_agent_turn_id"] != ""
+    is_different_turn_id = agent_turn_id != stream_state["current_agent_turn_id"]
+
+    is_new_turn = has_incoming_turn_id
+
+    # 判定：之前未有一輪 → 唔算新一輪
+    if has_previous_turn_id is False:
+        is_new_turn = False
+
+    # 判定：id 同之前一樣 → 唔算新一輪
+    if is_different_turn_id is False:
+        is_new_turn = False
+
+    # 判定：新一輪 → 先關上一輪，段落 index 再前進（每輪一對檔）
+    if is_new_turn:
+        message_log().close_response_turn(int(stream_state["response_index"]), "completed")
+
         stream_state["response_index"] += 1
 
-    # 判定：本輪 message id → 記為當前
-    if message_id != "":
-        stream_state["current_message_id"] = message_id
+    # 判定：本輪 agent turn id → 記為當前（poll_list 建 entry 時寫入）
+    if agent_turn_id != "":
+        stream_state["current_agent_turn_id"] = agent_turn_id
+
+    message_log().set_current_agent_turn_id(str(stream_state["current_agent_turn_id"]))
+
+    message_log().remember_agent_turn(
+        agent_turn_id,
+        int(stream_state["response_index"]),
+        update_kind,
+        len(str(update_payload.get("text", ""))),
+    )
 
     # 思考段（reasoning——入 {i}.thinking 檔）
     if update_kind == "thought":
@@ -248,12 +277,54 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
         _ = message_log().append_response_result(stream_state["response_index"], str(update_payload.get("text", "")))
         return
 
-    # 工具活動（TOOL_INVOKED 事件——trace）
+    # 工具活動（TOOL_INVOKED 事件——trace；同一工具同狀態只記一次）
     if update_kind == "tool":
+        tool_call_id = str(update_payload.get("tool_call_id", ""))
+        tool_name = str(update_payload.get("tool_name", ""))
+        tool_status = str(update_payload.get("status", ""))
+        tool_title = str(update_payload.get("title", ""))
+
+        # 顯示名：工具名優先（冇就用 title）
+        display_name = tool_name
+
+        # 判定：冇工具名 → 用 title
+        if display_name == "":
+            display_name = tool_title
+
+        tool_signature = tool_call_id + "|" + tool_status + "|" + tool_title
+
+        # 判定：同一工具同狀態已記 → 唔重複
+        if stream_state["tool_signatures"].get(tool_call_id) == tool_signature:
+            return
+
+        stream_state["tool_signatures"][tool_call_id] = tool_signature
+
+        tool_parts: list[str] = []
+
+        # 判定：有顯示名 → 加入
+        if display_name != "":
+            tool_parts.append(display_name)
+
+        # 判定：有擴展名 → 加入
+        if str(update_payload.get("extension_name", "")) != "":
+            tool_parts.append(str(update_payload.get("extension_name", "")))
+
+        # 判定：有狀態 → 加入
+        if tool_status != "":
+            tool_parts.append(tool_status)
+
+        # 判定：有輸入摘要 → 加入
+        if str(update_payload.get("raw_input", "")) != "":
+            tool_parts.append(str(update_payload.get("raw_input", "")))
+
+        # 判定：有輸出摘要 → 加入
+        if str(update_payload.get("output_text", "")) != "":
+            tool_parts.append(str(update_payload.get("output_text", "")))
+
         _ = message_log().append_info_log(
             EVENT_TOOL_INVOKED,
-            "ACP tool: " + str(update_payload.get("title", "")),
-            {"tool_call_id": str(update_payload.get("tool_call_id", ""))},
+            "ACP tool: " + " · ".join(tool_parts),
+            {"tool_call_id": tool_call_id},
         )
         return
 

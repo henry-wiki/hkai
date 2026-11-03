@@ -48,10 +48,12 @@ trait welcome_view
         $product_version = setup()->get_version();
 
         $section_lines   = [];
-        $section_lines[] = "<div class='setup_section-main'>";
-        
+        $section_lines[] = "<div class='setup_section-main setup_section-main--center'>";
+
+        $section_lines[] = "<div class='setup_welcome'>";
         $section_lines[] = "<div class='check_hero'>";
         $section_lines[] = "<img class='check_hero__icon' src='" . $setup_logo_url . "' alt='HKAI'>";
+        $section_lines[] = "<div class='check_hero__version'>" . $product_version . "</div>";
         $section_lines[] = "<p class='check_hero__desc'>" . $welcome_desc . "</p>";
         $section_lines[] = "<div class='check_hero__lang'>";
 
@@ -74,7 +76,53 @@ trait welcome_view
 
         $section_lines[] = "</div>";
 
-        $section_lines[] = "<div class='check_hero__version'>" . $product_version . "</div>";
+        $section_lines[] = "</div>";
+
+        // 安裝模式（全新安裝／升級搬遷——後續步驟按此調整）
+        $source_mode_value = setup()->state()->get_setting_setup_process("welcome", "source_mode");
+        $source_dir_value  = setup()->state()->get_setting_setup_process("welcome", "source_dir");
+
+        $is_import_mode = ($source_mode_value === "import");
+
+        $default_checked_attr = "checked='checked'";
+        $import_checked_attr  = "";
+
+        // 判定：上次揀咗搬遷 → 改由搬遷選項標記
+        if ($is_import_mode === true) {
+            $default_checked_attr = "";
+            $import_checked_attr  = "checked='checked'";
+        }
+
+        $path_row_class = "setup_db_source-path is-hidden";
+
+        // 判定：搬遷模式 → 目錄行顯示
+        if ($is_import_mode === true) {
+            $path_row_class = "setup_db_source-path";
+        }
+
+        $source_label_text  = setup()->i18n()->get("welcome.source_label");
+        $mode_default_text  = setup()->i18n()->get("welcome.source_default");
+        $mode_import_text   = setup()->i18n()->get("welcome.source_import");
+        $import_placeholder = setup()->i18n()->get("welcome.source_import_placeholder");
+
+        $empty_path_message = setup()->i18n()->get("check.migration_source.empty");
+
+        $section_lines[] = "<div class='setup_db_source' data-msg_empty='" . sc_html_encode($empty_path_message) . "'>";
+            $section_lines[] = "<div class='setup_db_source-title'>" . $source_label_text . "</div>";
+            $section_lines[] = "<label class='setup_db_source-option'>";
+                $section_lines[] = "<input type='radio' name='formdata[welcome][source_mode][value]' value='default' " . $default_checked_attr . "/>";
+                $section_lines[] = "<span>" . $mode_default_text . "</span>";
+            $section_lines[] = "</label>";
+            $section_lines[] = "<label class='setup_db_source-option'>";
+                $section_lines[] = "<input type='radio' name='formdata[welcome][source_mode][value]' value='import' " . $import_checked_attr . "/>";
+                $section_lines[] = "<span>" . $mode_import_text . "</span>";
+            $section_lines[] = "</label>";
+            $section_lines[] = "<div class='" . $path_row_class . "'>";
+                $section_lines[] = "<input type='text' class='setup_db_source-input' name='formdata[welcome][source_dir][value]' autocomplete='off' spellcheck='false' placeholder='" . $import_placeholder . "' value='" . sc_html_encode($source_dir_value) . "'/>";
+                $section_lines[] = "<div class='setup_db_source-status'></div>";
+            $section_lines[] = "</div>";
+        $section_lines[] = "</div>";
+
         $section_lines[] = "</div>";
         $section_lines[] = "</div>";
 

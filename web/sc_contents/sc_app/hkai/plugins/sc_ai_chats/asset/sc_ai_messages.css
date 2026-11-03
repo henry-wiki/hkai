@@ -669,6 +669,11 @@
     word-break: break-word;
     white-space: normal;
 }
+/* 只顯示最新一條（其餘保留喺 DOM，唔顯示） */
+.log_message .activity_monitor > .activity_lines > .activity_line:not(:last-child) {
+    display: none;
+}
+
 .activity_level_error { border-left-color: #f85149; background: #241516; color: #ff8a8a; }
 .activity_level_success { color: #3fb950; }
 .activity_level_warn { color: #d29922; }
@@ -928,7 +933,7 @@
     display: none;
 }
 
-/* 訊息主區頂欄（topnav——導覽鈕／路徑列／右上工具鈕；HTML 出自 cls/sc_ai_chats_view.php） */
+/* 訊息主區頂欄（topnav——導覽鈕／路徑列／右上工具鈕；HTML 出自 cls/message/view/render_message_body.php） */
 .sc_topbar {
     gap: 6px;
 }

@@ -9,7 +9,7 @@ class _verify_project_data {
     // 驗證專案資料（送全表單到後端——一次過：欄位正確？後台接受？）
     // ＋套用結果：欄位錯誤／路徑提示（純檢查）
     // [ remark ] 表單進入 loading 模式：驗證期間表單顯示載入中狀態
-    // 排程（debounce）交 bind/modal_form_init.js——此處只做驗證本體
+    // 排程（debounce）交 web/sc_contents/sc_app/hkai/plugins/sc_ai_projects/jsmods/modal/evt/modal_form_init.js——此處只做驗證本體
     async verify_project_data(j_modal) {
         // 表單整包（serialize＝name='formdata[x]' 字串——後台收到再解）
         const request_data = {};

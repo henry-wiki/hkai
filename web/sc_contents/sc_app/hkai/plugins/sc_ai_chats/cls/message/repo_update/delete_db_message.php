@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\repo_update;
 
 // == sc_ai_chats message repo_update delete_db_message：repo_update 子域動作（trait——合成入 repo_update_Class；檔＝動作） ==
-// == 2026-09-27 自 message/repo_update.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/message/repo_update/_.bridge.cls.php 分獨立檔（one file one function） ==
 
 trait delete_db_message
 {
@@ -33,7 +33,14 @@ trait delete_db_message
             );
         });
 
-        sc_ai_health()->stream()->mark_target_updated("chat");
+
+        // 上游（專案）計數／時間同步（chat → project）
+        $chat_row = sc_ai_chats()->chat()->get_chat_row((int)$chat_id);
+
+        // 判定：有專案 → refresh
+        if ($chat_row !== null) {
+            sc_ai_projects()->project()->refresh_project_stats((int)$chat_row["project_id"]);
+        }
     }
 
 }

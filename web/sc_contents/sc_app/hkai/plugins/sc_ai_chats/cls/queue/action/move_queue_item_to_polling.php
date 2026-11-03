@@ -31,6 +31,8 @@ trait move_queue_item_to_polling
             throw new \RuntimeException("polling move failed: " . $queue_item_dir);
         }
 
+        // 入 polling 目錄 → 通知監視（chat／project gate——polling 數值即時重算）
+
         $attachments = (array)($queue_item["attachments"] ?? []);
         $attachments_dir = "";
 
@@ -56,6 +58,15 @@ trait move_queue_item_to_polling
         // 箱內 meta（message_id 已由呼叫端蓋好——原樣寫入；attachments_dir＝附件實際位置）
         $queue_item["attachments_dir"] = $attachments_dir;
         sc_write_json($message_dir . "/meta.json", $queue_item);
+
+        // 附件列（搬遷落地之後才寫 DB——訊息與附件同一刻成立；message_id 已由呼叫端蓋好）
+        sc_ai_chats()->attachment()->insert_message_attachments(
+            (int)$queue_item["project_id"],
+            $chat_id,
+            $message_id,
+            $attachments_dir,
+            $attachments
+        );
 
         // 狀態＋起步 log（有附件＝先 preparing；冇＝直接 queued）
         $this->_write_message_start_state($chat_id, $message_id, $queue_item);

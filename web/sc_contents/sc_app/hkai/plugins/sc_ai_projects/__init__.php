@@ -35,29 +35,6 @@ sc_ai_projects()->project()->add_reserved_slugs([
     "vendor",
 ]);
 
-// 登記 health 報告（name＝輸出 JSON key——重複名會即時報錯；request_data＝每輪 health 請求原樣轉交——報告按清單語境過濾）
-sc_ai_health()->health()->add_health_report("project", function ($request_data) {
-    return sc_ai_projects()->health()->get_project_report($request_data);
-});
-
-// 外部貢獻 status item（project 欄——歸檔入口／離開歸檔；provider HTML——Closure 於 render 時求值）
-sc_ai_status_bar()->status_bar()->add_status_item("project", function () {
-    // 依語境定目標（歸檔語境＝離開歸檔（箭頭圖示）／普通＝入歸檔（盒仔圖示）——後台出；URL 一變由 status bar 區重渲更新）
-    $resolved_project_slug = sc_ai_projects()->project()->resolve_project_slug(sc_get_friendly(0));
-
-    if ($resolved_project_slug["archive"] === 1) {
-        $archive_url   = "/";
-        $archive_title = hkai()->i18n()->get("project.archive_leave");
-        $archive_icon  = "fa-solid fa-arrow-left";
-    } else {
-        $archive_url   = "/archive/";
-        $archive_title = hkai()->i18n()->get("project.archive");
-        $archive_icon  = "fa-solid fa-box-archive";
-    }
-
-    return "<a class='sc_statusbar__archive' href='" . $archive_url . "' title='" . $archive_title . "'><i class='" . $archive_icon . "'></i></a>";
-});
-
 // 註冊 request action（取資料端點：清單／表單／Git 狀態）
 $plugin->add_request_action("project_list_fetch"    ,__DIR__ . "/request/project/project_list_fetch.php");
 $plugin->add_request_action("project_item_fetch"    ,__DIR__ . "/request/project/project_item_fetch.php");

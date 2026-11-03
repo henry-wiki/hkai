@@ -87,7 +87,7 @@ trait welcome_install
         return ($write_result !== false);
     }
 
-    // 應用設定檔路徑（sc_config/hkai/settings.json——單一來源＝sc_config/load.php）
+    // 應用設定檔路徑（web/sc_contents/sc_app/hkai/cls/settings/settings.phpon——單一來源＝sc_config/load.php）
     private function get_app_settings_file()
     {
         return sc_get_config("hkai.settings");

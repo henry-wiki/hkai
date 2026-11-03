@@ -9,8 +9,6 @@ namespace sc\app\hkai\plugins\sc_ai_chats;
 class sc_ai_chats_Class
 {
 
-    use resolver\project\resolve_project_row;
-    use resolver\project\resolve_project_context;
     use resolver\chat\resolve_chat_title;
 
     private static $instance = null;
@@ -116,16 +114,6 @@ class sc_ai_chats_Class
     public function storage()
     {
         return storage\storage_Class::getInstance();
-    }
-
-    /**
-     * 健康報告域（health_Class——1 動作）
-     *
-     * @return \sc\app\hkai\plugins\sc_ai_chats\health\health_Class
-     */
-    public function health()
-    {
-        return health\health_Class::getInstance();
     }
 
     /**

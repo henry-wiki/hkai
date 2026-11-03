@@ -37,7 +37,7 @@ trait render_project_sidebar
                 $output_lines[] = "<span class='sc_sidebar__resize_grip' aria-hidden='true'></span>";
             $output_lines[] = "</div>";
             // 欄底 status bar（sc_ai_status_bar plugin 產生——project region；嵌喺 panel 內，唔係 fixed footer）
-            $output_lines[] = sc_ai_status_bar()->status_bar()->render_region("project");
+            $output_lines[] = sc_ai_status_bar()->status_bar()->render_project_region();
         $output_lines[] = "</aside>";
         
         return implode("\r\n", $output_lines);

@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\prompt\view;
 
 // == sc_ai_chats prompt get_chat_options_html：prompt 域動作（trait——掛入 prompt_Class；檔＝動作：區塊格1：chat options 內容（模式鈕＋模型顯示＋hidden）） ==
-// == 2026-09-27 自 prompt/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait get_chat_options_html
 {

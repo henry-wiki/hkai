@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_projects\modal\tabs;
 
 // == sc_ai_projects modal get_modal_tab：modal 域動作（trait——掛入 modal_Class；檔＝動作） ==
-// == 2026-09-27 自 modal/tabs.php 分遷入（one file one action） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_projects/cls/modal/tabs/_.bridge.cls.php 分遷入（one file one action） ==
 
 trait get_modal_tab
 {

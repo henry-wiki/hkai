@@ -73,11 +73,13 @@ class _setup_evt_bridge {
         (await this.refresh_install_item()).init();
         (await this.switch_language()).init();
         (await this.close_setup()).init();
+        (await this.database_source_mode()).init();
     }
     async switch_section()       { return (await import("./evt/switch_section.js")).switch_section(); }
     async refresh_install_item() { return (await import("./evt/refresh_install_item.js")).refresh_install_item(); }
     async switch_language()      { return (await import("./evt/switch_language.js")).switch_language(); }
     async close_setup()          { return (await import("./evt/close_setup.js")).close_setup(); }
+    async database_source_mode() { return (await import("./evt/database_source_mode.js")).database_source_mode(); }
 }
 
 // act（動作——開單叫工作）
@@ -95,9 +97,11 @@ class _setup_act_bridge {
 class _setup_req_bridge {
     constructor() {}
     async switch_section()      { return (await import("./req/switch_section.js")).switch_section(); }
+    async check_migration_source() { return (await import("./req/check_migration_source.js")).check_migration_source(); }
     async start_single_check()  { return (await import("./req/start_single_check.js")).start_single_check(); }
     async start_single_install() { return (await import("./req/start_single_install.js")).start_single_install(); }
     async switch_language()     { return (await import("./req/switch_language.js")).switch_language(); }
     async record_section()      { return (await import("./req/record_section.js")).record_section(); }
+    async validate_section()     { return (await import("./req/validate_section.js")).validate_section(); }
 }
 

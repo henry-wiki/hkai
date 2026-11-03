@@ -1,4 +1,4 @@
-// jsmods/bind/clicked_status_item.js —— status item 點擊綁定與分派（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/evt/clicked_status_item.js —— status item 點擊綁定與分派（bind 層——一檔一事）
 // 職責：clicked_status_item（.sc_statusbar__item[data-click] 點擊 → 依 data-click 觸發既有 UI）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

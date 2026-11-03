@@ -18,24 +18,18 @@ class _chat_add {
     async chat_add(event) {
         event.preventDefault();
 
-        // 橋接駁（兩域——目標 URL 即場由域 getter 砌，唔靠按鈕 href：切換專案後側欄 header 唔重繪，href 會過期）
-        const project_instance = await registry().sc_ai_projects().project();
-        const chat_instance    = await registry().sc_ai_chats().chat();
+        // 橋接駁（同域——新對話流程交 chat_start_new；URL 由後端派 sid 後才寫）
+        const chat_instance = await registry().sc_ai_chats().chat();
 
-        const project_slug = project_instance.get_project_slug();
-        const chat_sid     = "";
-        const chat_url     = chat_instance.build_chat_url(project_slug, chat_sid);
-
-        // 換 URL（無痕轉向——加 history 記錄；換完由劫持派 on_url_change → 交 URL 鏈）
-        sc_url.silent_redirect_url(chat_url);
+        const chat_sid = "";
 
         // 派發 chat_item_switch hook（before 相位——切換前；跨 plugin 用家各自嘅反應）
         registry().sc_ai_chats().execute_hook_before("chat_item_switch", [chat_sid]);
 
-        // 橋接駁（同域 act——新方式）
+        // 新對話（切空語境 → 向後端取新 prompt → URL 跟隨後端 sid）
         const chat_start_new_instance = await chat_instance.act().chat_start_new();
 
-        chat_start_new_instance.chat_start_new();
+        await chat_start_new_instance.chat_start_new();
 
         // 切換完成 → 派發 chat_item_switch hook（after 相位——跨 plugin 用家各自嘅反應）
         registry().sc_ai_chats().execute_hook_after("chat_item_switch", [chat_sid]);

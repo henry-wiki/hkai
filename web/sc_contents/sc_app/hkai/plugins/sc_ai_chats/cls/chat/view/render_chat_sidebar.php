@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\view;
 
 // == sc_ai_chats chat render_chat_sidebar：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait render_chat_sidebar
 {
@@ -15,7 +15,7 @@ trait render_chat_sidebar
         $empty_state_hidden = sc_ai_chats()->chat()->is_project_selected();
         
         // header kicker＝目前專案名（未選／查無＝空；跟切換由 chat_list_fetch 回應更新）
-        $selected_project_slug = sc_ai_projects()->project()->get_selected_project_slug();
+        $selected_project_slug = sc_ai_projects()->project()->get_project_slug();
         
         $project_name = "";
         // 判定：有選專案 → 查嗰行攞名
@@ -59,7 +59,7 @@ trait render_chat_sidebar
                 $outputLines[] = "<span class='sc_sidebar__resize_grip' aria-hidden='true'></span>";
             $outputLines[] = "</div>";
             // 欄底 status bar（sc_ai_status_bar plugin 產生——chat region；嵌喺 panel 內，唔係 fixed footer）
-            $outputLines[] = sc_ai_status_bar()->status_bar()->render_region("chat");
+            $outputLines[] = sc_ai_status_bar()->status_bar()->render_chat_region();
         $outputLines[] = "</aside>";
         
         return implode("\r\n", $outputLines);

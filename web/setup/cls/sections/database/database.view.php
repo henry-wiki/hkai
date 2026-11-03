@@ -47,7 +47,7 @@ trait database_view
             $section_intro_text = setup()->i18n()->get("section.database.intro");
 
             $section_lines[] = "<p class='check_intro'>" . $section_intro_text . "</p>";
-            
+
             // 逐項出殼（init 態——唔跑檢查；交前端逐項查、換真卡）
             $check_item_codes = array_keys($database_section->check_items);
             

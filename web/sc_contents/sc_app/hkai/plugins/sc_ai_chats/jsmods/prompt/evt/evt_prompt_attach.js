@@ -3,6 +3,8 @@
 // 檔名＝DevTools Event Listeners 面板顯示嘅字（一檔一事——一眼知位置）
 // 範圍：只做 UI chips（選檔／貼上／拖放／移除）；上傳與送模型屬下一部分
 
+import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
+
 // fallback 設定（實際值由 .sc_composer__attachments data-* 覆寫——後端 sc_config hkai.draft）
 const DEFAULT_MAX_IMAGES                = 13;
 const DEFAULT_MAX_SOURCE_SIDE_PX        = 12800;
@@ -294,18 +296,18 @@ class _evt_prompt_attach {
             xhr.open("POST", "/request/hkai/upload_draft_attachment/");
             xhr.setRequestHeader("X-CSRF-Token", csrf_token);
 
-            console.log("[upload_draft_attachment] start | name=" + attachment.name + " | size=" + attachment.file.size + "B | chat_sid=" + chat_sid);
+            sc_console("prompt", "attach").log("start | name=" + attachment.name + " | size=" + attachment.file.size + "B | chat_sid=" + chat_sid);
 
             // 狀態：上傳開始
             xhr.upload.onloadstart = function () {
-                console.log("[upload_draft_attachment] 0.00% | uploaded=0B | total=" + attachment.file.size + "B");
+                sc_console("prompt", "attach").log("0.00% | uploaded=0B | total=" + attachment.file.size + "B");
             };
 
             // 進度（真百分比——記入 attachment；畫面交 chip CSS）
             xhr.upload.onprogress = function (event) {
                 // 判定：長度未知 → 唔記
                 if (event.lengthComputable === false) {
-                    console.log("[upload_draft_attachment] progress (length unknown) | loaded=" + event.loaded + "B");
+                    sc_console("prompt", "attach").log("progress (length unknown) | loaded=" + event.loaded + "B");
 
                     return;
                 }
@@ -314,12 +316,12 @@ class _evt_prompt_attach {
 
                 const progress_percent = (attachment.progress * 100).toFixed(2);
 
-                console.log("[upload_draft_attachment] " + progress_percent + "% | uploaded=" + event.loaded + "B | total=" + event.total + "B");
+                sc_console("prompt", "attach").log(progress_percent + "% | uploaded=" + event.loaded + "B | total=" + event.total + "B");
             };
 
             // 狀態：位元組已送完（等伺服器回應）
             xhr.upload.onload = function () {
-                console.log("[upload_draft_attachment] 100.00% | uploaded all bytes | waiting server response");
+                sc_console("prompt", "attach").log("100.00% | uploaded all bytes | waiting server response");
             };
 
             xhr.onload = function () {
@@ -333,7 +335,7 @@ class _evt_prompt_attach {
                     result = null;
                 }
 
-                console.log("[upload_draft_attachment] response | http=" + xhr.status + " | ok=" + (result !== null && result.ok === true) + " | body=" + xhr.responseText);
+                sc_console("prompt", "attach").log("response | http=" + xhr.status + " | ok=" + (result !== null && result.ok === true) + " | body=" + xhr.responseText);
 
                 // 判定：HTTP 非 200／冇結果／ok 唔係 true → 失敗
                 if (xhr.status !== 200 || result === null || result.ok !== true) {
@@ -346,13 +348,13 @@ class _evt_prompt_attach {
             };
 
             xhr.onerror = function () {
-                console.log("[upload_draft_attachment] error | network failure | name=" + attachment.name);
+                sc_console("prompt", "attach").log("error | network failure | name=" + attachment.name);
 
                 resolve(null);
             };
 
             xhr.ontimeout = function () {
-                console.log("[upload_draft_attachment] timeout | name=" + attachment.name);
+                sc_console("prompt", "attach").log("timeout | name=" + attachment.name);
 
                 resolve(null);
             };

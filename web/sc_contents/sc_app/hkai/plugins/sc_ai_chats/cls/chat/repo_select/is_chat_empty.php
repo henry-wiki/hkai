@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\repo_select;
 
 // == sc_ai_chats chat is_chat_empty：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 message/action.php 分獨立檔；2026-09-27 歸 chat 域（讀 chats 表 chat_message_count） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/message/action/ 分獨立檔；2026-09-27 歸 chat 域（讀 chats 表 chat_message_count） ==
 
 trait is_chat_empty
 {

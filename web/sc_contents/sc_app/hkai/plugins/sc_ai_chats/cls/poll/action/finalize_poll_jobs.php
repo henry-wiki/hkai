@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\poll\action;
 
 // == sc_ai_chats poll finalize_poll_jobs：poll 域動作（trait——掛入 poll_Class；檔＝動作） ==
-// == 2026-09-27 自 poll/action.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_chats/cls/poll/action/ 分獨立檔（one file one function） ==
 
 trait finalize_poll_jobs
 {

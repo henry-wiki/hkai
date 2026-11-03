@@ -39,6 +39,18 @@ sc_set_configs([
         "root_dir"      => SC_WEB_ROOT . "/sc_storage",
         "app_dir"       => dirname(SC_WEB_ROOT) . "/data",
         "database_file" => dirname(SC_WEB_ROOT) . "/data/localdb/hkai_chat_data.sqlite",
+        // 目前資料庫版本（dbv-1.2——只遞增；@ 檔 DB.VERSION 最後一行同步）
+        "database_schema_version" => "1.1",
+        // 舊庫基準版本（無 DB.VERSION 的 0.1.0 安裝）
+        "database_version_base"   => "1.0",
+        // 版本記錄檔（每行一個版本；最後一行＝目前版本）
+        "database_version_file"   => dirname(SC_WEB_ROOT) . "/DB.VERSION",
+        // 最新完整 schema 檔（新裝用；結構簽名亦以此檔計）
+        "schema_file"             => SC_WEB_ROOT . "/setup/assets/database_schema.sql.php",
+        // 搬遷偵測表目錄（每版本一個 *_detect.php——跟程式發佈，入 build）
+        "detections_dir"          => SC_WEB_ROOT . "/setup/assets/detections",
+        // migration 目錄（逐級升級腳本——跟程式發佈，入 build）
+        "migrations_dir"          => SC_WEB_ROOT . "/setup/assets/migrations",
     ],
     "app"             => [
         "sc_contents_dir" => SC_WEB_ROOT . "/sc_contents",

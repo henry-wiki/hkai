@@ -69,7 +69,12 @@ class install_Class
 
             // 逐個項（項名＝單元 accessor 名——直呼單元；行值＝單元自決）
             foreach ($section_check_item_codes as $section_check_item_code_item) {
-                $install_steps[] = $this->build_install_step($section_id, $section_check_item_code_item);
+                $install_step = $this->build_install_step($section_id, $section_check_item_code_item);
+
+                // 判定：冇對應安裝單元（例 welcome 的 source_mode／source_dir）→ 跳
+                if ($install_step !== null) {
+                    $install_steps[] = $install_step;
+                }
             }
         }
 
@@ -77,7 +82,12 @@ class install_Class
         if (!array_key_exists("database", $process_sections)) {
             // 逐個必需項（照出）
             foreach ($database_check_item_codes as $database_check_item_code_item) {
-                $install_steps[] = $this->build_install_step("database", $database_check_item_code_item);
+                $install_step = $this->build_install_step("database", $database_check_item_code_item);
+
+                // 判定：有單元 → 入列
+                if ($install_step !== null) {
+                    $install_steps[] = $install_step;
+                }
             }
         }
 
@@ -93,7 +103,13 @@ class install_Class
     // 砌安裝步（格＋項名 → 單元自決行資料——標題／行值；頭尾步／記錄項／必需步共用同一形）
     private function build_install_step($install_section_id, $install_check_item_code)
     {
-        $unit_instance  = setup()->sections()->get_section_unit_instance($install_section_id, $install_check_item_code);
+        $unit_instance = setup()->sections()->get_section_unit_instance($install_section_id, $install_check_item_code);
+
+        // 判定：冇對應單元 → null（呼叫端跳）
+        if ($unit_instance === null) {
+            return null;
+        }
+
         $unit_step_data = $unit_instance->get_install_step_data();
 
         return [

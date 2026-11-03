@@ -15,7 +15,6 @@ class draft_Class
     use action\draft_create;
     use action\fetch;
     use action\discard;
-    use meta\set_draft_meta__is_new_chat;
     use action\save_meta;
     use action\finalize_draft;
     use guard\get_prompt_required_fields;
@@ -94,20 +93,6 @@ class draft_Class
         }
 
         return $draft_files;
-    }
-
-    // 標記草稿狀態（submitted／discarded——meta 存在才寫）
-    public function set_draft_meta_status($project_slug, $chat_sid, $status)
-    {
-        $meta_data = $this->get_draft_meta($project_slug, $chat_sid);
-
-        // 判定：冇 meta → 唔動作
-        if (count($meta_data) < 1) {
-            return false;
-        }
-
-        // 交 update_meta（唯一寫入路徑——連鎖）
-        return $this->set_draft_meta($project_slug, $chat_sid, ["status" => $status]);
     }
 
 

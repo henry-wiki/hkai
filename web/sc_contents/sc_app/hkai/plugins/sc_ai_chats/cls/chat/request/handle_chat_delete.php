@@ -55,8 +55,6 @@ trait handle_chat_delete
         // 對話列硬刪（＋殘留 messages／message_response 列——同一事務）
         sc_ai_chats()->chat()->delete_db_chat($chat_id);
 
-        sc_ai_health()->stream()->mark_target_updated("chat");
-
         // 前端導向目標：同專案最新的對話（沒有其他對話 → 空字串＝回專案根）
         $next_chat_sid = sc_ai_chats()->chat()->get_latest_chat_sid($chat_row["project_id"]);
 

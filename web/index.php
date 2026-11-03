@@ -1,7 +1,7 @@
 <?php
 
 // == 站點入口：setup 端點（/setup_request/）或未有完成標記 → 直入 setup.php（精靈端點完成後仍要——完成頁導覽靠佢）
-// == 完成標記：setup/state/setup_done.json（setup 寫·永久保留）
+// == 完成標記：web/setup/state/setup_done.jsonon（setup 寫·永久保留）
 // == 完成之後：正式入口——建立應用（容器）＋請求鏈（front controller——dev 同款）
 // == 出口把關：全程輸出收喺 ob——離場前驗：JSON 回應而輸出唔合法 → 標 500（raw 照出——對齊 Laravel 語義）
 

@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\view;
 
 // == sc_ai_chats message get_user_prompt：message 域動作（trait——掛入 view_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/view.php 分獨立檔；2026-09-27 歸 message 域（訊息渲染） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔；2026-09-27 歸 message 域（訊息渲染） ==
 
 trait get_user_prompt
 {

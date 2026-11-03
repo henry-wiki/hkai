@@ -14,14 +14,8 @@ class _evt_prompt_input {
             .on("input.sc_ai_chats_prompt_input change.sc_ai_chats_prompt_input", "#sc_input", this.prompt_input.bind(this));
     }
 
-    // 輸入事件（主按鈕兩態交 prompt 域 prompt_send_button_toggle()；打字／停止／發送後對賬都經呢度）
+    // 輸入事件（主按鈕兩態已交 prompt_state_observer 監 input——本檔唔再判斷）
     async prompt_input() {
-        // 主按鈕兩態刷新（單一決策者＝prompt 域 prompt_send_button_toggle——本檔唔自己判）
-        // 橋接駁（同域 act——新方式）
-        const prompt_instance = await registry().sc_ai_chats().prompt();
-        const prompt_send_button_toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
-
-        prompt_send_button_toggle_instance.prompt_send_button_toggle();
     }
 }
 

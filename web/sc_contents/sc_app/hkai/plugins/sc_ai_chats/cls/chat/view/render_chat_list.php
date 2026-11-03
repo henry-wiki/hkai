@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\view;
 
 // == sc_ai_chats chat render_chat_list：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-27 自 chat/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait render_chat_list
 {
@@ -30,7 +30,7 @@ trait render_chat_list
 
         $chat_rows = [];
         if ($project_row !== null) {
-            $chat_rows = sc_ai_chats()->chat()->get_chat_rows($project_row["project_id"]);
+            $chat_rows = sc_ai_chats()->chat()->get_all_chat_rows($project_row["project_id"]);
         }
         
         $chat_rows = sc_html_encode($chat_rows);

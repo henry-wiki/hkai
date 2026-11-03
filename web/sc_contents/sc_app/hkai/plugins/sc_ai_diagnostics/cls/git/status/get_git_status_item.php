@@ -11,7 +11,7 @@ trait get_git_status_item
     // 文字槽 sc-text：首屏放佔位「—」（同 model 一樣），由 status bar init 的 refresh_git_item() 填真值
     public function get_git_status_item()
     {
-        $project_slug = sc_ai_projects()->project()->get_selected_project_slug();
+        $project_slug = sc_ai_projects()->project()->get_project_slug();
         $project_row  = sc_ai_projects()->project()->get_project_row($project_slug);
         
         // 無選取專案 → 不顯示

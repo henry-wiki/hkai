@@ -1,9 +1,9 @@
 // jsmods/registry.js —— 跨目錄共用模組註冊表（typed bridging——動態載入）
-// 寫法同 sc_ai_health.js：class + 單例（registry() 回傳單例）
+// 寫法：class + 單例（registry() 回傳單例）
 // 契約：registry().{模組名}() 回傳該模組單例——動態 accessor 皆 async（呼叫端要 await）；靜態 accessor 直回（await 照通）
 // 用途：跨 dir／js 取用其他模組（例：sc_ai_providers → sc_ai_chats）
 // 載入：動態模組＝await import()、靜態批＝頂層 import（一律 literal path——編輯器照樣解析型別、F12 可跳）
-// 例外（靜態——開機即需）：sc_loading／sc_modal／sc_i18n／shared／sc_ai_projects／sc_ai_chats／sc_ai_status_bar／sc_ai_health／sc_stream／sc_presence（accessor 直回、唔使 await）
+// 例外（靜態——開機即需）：sc_loading／sc_modal／sc_i18n／shared／sc_ai_projects／sc_ai_chats／sc_ai_status_bar／sc_state_stream／sc_stream／sc_presence／sc_console（accessor 直回、唔使 await）
 // 次序：靜態載入嘅放最上、動態載入嘅放下面（新加嘅照跟）
 // 結構：class 單例 + export default factory（本檔由 bootstrap／各模組靜態 import——保持 default）
 
@@ -14,9 +14,11 @@ import { shared }     from "../../shared/jsmods/shared.js";
 import { sc_ai_projects } from "../plugins/sc_ai_projects/jsmods/sc_ai_projects.js";
 import { sc_ai_chats }    from "../plugins/sc_ai_chats/jsmods/sc_ai_chats.js";
 import { sc_ai_status_bar } from "../plugins/sc_ai_status_bar/jsmods/sc_ai_status_bar.js";
-import { sc_ai_health } from "../plugins/sc_ai_health/jsmods/sc_ai_health.js";
+import { sc_state_stream } from "../plugins/sc_stream/jsmods/sc_state_stream.js";
 import { sc_stream }     from "./sc_stream/sc_stream.js";
 import { sc_presence }   from "./sc_stream/presence/presence.js";
+import { sc_state_watch }   from "./sc_state_watch/sc_state_watch.js";
+import { sc_console }       from "./sc_console/sc_console.js";
 
 class _registry {
     constructor() {
@@ -57,9 +59,9 @@ class _registry {
         return sc_ai_status_bar();
     }
 
-    // sc_ai_health（靜態——開機即需）
-    sc_ai_health() {
-        return sc_ai_health();
+    // sc_state_stream（靜態——狀態事件套用層）
+    sc_state_stream() {
+        return sc_state_stream();
     }
 
     // sc_stream（靜態——SSE 連線總管；開機即需）
@@ -70,6 +72,16 @@ class _registry {
     // sc_presence（靜態——頁面在線 SSE；開機即需）
     sc_presence() {
         return sc_presence();
+    }
+
+    // sc_state_watch（靜態——狀態看守：值一變即套效果；開機即需）
+    sc_state_watch() {
+        return sc_state_watch();
+    }
+
+    // sc_console（靜態——全站 console 統一入口；可帶 scope：registry().sc_console("a", "b").log(...)）
+    sc_console() {
+        return sc_console.apply(null, arguments);
     }
 
     // sc_topnav（動態載入——用先載）

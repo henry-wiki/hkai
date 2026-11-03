@@ -1,0 +1,41 @@
+# =====================================================================================
+# == sc-hkai 站根 .htaccess——Apache 服務用（lab 247x／build）
+# == 對外文件根＝站根；URL 起點＝站根（/web/…＝實體檔；其餘＝app 路由）
+# == 職責：補回 php -S 側 sites_router.php 嘅兩件事——
+# ==   一、安全防護（隱藏段／原始碼 .php／非公開資源——默認拒絕·三條通用規則）
+# ==   二、Front Controller 重寫（非實體檔一律交 web/index.php 分派）
+# =====================================================================================
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# ============================================================
+# 一、安全防護（403——通用規則·唔披露任何內部結構）
+# ============================================================
+
+# ① 隱藏段（任何以點開頭嘅段——一律擋）
+RewriteRule (^|/)\. - [F]
+
+# ② 入口放行（下面三支除外：任何 .php 一律唔准直讀——原始碼唔外洩）
+RewriteRule ^index\.php$ - [L]
+RewriteRule ^web/index\.php$ - [L]
+RewriteRule ^web/setup\.php$ - [L]
+RewriteRule \.php$ - [F]
+
+# ③ 公開資源白名單（樣式／腳本／圖／字型）；其餘實體檔一律 403
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} !\.(css|js|mjs|png|jpe?g|gif|svg|ico|webp|avif|woff2?|ttf|eot|map)$ [NC]
+RewriteRule ^ - [F]
+
+# ============================================================
+# 二、Front Controller 重寫（非實體檔 → web/index.php·URI 原樣交分派）
+# ============================================================
+
+# 存在嘅檔案／目錄直接服務（資源一類——唔重寫）
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# 其餘請求一律交 web/index.php（kernel 分派）
+RewriteRule ^ web/index.php [L]
+</IfModule>

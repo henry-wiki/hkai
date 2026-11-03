@@ -21,7 +21,6 @@ class tab_general_form_Class
     use view\build_remove_row;
     use view\build_section_heading;
     use view\build_tab_general_form_body;
-    use view\build_textarea_row;
 
     private static $instance = null;
 

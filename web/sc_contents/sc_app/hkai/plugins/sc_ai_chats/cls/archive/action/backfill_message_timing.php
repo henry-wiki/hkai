@@ -111,6 +111,15 @@ trait backfill_message_timing
         $message_meta["tokens_sent"]     = $token_sums["sent"];
         $message_meta["tokens_received"] = $token_sums["received"];
         
+        // 本次嘗試起點（恢復重設過 → DB started_at 覆蓋 log 首行——避免把停機時間計入）
+        $message_row = sc_ai_chats()->message()->repo_select()->get_message_row($message_id);
+        $attempt_started_at = (string)(isset($message_row["message_started_at"]) ? $message_row["message_started_at"] : "");
+
+        // 判定：有重設起點 → 覆蓋
+        if ($attempt_started_at !== "") {
+            $started_at = $attempt_started_at;
+        }
+
         // 耗時（秒——首末時間齊備才算）
         $elapsed_sec = 0;
         // 判定：首末時間都有值 → 計算耗時

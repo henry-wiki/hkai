@@ -36,6 +36,9 @@ class _bootstrap {
 
         await topnav.init();
 
+        // 狀態看守（根容器開頁即建＋觀察者啟動——零變化都要有容器）
+        await registry().sc_state_watch().init();
+
         const projects = registry().sc_ai_projects();
 
         await projects.init();
@@ -45,14 +48,13 @@ class _bootstrap {
         await chats.init();
 
         // 連線總管（跨 tab 計數——presence／message stream 開線前要登記）
-        registry().sc_stream().init();
+        await registry().sc_stream().init();
 
         // status bar（事件綁定＋初值同步＋時鐘＋健康更新反應登記；喺 health 之前——首輪就註冊到）
         await registry().sc_ai_status_bar().init();
 
-        // health 心跳（全 plugin init 之後才起——首輪 health 帶得到頁面語境；清單載入由 obs:page_loaded 驅動）
-        await registry().sc_ai_health().init();
-
+        // 狀態線（唯一入口——sc_stream 開；身份由當前頁算）
+        await registry().sc_stream().open_state_stream();
 
         // model selection（模型選擇器 modal——bind 註冊＋modal 暖載；動態 accessor＝兩步式）
         const providers = await registry().sc_ai_providers();

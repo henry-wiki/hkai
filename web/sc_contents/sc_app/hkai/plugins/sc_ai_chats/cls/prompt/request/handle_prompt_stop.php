@@ -67,9 +67,25 @@ trait handle_prompt_stop
             $box_dir = sc_ai_chats()->poll()->get_poll_dir_by_identity($project_slug, $chat_sid, $prompt_id);
         }
 
-        // 判定：紙箱已唔喺 polling（已歸檔／已刪）→ 唔喺運送中，零寫入直接回
+        // 判定：紙箱已唔喺 polling（已歸檔／已刪）→ 唔喺運送中：補終態後回
         if ($box_dir === "" || is_dir($box_dir) === false) {
             hkai()->runtime()->logger()->info("prompt_stop ignored: not in flight | message_id=" . $message_id . " | prompt_id=" . $prompt_id);
+
+            // 判定：DB 仲係非終態 → 由歸檔尾行（冇歸檔＝failed）補回
+            $message_status = (string)($message_row["message_status"] ?? "");
+
+            if (sc_ai_chats()->fsm()->is_terminal_status($message_status) !== true) {
+                $archived_status = sc_ai_chats()->archive()->file()->read_archived_message_status($chat_id, $message_id);
+                $repaired_status = "failed";
+
+                // 判定：歸檔有終態 → 用歸檔嗰個
+                if ($archived_status !== "") {
+                    $repaired_status = $archived_status;
+                }
+
+                sc_ai_chats()->message()->repo_update()->update_db_message_status($message_id, $repaired_status);
+                hkai()->runtime()->logger()->info("prompt_stop repaired: message_id=" . $message_id . " " . $message_status . " -> " . $repaired_status);
+            }
 
             // 判定：route 呼叫 → 200（已成終態，唔當錯）；內部呼叫 → false
             if ($is_request_call) {

@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\fsm;
 
 // == sc_ai_chats fsm\fsm_Class（bridge 檔）：狀態機本體（單一詞彙：status——event → status 解析；落地由 status class 負責） ==
-// == SSOT：web/sc_config/hkai/fsm_map.json → status／event_to_status／transitions ==
+// == SSOT：web/sc_config/hkai/fsm_map.jsonon → status／event_to_status／transitions ==
 // == 動作（cls/fsm/ 各 trait——一檔一動作）：resolve_status_by_event／is_status_event／get_display_state／is_terminal_status ==
 // == 2026-09-27 方法拆入 cls/fsm/（one file one function）；屬性＋constructor 留本體（狀態載入） ==
 

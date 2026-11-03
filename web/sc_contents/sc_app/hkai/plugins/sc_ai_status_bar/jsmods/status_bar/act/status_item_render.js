@@ -1,4 +1,4 @@
-// jsmods/callback/status_item_render.js —— status item 渲染讀寫（callback 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/act/status_item_render.js —— status item 渲染讀寫（callback 層——一檔一事）
 // 職責：status_item_render（item 取得／文字／顏色／隱藏／tooltip／狀態鍵套用——DOM 寫入單一 writer）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

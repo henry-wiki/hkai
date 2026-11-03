@@ -17,9 +17,23 @@ trait fetch
         $chat_sid     = trim((string)($input_data["chat_sid"] ?? ""));
         $project_slug = trim((string)($input_data["project_slug"] ?? ""));
 
+        $draft_result = $this->build_draft_result($project_slug, $chat_sid);
+
+        // 判定：驗證失敗 → 400
+        if (($draft_result["ok"] ?? false) === false) {
+            return sc_response()->json($draft_result, 400);
+        }
+
+        return sc_response()->json($draft_result);
+    }
+
+    // 組草稿結果（回 array——draft_fetch 與 health prompt 監視共用）
+    public function build_draft_result($project_slug, $chat_sid)
+    {
+
         // 判定：目錄 key 格式唔合 → 400（防路徑穿越）
         if (!sc_ai_chats()->chat()->is_valid_chat_sid($chat_sid)) {
-            return sc_response()->json(["ok" => false, "error" => "invalid chat_sid"], 400);
+            return ["ok" => false, "error" => "invalid chat_sid"];
         }
 
         // 專案列（空／無效 slug → fallback Home）
@@ -32,7 +46,7 @@ trait fetch
 
         // 判定：連 Home 都冇 → 嚴重錯
         if ($project_row === null) {
-            return sc_response()->json(["ok" => false, "error" => "home project not found"], 500);
+            return ["ok" => false, "error" => "home project not found"];
         }
 
         $project_slug = (string)$project_row["project_slug"];
@@ -40,14 +54,15 @@ trait fetch
 
         // 判定：冇 meta → 200 空結果（無草稿係常態——前端靜默，唔當錯）
         if (count($meta_data) < 1) {
-            return sc_response()->json([
-                "ok"           => true,
-                "prompt_id"    => "",
-                "chat_sid"  => $chat_sid,
-                "project_slug" => $project_slug,
-                "meta"         => [],
-                "attachments"  => [],
-            ]);
+            $empty_result = [];
+            $empty_result["ok"]           = true;
+            $empty_result["prompt_id"]    = "";
+            $empty_result["chat_sid"]     = $chat_sid;
+            $empty_result["project_slug"] = $project_slug;
+            $empty_result["meta"]         = [];
+            $empty_result["attachments"]  = [];
+
+            return $empty_result;
         }
 
         // 清單以附件 json 為真相 → 重建（有 meta 才做，避免讀取層建草稿）
@@ -96,13 +111,14 @@ trait fetch
             $meta_data["chat_mode"] = sc_ai_chats()->chat_option()->get_chat_mode((string)$meta_data["chat_mode"]);
         }
 
-        return sc_response()->json([
-            "ok"           => true,
-            "prompt_id"    => $meta_data["prompt_id"] ?? "",
-            "chat_sid"  => $chat_sid,
-            "project_slug" => $project_slug,
-            "meta"         => $meta_data,
-            "attachments"  => $attachment_list,
-        ]);
+        $draft_result = [];
+        $draft_result["ok"]           = true;
+        $draft_result["prompt_id"]    = $meta_data["prompt_id"] ?? "";
+        $draft_result["chat_sid"]     = $chat_sid;
+        $draft_result["project_slug"] = $project_slug;
+        $draft_result["meta"]         = $meta_data;
+        $draft_result["attachments"]  = $attachment_list;
+
+        return $draft_result;
     }
 }

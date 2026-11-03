@@ -58,6 +58,18 @@ class welcome_Class
             $state_value["value"] = $value;
         }
 
+        // 判定：安裝模式（全新／升級搬遷）→ 原樣記入
+        if($check_item_code === "source_mode")
+        {
+            $state_value["value"] = $value;
+        }
+
+        // 判定：舊安裝資料夾 → 原樣記入
+        if($check_item_code === "source_dir")
+        {
+            $state_value["value"] = $value;
+        }
+
         return $state_value;
     }
 

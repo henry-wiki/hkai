@@ -1,5 +1,5 @@
 // jsmods/model_selector/model_selector.js —— model_selector 域（唯一入口——出入口掛喺 prototype）
-// 用途：import { model_selector } from "./model_selector.js" 拎單例——model_selector().evt()／act()／req().<動作>() 咁叫（F12 逐條跳得到）
+// 用途：import { model_selector } from "web/sc_contents/sc_app/hkai/plugins/sc_ai_providers/jsmods/model_selector/model_selector.js" 拎單例——model_selector().evt()／act()／req().<動作>() 咁叫（F12 逐條跳得到）
 // 契約：動作表住本檔尾（bridge class——act／evt／req 全部接喺度；每條自載）
 
 class _model_selector {

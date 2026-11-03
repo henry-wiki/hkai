@@ -1,4 +1,4 @@
-// jsmods/action/modal_nav.js —— settings modal 左側選單（nav）動作（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/modal/act/modal_nav.js —— settings modal 左側選單（nav）動作（action 層——一 action 一檔）
 // 職責：modal_nav（切頁請求／active 切換／搜尋過濾／父項開合——事件綁定在 bind/ 各檔）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

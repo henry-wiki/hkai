@@ -4,7 +4,7 @@ namespace sc\app\hkai\cls\i18n;
 
 // == i18n_Class：hkai app 層 i18n（singleton——經 bridging hkai()->i18n() 取得） ==
 // == 字典檔：cls/i18n/lang/{lang_code}.json（flat dot-key——PHP 與 JS 共用同一份檔） ==
-// == 語系碼：讀設定（hkai()->settings()——出廠默認＋data/settings.json 覆蓋）；未設定 → 預設 zh-HK ==
+// == 語系碼：讀設定（hkai()->settings()——出廠默認＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon 覆蓋）；未設定 → 預設 zh-HK ==
 
 class i18n_Class
 {
@@ -25,7 +25,7 @@ class i18n_Class
     public function __construct()
     {}
     
-    // 目前語系碼（hkai()->settings()——出廠默認＋data/settings.json 覆蓋；語言 SSOT＝general 組嘅 language）
+    // 目前語系碼（hkai()->settings()——出廠默認＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon 覆蓋；語言 SSOT＝general 組嘅 language）
     public function get_lang_code()
     {
         $lang_code = hkai()->settings()->get("general.language", "zh-HK");

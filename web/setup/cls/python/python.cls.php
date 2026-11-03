@@ -3,7 +3,7 @@
 namespace sc\setup\python;
 
 // == HKAI setup python：python 域本體（域本體——singleton；呼叫形 setup()->python()->detect_python_command()）
-// == 內容：class（singleton）＋全部 Python 相關操作——執行命令偵測／執行檔測試／版本讀取／pip 探測／套件探測／aider 套件位置
+// == 內容：class（singleton）＋全部 Python 相關操作——執行命令偵測／執行檔測試／版本讀取／pip 探測／套件探測
 // == 規格：零框架（唔用 autoloader／session／DB——只用 PHP 內建 exec）；語法下限 PHP 5.4
 
 class python_Class
@@ -182,43 +182,4 @@ class python_Class
         return ["ok" => false, "status" => "fail", "hint" => "pip install fastapi uvicorn psutil", "detail" => setup()->i18n()->get("check.python_packages.detail_missing_prefix") . $error_line, "reading" => ""];
     }
 
-    // 搵本機 aider 套件位置（先 externals〔發佈版標準位〕、後 python import 位置；搵唔到回空字串）
-    public function find_aider_pylibs_dir()
-    {
-        $aider_found = "";
-
-        $aider_externals_path = sc_get_config("externals.aider");
-
-        // 判定：externals 有 → 攞（發佈版標準位）
-        if (is_dir($aider_externals_path)) {
-            $aider_found = $aider_externals_path;
-        }
-
-        // 判定：externals 冇 → 問 python（import aider 嘅實際位置）
-        if ($aider_found === "") {
-            $python_command = $this->detect_python_command();
-
-            // 判定：有 python → 試匯入
-            if ($python_command !== "") {
-                $import_lines = [];
-                $import_code  = null;
-
-                @exec($python_command . " -c \"import aider, os; print(os.path.dirname(os.path.dirname(aider.__file__)))\" 2>&1", $import_lines, $import_code);
-
-                // 判定：匯入成功 → 睇輸出
-                if ($import_code === 0) {
-                    // 判定：有輸出 → 取尾行（print 輸出——警告可能喺前面）
-                    if (count($import_lines) > 0) {
-                        $last_import_index = count($import_lines) - 1;
-                        $aider_found       = trim($import_lines[$last_import_index]);
-                    }
-                }
-            }
-        }
-
-        // 顯示用：斜線統一（全 /）
-        $aider_found = str_replace("\\", "/", $aider_found);
-
-        return $aider_found;
-    }
 }

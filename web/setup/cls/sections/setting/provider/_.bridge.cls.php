@@ -4,7 +4,7 @@ namespace sc\setup\sections\setting\provider;
 
 // == HKAI setup setting provider _.bridge.cls.php：provider 域本體（系統指定橋檔——單元載單）
 // == 用法：setting_provider_Class::getInstance()->openrouter()——直取檢查單元
-// == 一項一檔：provider__openrouter／provider__kilocode（檔名＝class 前綴）
+// == 一項一檔：provider__openrouter／provider__deepseek／provider__kilocode（檔名＝class 前綴）
 // == 載入：setting/setting.php require 鏈（本程式無 autoloader——顯式載入、零註冊）
 
 class setting_provider_Class
@@ -39,6 +39,18 @@ class setting_provider_Class
         require_once __DIR__ . "/provider__openrouter.php";
 
         return \sc\setup\sections\setting\provider__openrouter_Class::getInstance();
+    }
+
+    /**
+     * DeepSeek API key（provider 單元——單例·按需 require 單元檔）
+     *
+     * @return \sc\setup\sections\setting\provider__deepseek_Class
+     */
+    public function deepseek()
+    {
+        require_once __DIR__ . "/provider__deepseek.php";
+
+        return \sc\setup\sections\setting\provider__deepseek_Class::getInstance();
     }
 
     /**

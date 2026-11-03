@@ -1,4 +1,4 @@
-// jsmods/action/server.js —— Server 設定分頁（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/cls/process/server/server.php —— Server 設定分頁（action 層——一 action 一檔）
 // 職責：server（fetch 分頁內容＋test／start／restart／stop 表單流程＋狀態 icon／按鈕 loading／動作後重載）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

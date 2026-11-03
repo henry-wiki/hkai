@@ -49,6 +49,9 @@ class sections_Class
             "prerequisite" => [
                 "name"  => ["zh-HK" => "前置檢查", "en-US" => "Prerequisites"],
             ],
+            "upgrade_review" => [
+                "name"  => ["zh-HK" => "升級覆核", "en-US" => "Upgrade Review"],
+            ],
             "database" => [
                 "name"  => ["zh-HK" => "資料庫", "en-US" => "Database"],
             ],
@@ -64,10 +67,24 @@ class sections_Class
         ];
     }
 
-    // 攞註冊表（六格：id => 名）
+    // 攞註冊表（按安裝模式過濾——全新安裝見 Database；搬遷見 Upgrade Review）
     public function get_sections()
     {
-        return $this->sections;
+        $visible_sections = $this->sections;
+
+        $source_mode = setup()->state()->get_setting_setup_process("welcome", "source_mode");
+
+        // 判定：搬遷模式 → 冇 Database（資料庫來自舊安裝）
+        if ($source_mode === "import") {
+            unset($visible_sections["database"]);
+        }
+
+        // 判定：非搬遷模式 → 冇 Upgrade Review
+        if ($source_mode !== "import") {
+            unset($visible_sections["upgrade_review"]);
+        }
+
+        return $visible_sections;
     }
 
     // 攞合法格 id（唔合法／唔存在 → 第一格——唯一裁決位）
@@ -78,9 +95,11 @@ class sections_Class
             $section_id = "";
         }
 
-        // 判定：唔喺註冊表（含空） → 用第一格
-        if (!array_key_exists($section_id, $this->sections)) {
-            $section_ids = array_keys($this->sections);
+        // 判定：唔喺可見清單（含空／本模式隱藏） → 用第一格
+        $visible_sections = $this->get_sections();
+
+        if (!array_key_exists($section_id, $visible_sections)) {
+            $section_ids = array_keys($visible_sections);
             $section_id  = $section_ids[0];
         }
 
@@ -113,6 +132,19 @@ class sections_Class
         require_once __DIR__ . "/prerequisite/_.internal.func.php";
 
         return prerequisite\prerequisite_Class::getInstance();
+    }
+
+    /**
+     * upgrade_review 格單元（單例——按需 require 單元檔）
+     *
+     * @return \sc\setup\sections\upgrade_review_Class
+     */
+    public function upgrade_review()
+    {
+        // 載入 upgrade_review 格本體（view trait 隨本體載入）
+        require_once __DIR__ . "/upgrade_review/upgrade_review.php";
+
+        return upgrade_review_Class::getInstance();
     }
 
     /**
@@ -180,7 +212,7 @@ class sections_Class
      */
     public function get_section_nav($section_id)
     {
-        $section_ids = array_keys($this->sections);
+        $section_ids = array_keys($this->get_sections());
 
         $section_index = array_search($section_id, $section_ids);
 
@@ -315,9 +347,6 @@ class sections_Class
             elseif ($check_item_code === "environment__goose_executable") {
                 return prerequisite\executor()->goose_executable();
             }
-            elseif ($check_item_code === "environment__aider_pylibs_dir") {
-                return prerequisite\executor()->aider_pylibs_dir();
-            }
             elseif ($check_item_code === "environment__env_writable") {
                 return prerequisite\permission()->env_writable();
             }
@@ -351,6 +380,9 @@ class sections_Class
             }
             elseif ($check_item_code === "key_settings__openrouter") {
                 return setting\provider()->openrouter();
+            }
+            elseif ($check_item_code === "key_settings__deepseek") {
+                return setting\provider()->deepseek();
             }
             elseif ($check_item_code === "key_settings__kilocode") {
                 return setting\provider()->kilocode();

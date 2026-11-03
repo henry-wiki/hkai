@@ -3,7 +3,7 @@
 namespace sc\setup\sections;
 
 // == HKAI setup sections install view：install 格 view 側（trait——掛入 install_Class；檔＝本格 view 側）
-// == 內容：六個 view 方法＝build_section／build_body／build_footer／build_response_html／render_main_button／render_install_row
+// == 內容：五個 view 方法＝build_section／build_body／build_footer／render_main_button／render_install_row
 // == 載入：install.php require_once（include once）
 
 trait install_view
@@ -93,20 +93,6 @@ trait install_view
         $section_lines[] = "</div>";
 
         return $section_lines;
-    }
-
-    // 出本格回應 HTML（動作後重建——main＝body 行、footer＝底列行；位置本體在此，呼叫端零查找）
-    public function build_response_html()
-    {
-        $install_section = setup()->sections()->install();
-
-        $section_nav = setup()->sections()->get_section_nav("install");
-
-        $response_html = [];
-        $response_html["main"]   = $install_section->build_body();
-        $response_html["footer"] = $install_section->build_footer($section_nav);
-
-        return $response_html;
     }
 
     // 出主掣（未完成＝安裝掣〔動作指令·藍〕；完成標記已寫＝完成掣〔導覽——去⑥完成頁〕）

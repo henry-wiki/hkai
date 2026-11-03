@@ -6,7 +6,7 @@ namespace sc\app\hkai\plugins\sc_ai_settings\general\action;
 
 trait handle_settings_save_general
 {
-    // POST save general settings handler（驗證後寫入 sc_config/hkai/settings.json——general 組）
+    // POST save general settings handler（驗證後寫入 web/sc_contents/sc_app/hkai/cls/settings/settings.phpon——general 組）
     public function handle_settings_save_general()
     {
         $request_data = sc_request()->json();
@@ -21,7 +21,7 @@ trait handle_settings_save_general
             return sc_response()->json(["ok" => false, "errors" => $errors], 400);
         }
 
-        // 寫入 data/settings.json（只動 general.language）
+        // 寫入 web/sc_contents/sc_app/hkai/cls/settings/settings.phpon（只動 general.language）
         hkai()->settings()->set("general.language", $language);
 
         return sc_response()->json(["ok" => true]);

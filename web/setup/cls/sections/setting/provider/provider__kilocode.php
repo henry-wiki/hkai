@@ -28,7 +28,9 @@ class provider__kilocode_Class
     // 安裝步驟資料（標題／行值——值由本單元自決：解密真值遮罩／未填＝留空字眼）
     public function get_install_step_data()
     {
-        $kilocode_recorded_value = setup()->state()->get_sensitive_setting_setup_process("settings", "key_settings__kilocode");
+        // 有效值（同設定格預填鏈：狀態檔 → staging → 本機 .env）
+        $install_step_check = $this->setup_check();
+        $kilocode_recorded_value = (string)($install_step_check["input"]["value"] ?? "");
 
         $install_step_value = "";
 
@@ -50,6 +52,18 @@ class provider__kilocode_Class
 
         $kilocode_recorded_value = setup()->state()->get_sensitive_setting_setup_process("settings", "key_settings__kilocode");
 
+        $source_dir = setup()->state()->get_setting_setup_process("welcome", "source_dir");
+
+        // 判定：狀態檔未有值 → 用暫存 .env（搬遷複本）預填
+        if ($kilocode_recorded_value === "") {
+            $kilocode_recorded_value = setup()->staging()->get_env_value($source_dir, "KILO_API_KEY");
+        }
+
+        // 判定：暫存仍冇 → 用本機 .env 現值
+        if ($kilocode_recorded_value === "") {
+            $kilocode_recorded_value = sc_env()->get("KILO_API_KEY", "");
+        }
+
         $check_result["input"] = [
             "name"        => "key_settings__kilocode",
             "value"       => $kilocode_recorded_value,
@@ -62,7 +76,9 @@ class provider__kilocode_Class
     // 安裝（用戶打過嘅 key 解密後寫入 .env——缺先加·已有唔覆蓋；未打＝跳過）
     public function setup_install()
     {
-        $kilocode_recorded_value = setup()->state()->get_sensitive_setting_setup_process("settings", "key_settings__kilocode");
+        // 有效值（同畫面顯示一致：狀態檔 → staging → 本機 .env）
+        $install_step_check = $this->setup_check();
+        $kilocode_recorded_value = (string)($install_step_check["input"]["value"] ?? "");
 
         // 判定：未打 → 跳過（選填——唔算失敗）
         if ($kilocode_recorded_value === "") {

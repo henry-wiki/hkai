@@ -2,6 +2,10 @@
 
 /**
  * 進階版 - 支援更多功能
+ *
+ * @param string $url 目標網址
+ * @param array $args 選項（method／get／post／headers／timeout…）
+ * @return mixed 回應內容（或 header 字串）
  */
 function sc_curl_advanced($url, $args = array()) {
     $defaults = array(

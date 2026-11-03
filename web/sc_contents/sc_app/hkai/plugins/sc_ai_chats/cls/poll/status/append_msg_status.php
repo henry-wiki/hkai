@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\poll\status;
 
 // == sc_ai_chats poll append_msg_status：poll 域動作（trait——掛入 poll_Class；檔＝動作） ==
-// == 2026-09-27 自 poll/status.php 分獨立檔（one file one function） ==
+// == 2026-09-27 自 web/sc_contents/sc_console/commands/status.php 分獨立檔（one file one function） ==
 
 trait append_msg_status
 {

@@ -12,7 +12,7 @@ use function sc\app\hkai\plugins\sc_ai_projects\modal\tab_rule_view;
 use function sc\app\hkai\plugins\sc_ai_projects\modal\tabs;
 
 // == sc_ai_projects modal fetch_project_form：modal 域動作（trait——掛入 modal_Class；檔＝動作） ==
-// == 2026-09-27 自 modal/view.php 分遷入（one file one action） ==
+// == 2026-09-27 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分遷入（one file one action） ==
 
 trait fetch_project_form
 {

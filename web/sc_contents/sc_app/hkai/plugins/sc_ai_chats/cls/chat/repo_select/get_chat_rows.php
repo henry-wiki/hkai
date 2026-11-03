@@ -26,15 +26,6 @@ trait get_chat_rows
         );
     }
 
-    // 讀取單一對話列（依 chat_sid——只取未歸檔：歸檔對話當唔存在）
-    public function get_normal_chat_row_by_sid($chat_sid)
-    {
-        return sc_db()->connection("sqlite")->selectOne(
-            "SELECT * FROM chats WHERE chat_sid = ? AND chat_status = 'normal'",
-            [$chat_sid]
-        );
-    }
-
     // 讀取對話列（依 project_id——該專案下未歸檔嘅對話；更新時間新到舊＝顯示順序；同時間以 chat_id DESC 決勝）
     public function get_chat_rows($project_id)
     {
@@ -45,14 +36,16 @@ trait get_chat_rows
         return $selectStmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    // 讀取對話列（依 project_id——該專案下已歸檔嘅對話；歸檔清單來源；同排序）
-    public function get_archived_chat_rows($project_id)
+    // 讀取全部對話列（唔分狀態——清單一次過出齊；顯示由 CSS 決定）
+    public function get_all_chat_rows($project_id)
     {
         $pdo = sc_db()->getPdo();
-        $selectStmt = $pdo->prepare("SELECT * FROM chats WHERE project_id = ? AND chat_status = 'archived' ORDER BY chat_updated_at DESC, chat_id DESC");
+        $selectStmt = $pdo->prepare("SELECT * FROM chats WHERE project_id = ? ORDER BY chat_updated_at DESC, chat_id DESC");
         $selectStmt->execute([$project_id]);
 
         return $selectStmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+
+
 
 }

@@ -1,4 +1,4 @@
-// jsmods/bind/nav_section.js —— 選單切頁綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/modal/evt/nav_section.js —— 選單切頁綁定（bind 層——一檔一事）
 // 職責：nav_section（.settings_nav_button 點擊 → 切換 section）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

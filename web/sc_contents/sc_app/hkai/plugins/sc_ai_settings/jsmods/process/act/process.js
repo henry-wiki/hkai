@@ -1,4 +1,4 @@
-// jsmods/action/process.js —— Process Viewer 分頁（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/cls/process/process.php —— Process Viewer 分頁（action 層——一 action 一檔）
 // 職責：process（fetch 分頁內容（後端渲染 HTML——前端只 insert）＋auto-refresh 鏈＋kill_process；狀態 auto_refresh_* 收本檔）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

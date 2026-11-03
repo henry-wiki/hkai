@@ -23,6 +23,56 @@ from ..utils.io import get_tail_content
 from ..utils.timer import timer_class
 
 
+def _read_jsonl_entries(jsonl_path: Path) -> "list[dict[str, object]]":
+    """讀 JSONL → list（空行跳過；每行一個 object）。"""
+    # 判定：未有檔 → 空
+    if jsonl_path.exists() is False:
+        return []
+
+    entry_list: "list[dict[str, object]]" = []
+
+    for jsonl_line in jsonl_path.read_text(encoding="utf-8").splitlines():
+        # 判定：空行 → 跳過
+        if jsonl_line.strip() == "":
+            continue
+
+        entry_list.append(cast("dict[str, object]", json.loads(jsonl_line)))
+
+    return entry_list
+
+
+def _write_jsonl_entries(jsonl_path: Path, entry_list: "list[dict[str, object]]") -> None:
+    """整檔重寫 JSONL（一行一個 object；LF）。"""
+    jsonl_lines: "list[str]" = []
+
+    for entry_item in entry_list:
+        jsonl_lines.append(json.dumps(entry_item, ensure_ascii=False))
+
+    with jsonl_path.open("w", encoding="utf-8", newline="") as output_file:
+        _ = output_file.write("\n".join(jsonl_lines) + "\n")
+
+
+def _parse_poll_file_identity(poll_file_name: str) -> "tuple[str, int, str]":
+    """檔名 → (family, response_index, type)——msg_{family}.{i}.{type}.txt。"""
+    stem = poll_file_name
+
+    # 判定：有 msg_ 前綴 → 去掉
+    if stem.startswith("msg_"):
+        stem = stem[4:]
+
+    # 判定：有 .txt 尾 → 去掉
+    if stem.endswith(".txt"):
+        stem = stem[:-4]
+
+    identity_parts = stem.split(".")
+
+    # 判定：格式唔合（少過 3 段）→ 回空身份
+    if len(identity_parts) < 3:
+        return "", 0, ""
+
+    return identity_parts[0], int(identity_parts[1]), identity_parts[2]
+
+
 class message_log_class:
     """
     message_log 檔的統一寫入/讀取（singleton——整個程序只有一個實例）。
@@ -35,6 +85,8 @@ class message_log_class:
     _stream_log_enabled: bool = True
     # 寫入鎖（callback 由多執行緒觸發——序列化寫入，避免行交錯；可重入——poll 更新整段持鎖再入寫檔）
     _write_lock: "threading.RLock" = threading.RLock()
+    # 當前 agent turn id（session 每輪寫入；entry 建檔時記落去）
+    _current_agent_turn_id: str = ""
 
     def __new__(cls):
         """單例：整個程序只建立一次（無狀態——單例為統一入口）。"""
@@ -230,6 +282,75 @@ class message_log_class:
         self._update_poll_list(summarize_result_path)
 
     #---------------------------------------------------------
+    # 由 session 設定當前 turn id（entry 建檔時記落去）
+    def set_current_agent_turn_id(self, agent_turn_id: str) -> None:
+        self._current_agent_turn_id = str(agent_turn_id)
+
+    #---------------------------------------------------------
+    # 回合表（msg_turn_list.jsonl——Python 獨家寫；每事件整檔重寫）
+    # 1. 一行一回合（key＝agent_turn_id）
+    # 2. 同一輪累加 thinking／result 字數、事件次數、最後時間
+    #---------------------------------------------------------
+
+    # 回合表路徑
+    def _get_turn_list_path(self) -> Path:
+        message_dir = message_store().get_message_dir()
+        return message_context.get_msg_file_path(message_dir, "turn_list")
+
+    # 讀回合表（JSONL → list）
+    def _read_turn_list(self) -> "list[dict[str, object]]":
+        return _read_jsonl_entries(self._get_turn_list_path())
+
+    # 寫回合表（整檔重寫——JSONL；LF）
+    def _write_turn_list(self, turn_list: "list[dict[str, object]]") -> None:
+        with self._write_lock:
+            _write_jsonl_entries(self._get_turn_list_path(), turn_list)
+
+    # 記一次事件（session 每事件叫一次；整檔重寫）
+    def remember_agent_turn(self, agent_turn_id: str, response_index: int, update_kind: str, text_length: int) -> None:
+        with self._write_lock:
+            # 判定：冇 turn id → 唔記
+            if agent_turn_id == "":
+                return
+
+            current_time = timer_class.get_datetime()
+
+            turn_list = self._read_turn_list()
+            turn_entry = None
+
+            # 逐回合：找回本輪
+            for turn_list_entry_item in turn_list:
+                # 判定：同一 turn → 記低
+                if turn_list_entry_item.get("agent_turn_id", "") == agent_turn_id:
+                    turn_entry = turn_list_entry_item
+                    continue
+
+            # 判定：首次見到此輪 → 建條目
+            if turn_entry is None:
+                turn_entry = {
+                    "agent_turn_id":  agent_turn_id,
+                    "response_index": response_index,
+                    "first_seen_at":  current_time,
+                    "last_seen_at":   current_time,
+                    "thinking_chars": 0,
+                    "result_chars":   0,
+                    "event_count":    0,
+                }
+                turn_list.append(turn_entry)
+
+            turn_entry["last_seen_at"] = current_time
+            turn_entry["event_count"] = int(turn_entry["event_count"]) + 1
+
+            # 判定：思考段 → 累加 thinking 字數
+            if update_kind == "thought":
+                turn_entry["thinking_chars"] = int(turn_entry["thinking_chars"]) + text_length
+
+            # 判定：回答段 → 累加 result 字數
+            if update_kind == "text":
+                turn_entry["result_chars"] = int(turn_entry["result_chars"]) + text_length
+
+            self._write_turn_list(turn_list)
+
     # poll 對照表（msg_poll_list.jsonl——Python 獨家寫；PHP 純讀）
     # 1. 路徑：msg_poll_list.jsonl（與 PHP 同一檔名規則）
     # 2. 逐 append 更新：本檔 update 時間＋byte 長（狀態交 msg_status 單一來源）
@@ -244,27 +365,22 @@ class message_log_class:
     # 讀 poll 對照表（逐行解析；舊制行——冇 poll_file——唔收）
     def _read_poll_list(self) -> list[dict[str, object]]:
         poll_list_path = self._get_poll_list_path()
-        if not poll_list_path.exists():
-            return []
-        poll_list: list[dict[str, object]] = []
-        for poll_list_line in poll_list_path.read_text(encoding="utf-8").splitlines():
-            # 判定：空行 → 跳過
-            if poll_list_line.strip() == "":
-                continue
-            poll_list_entry = cast("dict[str, object]", json.loads(poll_list_line))
-            # 判定：舊制行（冇 poll_file——PHP 時代遺留）→ 唔收
+        poll_list: "list[dict[str, object]]" = []
+
+        # 逐行：舊制行（冇 poll_file——PHP 時代遺留）唔收
+        for poll_list_entry in _read_jsonl_entries(poll_list_path):
+            # 判定：冇 poll_file → 跳過
             if "poll_file" not in poll_list_entry:
                 continue
+
             poll_list.append(poll_list_entry)
+
         return poll_list
 
     # 寫 poll 對照表（整檔重寫——JSONL；LF）
     def _write_poll_list(self, poll_list: list[dict[str, object]]) -> None:
-        poll_list_lines: list[str] = []
-        for poll_list_entry in poll_list:
-            poll_list_lines.append(json.dumps(poll_list_entry, ensure_ascii=False))
-        with self._write_lock, self._get_poll_list_path().open("w", encoding="utf-8", newline="") as output_file:
-            _ = output_file.write("\n".join(poll_list_lines) + "\n")
+        with self._write_lock:
+            _write_jsonl_entries(self._get_poll_list_path(), poll_list)
 
     # 對照更新（一檔 append 完）：只更新本檔時間／長度（狀態交 msg_status 單一來源）
     def _update_poll_list(self, poll_file_path: Path) -> None:
@@ -286,24 +402,40 @@ class message_log_class:
                 current_entry = poll_list_entry
                 continue
 
+        family, response_index, response_type = _parse_poll_file_identity(poll_file_path.name)
+
         # 判定：本檔首次出現 → 起 entry（起始時間＝當下）
         if current_entry is None:
             current_entry = {
-                "poll_file":           poll_file_path.name,
-                "poll_status":         "poll",
-                "poll_start_at":       current_time,
-                "poll_update_at":      current_time,
-                "poll_content_length": file_content_length,
+                "family":         family,
+                "response_index": response_index,
+                "type":           response_type,
+                "agent_turn_id":  self._current_agent_turn_id,
+                "poll_file":      poll_file_path.name,
+                "status":         "poll",
+                "start_at":       current_time,
+                "update_at":      current_time,
+                "finished_at":    "",
+                "content_length": file_content_length,
             }
             poll_list.append(current_entry)
 
         # 本檔＝寫緊（poll）——update 時間＋byte 長（每 chunk 同步）
         # 狀態唔重設：新條目已起 poll（上面）；已收（completed／aborted）者唔回退——
         # 收尾後嘅遲到寫入（teardown flush）唔可以打返 poll
-        current_entry["poll_update_at"] = current_time
-        current_entry["poll_content_length"] = file_content_length
+        current_entry["update_at"] = current_time
+        current_entry["content_length"] = file_content_length
+
+        # 判定：有 agent turn id 而條目未有 → 補上
+        if self._current_agent_turn_id != "" and current_entry.get("agent_turn_id", "") == "":
+            current_entry["agent_turn_id"] = self._current_agent_turn_id
 
         self._write_poll_list(poll_list)
+
+    # 關閉指定輪（family=response；仍 poll 嘅 entry → 目標狀態＋完成時間）
+    def close_response_turn(self, response_index: int, poll_status: str) -> None:
+        with self._write_lock:
+            self._close_poll_entries(poll_status, int(response_index))
 
     # 全數 poll 檔收 completed（訊息成功終態）
     def complete_all_poll_files(self) -> None:
@@ -320,16 +452,39 @@ class message_log_class:
 
     # 收尾轉態本體（持鎖內）
     def _close_all_poll_files_locked(self, poll_status: str) -> None:
+        self._close_poll_entries(poll_status, None)
+
+    # 關閉 entry（response_index=None＝全部；只關仍 poll 嘅）
+    def _close_poll_entries(self, poll_status: str, response_index: "int | None") -> None:
         poll_list = self._read_poll_list()
         current_time = timer_class.get_datetime()
 
-        # 逐 entry：poll 中 → 轉目標狀態
+        # 逐 entry：符合條件且仍 poll → 關閉
         for poll_list_entry in poll_list:
-            # 判定：唔係 poll（已收）→ 唔郁
-            if poll_list_entry["poll_status"] != "poll":
+            is_response_family = poll_list_entry.get("family", "") == "response"
+            entry_status = poll_list_entry.get("status", "")
+
+            # 判定：全數收尾 → 舊記錄（冇 status）用 poll_status 補
+            if response_index is None and entry_status == "":
+                entry_status = poll_list_entry.get("poll_status", "")
+
+            # 判定：指定輪次 → 家族／輪次必須相符
+            if response_index is not None:
+                # 判定：唔係 response 家族 → 唔郁
+                if is_response_family is False:
+                    continue
+
+                # 判定：輪次唔同 → 唔郁
+                if int(poll_list_entry.get("response_index", -1)) != response_index:
+                    continue
+
+            # 判定：已收（非 poll）→ 唔郁
+            if entry_status != "poll":
                 continue
-            poll_list_entry["poll_status"] = poll_status
-            poll_list_entry["poll_update_at"] = current_time
+
+            poll_list_entry["status"] = poll_status
+            poll_list_entry["update_at"] = current_time
+            poll_list_entry["finished_at"] = current_time
 
         self._write_poll_list(poll_list)
 

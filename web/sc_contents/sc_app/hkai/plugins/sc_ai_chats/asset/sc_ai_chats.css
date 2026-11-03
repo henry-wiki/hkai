@@ -173,8 +173,8 @@
     background: rgba(143,184,232,0.16);
 }
 
-/* 歸檔清單語境（.sc_chat_list.archive——說明條；class 由 chat_list_fetch act 依後端旗標上） */
-.sc_chat_list.archive .sc_chat_list__explainer {
+/* 歸檔清單語境（.sc_chat_list.archived——說明條；class 由 chat_list_fetch act 依後端旗標上） */
+.sc_chat_list.archived .sc_chat_list__explainer {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -186,15 +186,15 @@
     font-size: 9.5px;
     line-height: 1.4;
 }
-.sc_chat_list.archive .sc_chat_list__explainer i {
+.sc_chat_list.archived .sc_chat_list__explainer i {
     font-size: 9.5px;
 }
 
-/* 歸檔語境 header（.sc_sidebar--chats.archive——kicker 轉琥珀＋頭部淡琥珀底；act 同步上呢個 class；純背景——邊線保持原狀） */
-.sc_sidebar--chats.archive .sc_panel_header__kicker {
+/* 歸檔語境 header（.sc_sidebar--chats.archived——kicker 轉琥珀＋頭部淡琥珀底；act 同步上呢個 class；純背景——邊線保持原狀） */
+.sc_sidebar--chats.archived .sc_panel_header__kicker {
     color: #f0b35e;
 }
-.sc_sidebar--chats.archive .sc_panel_header {
+.sc_sidebar--chats.archived .sc_panel_header {
     background: rgba(240,179,94,0.08);
 }
 
@@ -251,8 +251,20 @@
     color: #ef4444;
 }
 
-/* 歸檔語境整區底（.sc_chat_list.archive——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
-.sc_chat_list.archive {
+/* 歸檔語境整區底（.sc_chat_list.archived——入咗歸檔版面：全區淡琥珀漸層底，一眼知身處歸檔；純背景——唔加邊線） */
+.sc_chat_list.archived {
     background-image: linear-gradient(180deg, rgba(240,179,94,0.09), rgba(240,179,94,0.03));
 }
 
+/* 清單一次過出齊（正常＋歸檔）——顯示由語境 class 決定（data-status 為準） */
+.sc_chat_list .sc_chat_card[data-status='archived'] {
+    display: none;
+}
+
+.sc_chat_list.archived .sc_chat_card[data-status='archived'] {
+    display: flex;
+}
+
+.sc_chat_list.archived .sc_chat_card[data-status='normal'] {
+    display: none;
+}

@@ -1,4 +1,4 @@
-// jsmods/callback/conn_status_item.js —— 連線狀態結果套上 sb_conn（callback 層——一檔一事）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/act/conn_status_item.js —— 連線狀態結果套上 sb_conn（callback 層——一檔一事）
 // 職責：conn_status_item（health 報告 reports.conn（bridge 快查）→ sb_conn 已連線／未連線＋顏色——只此兩態）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

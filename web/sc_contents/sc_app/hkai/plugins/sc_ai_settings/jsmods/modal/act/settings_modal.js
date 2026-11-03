@@ -1,4 +1,4 @@
-// jsmods/action/settings_modal.js —— Settings modal 全流程（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/jsmods/modal/act/settings_modal.js —— Settings modal 全流程（action 層——一 action 一檔）
 // 職責：settings_modal（建 modal → 渲染 → section reload → slots 插入；狀態 j_modal／active_section 單一持有；佈局＝left nav＋right content——section 切換編排在 modal_nav）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

@@ -5,6 +5,8 @@
 //       續航唯一理由＝有嘢做（本輪有任務 或 現行對話有排隊）；皆無 → 停；acquired_responses＝每段已獲取緩衝（全文累積＋mb 字元長度——起 poll 由畫面 attribute 種、每輪由後端帶返；每輪申報，後台據此裁增量）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
+import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
+
 class _message_poll {
     constructor() {
         this.interval = 10000;      // 每輪間隔（毫秒）
@@ -28,6 +30,12 @@ class _message_poll {
 
         // 已補過訊息窗嘅 message_id（另一頁新增訊息——每條只補一次）
         this.refreshed_message_ids = {};
+
+        // 暫停開關（true＝唔啟動輪詢；SSE 接手內容——需要恢復時改 false）
+        this.poll_paused = true;
+
+        // 單次渲染模式（SSE 事件用——跑一輪即停，唔續航）
+        this.render_only = false;
     }
 
     // 啟動（框架 stub——重複防護喺 message_poll() 內 running 旗標）
@@ -72,6 +80,8 @@ class _message_poll {
             }
         }
 
+        sc_console("message", "poll").log("watch_stream working_message_id=", working_message_id);
+
         // 判定：冇工作中訊息 → 關掉殘留連線（唔開串流）
         if (working_message_id === null) {
             await message_stream_instance.stop();
@@ -80,10 +90,8 @@ class _message_poll {
             return false;
         }
 
-        const project_slug = this.get_project_slug_from_url();
-
-        // 開串流（URL／base_url／事件→poll 全部由 message_stream 自理）
-        const stream_started = await message_stream_instance.open(project_slug, working_message_id, 0);
+        // 開串流（identity 由 URL＋卡片 data-prompt_id 取；URL／base_url／事件→poll 全部由 message_stream 自理）
+        const stream_started = await message_stream_instance.open_for_panel(working_message_id, 0);
 
         this.stream_instance = message_stream_instance;
 
@@ -113,18 +121,6 @@ class _message_poll {
             this.poll_once.bind(this, this.poll_chat_sid),
             50,
         );
-    }
-
-    // 由 URL 取 project_slug（/proj-xxx/chat_sid/ 第一段）
-    get_project_slug_from_url() {
-        const path_segments = location.pathname.split("/").filter(function (path_segment) { return path_segment !== ""; });
-
-        // 判定：冇第一段 → 空
-        if (path_segments.length === 0) {
-            return "";
-        }
-
-        return path_segments[0];
     }
 
     // 用時計啟動（每秒 tick——工作緊嘅訊息 counter 遞增；已開 → 唔重開）
@@ -182,7 +178,11 @@ class _message_poll {
             j_response_elapsed.text(thisObject.format_elapsed_sec(now_elapsed_sec));
         });
 
-        // 權限提示倒數（每秒——剩餘秒數；未決定嘅卡先有）
+        this._tick_permission_countdowns();
+    }
+
+    // 權限卡倒數（poll 暫停時仍要行；每秒一次）
+    _tick_permission_countdowns() {
         jQuery(".permission_prompt[data-deadline_ts]").each(function () {
             const j_permission_prompt = jQuery(this);
 
@@ -203,8 +203,34 @@ class _message_poll {
         });
     }
 
+    // 起每秒 ticker（只起一次——poll 暫停期間仍要更新用時／倒數）
+    _start_tick_timer() {
+        // 判定：已起 → 唔重複
+        if (this.tick_timer) {
+            return;
+        }
+
+        const thisObject = this;
+
+        this.tick_timer = setInterval(function () {
+            thisObject.tick_elapsed();
+        }, 1000);
+    }
+
     // 開始輪詢（直接起——入場即傳「要 poll 邊個對話」；每輪再配對當前頁面）
     message_poll(poll_chat_sid) {
+        // 判定：未選對話（sid 空）→ 唔啟動（專案首頁＝正常狀態，非錯誤）
+        if (poll_chat_sid === "") {
+            return this;
+        }
+
+        // 暫停開關（2026-10-31：內容改由 SSE 提供；只暫停、唔刪除——設 false 即恢復）
+        if (this.poll_paused === true) {
+            sc_console("message", "poll").log("已暫停（poll_paused）——唔啟動輪詢");
+
+            return this;
+        }
+
         // 已在輪詢中 → 不重複啟動（guard 只擋外部重複啟動）
         if (this.running) {
             return this;
@@ -217,6 +243,27 @@ class _message_poll {
 
         // 用時計（每秒——工作緊嘅訊息 counter 遞增）
         this.start_elapsed_ticker();
+
+        this.poll_once(poll_chat_sid);
+
+        return this;
+    }
+
+    // 單次渲染（SSE 事件用——跑一輪；唔排下一輪）
+    render_once(poll_chat_sid) {
+        // 判定：未選對話（sid 空）→ 唔渲染（專案首頁＝正常狀態）
+        if (poll_chat_sid === "") {
+            return this;
+        }
+
+        this._start_tick_timer();
+
+        // 判定：已有一輪在途 → 跳過（等下一事件）
+        if (this.polling === true) {
+            return this;
+        }
+
+        this.render_only = true;
 
         this.poll_once(poll_chat_sid);
 
@@ -336,9 +383,8 @@ class _message_poll {
             return;
         }
 
-        // 判定：未選對話（sid 空——唔應該輪詢）→ 記錯即停（唔發請求；後端對空 sid 一律回 400）
+        // 判定：未選對話（sid 空——專案首頁正常狀態）→ 靜默停（唔發請求；後端對空 sid 一律回 400）
         if (poll_chat_sid === "") {
-            console.error("message_poll: chat_sid is empty, poll stopped");
 
             thisObject.polling = false;
             thisObject.stop_poll_message();
@@ -393,6 +439,7 @@ class _message_poll {
 
                 const tasks = result.tasks || [];
 
+                // 卡片狀態（bar／時間）交後端 HTML＋health 換卡——poll 只更新訊息內容
                 // 隊列整排替換（後端渲染 UI——shift 出列即反映；唔逐條剔）
                 // 判定：後端帶完整隊列 UI → 整排 bind（queue_list() 內含空值守衛）
                 if (
@@ -429,11 +476,17 @@ class _message_poll {
                         thisObject.update_response(task);
                     }
 
-                    // 判定：全部任務已終態＋冇排隊 → 收工（唔再等目錄 job）
-                    if (has_working_task === false && queue_count === 0) {
-                        thisObject.stop_poll_message();
+                    // 判定：全部任務已終態 → 睇有冇排隊
+                    if (has_working_task === false) {
+                        // 判定：冇排隊 → 收工（卡片交 health）
+                        if (queue_count === 0) {
+                            thisObject.stop_poll_message();
 
-                        return;
+                            return;
+                        }
+
+                        // 有排隊（前任務已完成）→ 即刻派下一條（唔好乾等 10 秒×N）
+                        queue_dispatch_instance.queue_dispatch(poll_chat_sid);
                     }
                 // 否則＝本輪冇任務 → 睇有冇排隊
                 } else {
@@ -451,6 +504,13 @@ class _message_poll {
                 if (thisObject.poll_pending) {
                     thisObject.poll_pending = false;
                     thisObject.poll_soon();
+
+                    return;
+                }
+
+                // 判定：單次渲染（SSE 驅動）→ 唔排下一輪
+                if (thisObject.render_only === true) {
+                    thisObject.render_only = false;
 
                     return;
                 }
@@ -518,9 +578,9 @@ class _message_poll {
 
         // 狀態變 → 刷新主按鈕兩態（prompt 域唯一決策者——跨域橋接駁）
         const prompt_instance = await registry().sc_ai_chats().prompt();
-        const prompt_send_button_toggle_instance = await prompt_instance.act().prompt_send_button_toggle();
+        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
 
-        prompt_send_button_toggle_instance.prompt_send_button_toggle();
+        prompt_send_button_state_instance.refresh();
 
         // 有資料就吐（各 updater 自帶「無資料 → 不動」）
         this.update_response_log(task, j_message_panel);
@@ -561,6 +621,14 @@ class _message_poll {
                 } else {
                     j_agent_message.append(permission.html);
                 }
+
+                // 同一請求只准一張卡（兩條渲染路徑同時插入時收多出嘅）
+                const j_request_cards = j_agent_message.find(".permission_prompt[data-request_id='" + request_id + "']");
+
+                // 判定：多過一張 → 移走其餘
+                if (j_request_cards.length > 1) {
+                    j_request_cards.slice(1).remove();
+                }
             }
 
             return;
@@ -572,13 +640,10 @@ class _message_poll {
         }
     }
 
-    // log 子函數：活動日誌——全部行保留（新行 prepend 落頂；容器 column＋overflow hidden 由 CSS 負責）
+    // log 子函數：活動日誌（內容由 SSE `log` 事件累加；呢度只更新 loading／用時）
     update_response_log(task, j_message_panel) {
-        const log_entries = task.logs || [];
-
         // 活動列骨架（log_message／activity_monitor）由後端砌（即時訊息一律帶）——前端唔補建
         const j_activity_monitor = j_message_panel.find(".activity_monitor");
-        const j_activity_lines = j_message_panel.find(".activity_lines");
 
         // 判定：未完結（後台 working="1"）→ 顯示 loading dots
         if (task.working !== "0") {
@@ -599,41 +664,6 @@ class _message_poll {
         // 判定：已完結 → 熄 loading；完成（success="1"）再多一步淡出 log 行
         } else {
             j_activity_monitor.removeClass("loading");
-        }
-
-        // activity_lines：全部保留——只追加未顯示嘅行（容器 column-reverse：追加＝顯示喺最頂）
-        if (log_entries.length > 0) {
-            const old_log_index = ~~j_activity_monitor.attr("data-log_index");
-
-            // 判定：冇新行 → 停
-            if (old_log_index >= log_entries.length)
-                return;
-
-            // 只顯示最新一條（uid＝log 索引；同 uid 已存在 → 唔動）
-            const log_entry = log_entries[log_entries.length - 1];
-            const log_uid = log_entry.activity_uid || "";
-
-            // 判定：同 uid 已存在 → 唔需要替換
-            if (j_activity_lines.find("[data-activity_uid='" + log_uid + "']").length) {
-                return;
-            }
-
-            const j_new_line = jQuery("<div class='activity_line'></div>");
-            j_new_line.addClass("activity_level_" + log_entry.level);
-            j_new_line.attr("data-activity_uid", log_uid);
-            j_new_line.attr("data-log_event", log_entry.event || "");
-            j_new_line.attr("data-log_status", (log_entry.level || "").toLowerCase());
-            j_new_line.text(log_entry.message);
-
-            // 判定：已有行 → 直接取代；未有 → 插入
-            const j_existing_line = j_activity_lines.find(".activity_line");
-            if (j_existing_line.length) {
-                j_existing_line.first().replaceWith(j_new_line);
-            } else {
-                j_activity_lines.append(j_new_line);
-            }
-
-            j_activity_monitor.attr("data-log_index", log_entries.length);
         }
     }
 

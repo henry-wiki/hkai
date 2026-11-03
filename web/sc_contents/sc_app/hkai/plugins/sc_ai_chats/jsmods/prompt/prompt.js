@@ -44,6 +44,26 @@ class _prompt {
         return this.get_composer_chat_sid();
     }
 
+    // 開草稿線（本域擁有——頁面 boot／換對話時重開；chat_sid 取現行對話）
+    async open_stream() {
+        // 暫停 prompt 串流（專注 chat／project 變化）；恢復＝改 true
+        const is_prompt_stream_enabled = false;
+
+        // 判定：未啟用 → 唔開線
+        if (is_prompt_stream_enabled === false) {
+            return;
+        }
+
+        const project_instance = await registry().sc_ai_projects().project();
+        const project_slug = project_instance.get_project_slug();
+        const chat_sid = await this.get_active_chat_sid();
+        const view_meta = document.querySelector("meta[name='view-id']");
+        const view_id = (view_meta === null) ? "" : view_meta.getAttribute("content");
+        const prompt_stream_module = await import("../../../../jsmods/sc_stream/prompt/prompt_stream.js");
+
+        prompt_stream_module.prompt_stream().open(project_slug, chat_sid, view_id);
+    }
+
     // 首次成功寫草稿之後：URL 未帶 sid → 靜默換（重載可憑 sid 取回）
     async sync_chat_url(project_slug) {
         const chat_instance = await registry().sc_ai_chats().chat();
@@ -79,6 +99,9 @@ class _prompt {
 
         // 事件綁定（prompt evt 家族——分組見 bind_events）
         await this.bind_events();
+
+        // 草稿線（本域擁有——頁面 boot／換對話時重開）
+        await this.open_stream();
 
         return this;
     }
@@ -151,7 +174,7 @@ class _prompt_act_bridge {
     async prompt_fetch()           { return (await import("./act/act_prompt_fetch.js")).prompt_fetch(); }
     async prompt_send()               { return (await import("./act/act_prompt_send.js")).prompt_send(); }
     async prompt_resume()             { return (await import("./act/act_prompt_resume.js")).prompt_resume(); }
-    async prompt_send_button_toggle() { return (await import("./act/act_prompt_send_button_toggle.js")).prompt_send_button_toggle(); }
+    async prompt_send_button_state() { return (await import("./act/prompt_send_button_state.js")).prompt_send_button_state(); }
     async prompt_stop()               { return (await import("./act/act_prompt_stop.js")).prompt_stop(); }
 }
 
@@ -177,4 +200,5 @@ class _prompt_req_bridge {
 class _prompt_obs_bridge {
     constructor() {}
     async prompt_input_height_observer() { return (await import("./obs/prompt_input_height_observer.js")).prompt_input_height_observer(); }
+    async prompt_state_observer() { return (await import("./obs/prompt_state_observer.js")).prompt_state_observer(); }
 }

@@ -22,6 +22,8 @@ trait close_db_message_response_rows
             "UPDATE message_response SET response_status = ? WHERE message_id = ? AND response_status = 'poll'",
             [$closed_response_status, $message_id]
         );
+        // 下游有變 → 同步上游時間（message → chat → project）
+        $this->touch_upstream_times($message_id);
     }
 
 }

@@ -104,14 +104,4 @@ class sc_ai_projects_Class
         return tab_delete_project\tab_delete_project_Class::getInstance();
     }
 
-    /**
-     * 健康報告域（health_Class——1 動作）
-     *
-     * @return \sc\app\hkai\plugins\sc_ai_projects\health\health_Class
-     */
-    public function health()
-    {
-        return health\health_Class::getInstance();
-    }
-
 }

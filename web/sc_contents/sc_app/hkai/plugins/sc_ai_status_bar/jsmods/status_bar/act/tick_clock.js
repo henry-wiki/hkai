@@ -1,4 +1,4 @@
-// jsmods/action/tick_clock.js —— status bar 時鐘每秒刷新（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/act/tick_clock.js —— status bar 時鐘每秒刷新（action 層——一 action 一檔）
 // 職責：tick_clock（HH:MM → sb_clock；start_clock 起 1 秒 interval，tick 寫值）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

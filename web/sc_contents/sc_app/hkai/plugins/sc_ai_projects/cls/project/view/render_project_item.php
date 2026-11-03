@@ -34,14 +34,6 @@ trait render_project_item
             $archived_class = " sc_project_card--archived";
         }
 
-        // 判定：輪詢區仍有本專案訊息 → 開頁即帶 polling（bar 純 CSS；唔等 SSE 首次 diff）
-        $project_polling_files = glob(sc_get_config("hkai.messages_polling_dir") . "/" . $project_slug . "/*/*/meta.json");
-        $polling_class = "";
-
-        // 判定：有進行中訊息 → 加 class
-        if (is_array($project_polling_files) === true && count($project_polling_files) > 0) {
-            $polling_class = " polling";
-        }
 
         // 專案連結（含歸檔語境形——URL 知識住 build_project_url；歸檔＝/archive@<project_slug>/）
         $project_link = $this->build_project_url($project_slug, $project_status);
@@ -96,9 +88,10 @@ trait render_project_item
         }
 
         $item_attr = [];
-        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}{$polling_class}'";
+        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}'";
         $item_attr[] = "href='{$project_link}'";
         $item_attr[] = "data-project_slug='{$project_segment}'";
+        $item_attr[] = "data-status='{$project_status}'";
         $item_attr[] = "data-project_id='{$project_id}'";
         $item_attr[] = "data-update_time='{$project_update_time}'";
         $item_attr = implode(" ", $item_attr);

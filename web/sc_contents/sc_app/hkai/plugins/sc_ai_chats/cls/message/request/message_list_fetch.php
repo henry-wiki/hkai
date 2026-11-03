@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\message\request;
 
 // == sc_ai_chats message message_list_fetch：message 域動作（trait——掛入 message_Class；檔＝動作） ==
-// == 2026-09-27 歸 request 層（POST 端點）；自 message/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 歸 request 層（POST 端點）；自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait message_list_fetch
 {
@@ -119,7 +119,9 @@ trait message_list_fetch
         $completed_count = (int)$chat_row["completed_msg"];
         $failed_count    = (int)$chat_row["failed_msg"];
         $cancelled_count = (int)$chat_row["cancelled_msg"];
-        $polling_count   = (int)$chat_row["polling_msg"];
+        // polling 計數同目錄來源（與 render_chat_item／health chat target 一致）
+        $chat_polling_files = glob(sc_get_config("hkai.messages_polling_dir") . "/*/" . $chat_row["chat_sid"] . "/*/meta.json");
+        $polling_count      = is_array($chat_polling_files) ? count($chat_polling_files) : 0;
 
         // 窗口內回應段（只取本頁 message_id——不讀全對話）
         $message_response_rows = [];

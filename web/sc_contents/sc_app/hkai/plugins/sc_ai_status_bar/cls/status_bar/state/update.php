@@ -8,7 +8,7 @@ namespace sc\app\hkai\plugins\sc_ai_status_bar\status_bar\state;
 trait update
 {
     // 更新 item 狀態（外部模組呼叫）
-    // 用法：sc_ai_status_bar()->status_bar()->update("sb_model", "gpt-5 · build")
+    // 用法：sc_ai_status_bar()->status_bar()->update("sb_state", "busy")
     public function update($item_id, $text, $class = "", $hidden = false)
     {
         if (!isset($this->item_states[$item_id])) {

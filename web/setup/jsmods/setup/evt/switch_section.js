@@ -29,11 +29,29 @@ class _switch_section {
         const nav_section_id = j_nav_element.attr("data-setup_nav");
         const nav_action = j_nav_element.attr("data-nav_action");
 
-        // 判定：下一步 → 先交走本格選擇（唯一遞交路徑）
+        // 判定：下一步 → 後台儲存＋驗證（後台唯一裁決；唔通過即停）
         if (nav_action === "next") {
-            const refresh_setup_process_instance = await setup_instance.act().refresh_setup_process();
+            const current_section_id = setup_instance.get_current_section_id();
 
-            await refresh_setup_process_instance.refresh_setup_process();
+            const refresh_setup_process_instance = await setup_instance.act().refresh_setup_process();
+            const field_pairs = refresh_setup_process_instance.collect_current_fields();
+
+            const validate_section_instance = await setup_instance.req().validate_section();
+            const validate_result = await validate_section_instance.validate_section(current_section_id, field_pairs);
+
+            // 判定：網絡失敗 → 唔跳
+            if (validate_result === null) {
+                return;
+            }
+
+            // 判定：驗證唔通過 → 顯示錯誤＋唔跳
+            if (validate_result.ok !== true) {
+                const database_source_mode_instance = await setup_instance.evt().database_source_mode();
+
+                database_source_mode_instance.render_status("fail", validate_result.error || "");
+
+                return;
+            }
         }
 
         // spawn 取 act 組（switch_section——切格）

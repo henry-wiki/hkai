@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS messages (
             message_status    VARCHAR(255) NOT NULL DEFAULT '',
             message_created_at DATETIME NOT NULL DEFAULT '',
             message_update_at DATETIME NOT NULL DEFAULT ''
-        , message_chat_mode VARCHAR(255) NOT NULL DEFAULT '', message_provider_id VARCHAR(255) NOT NULL DEFAULT '', message_model_id VARCHAR(255) NOT NULL DEFAULT '', message_started_at DATETIME NOT NULL DEFAULT '', message_finished_at DATETIME NOT NULL DEFAULT '', message_elapsed_sec INTEGER NOT NULL DEFAULT 0, message_meta TEXT NOT NULL DEFAULT '');
+        , message_chat_mode VARCHAR(255) NOT NULL DEFAULT '', message_provider_id VARCHAR(255) NOT NULL DEFAULT '', message_model_id VARCHAR(255) NOT NULL DEFAULT '', message_started_at DATETIME NOT NULL DEFAULT '', message_finished_at DATETIME NOT NULL DEFAULT '', message_elapsed_sec INTEGER NOT NULL DEFAULT 0, message_meta TEXT NOT NULL DEFAULT '', prompt_id TEXT NOT NULL DEFAULT '');
 
 CREATE TABLE IF NOT EXISTS meta (
                 meta_id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,6 +100,12 @@ CREATE TABLE IF NOT EXISTS attachments (
   attachment_status text NOT NULL DEFAULT 'pending',
   attachment_created_at datetime NOT NULL DEFAULT '',
   attachment_updated_at datetime NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS migrations (
+  migration_name text NOT NULL PRIMARY KEY,
+  migration_checksum text NOT NULL DEFAULT '',
+  migration_applied_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_key ON meta (meta_key);

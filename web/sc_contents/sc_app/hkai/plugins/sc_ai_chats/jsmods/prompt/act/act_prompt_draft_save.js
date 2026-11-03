@@ -8,8 +8,8 @@ class _act_prompt_draft_save {
         // 節流計時器（打字停手先寫一次——避免逐字 POST）
         this.throttle_timer = null;
 
-        // 節流延遲（毫秒——打字停 0.8 秒算一段）
-        this.throttle_delay_ms = 800;
+        // 節流延遲（毫秒——打字停 0.1 秒算一段；延遲直接影響另一分頁同步時間）
+        this.throttle_delay_ms = 100;
 
 
     }
@@ -24,7 +24,7 @@ class _act_prompt_draft_save {
             return;
         }
 
-        // input（打字中）→ 節流排程（停手 0.8 秒先寫）
+        // input（打字中）→ 節流排程（停手 0.1 秒先寫）
         this.throttle_timer = setTimeout(this.write_prompt_draft.bind(this), this.throttle_delay_ms);
     }
 
@@ -70,6 +70,10 @@ class _act_prompt_draft_save {
         payload.model_id = model_context_instance.get_context_model_id();
         payload.reasoning_effort = model_context_instance.get_context_reasoning_effort();
         payload.chat_mode = model_context_instance.get_context_chat_mode();
+
+        // 寫入者（viewer id——供 prompt_stream 判斷邊個頁面寫）
+        const view_meta = document.querySelector("meta[name='view-id']");
+        payload.view_id = (view_meta === null) ? "" : view_meta.getAttribute("content");
 
         const save_instance = await prompt_instance.req().draft_save_meta();
 

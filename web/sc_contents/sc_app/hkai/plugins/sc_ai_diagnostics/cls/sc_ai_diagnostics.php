@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_diagnostics;
 
 // == sc_ai_diagnostics_Class：插件頂層本體（singleton——bridging sc_ai_diagnostics()） ==
-// == 職責：域入口（accessor）——例：sc_ai_diagnostics()->git()->get_git_status_item() ==
+// == 職責：域入口（accessor）——例：sc_ai_diagnostics()->git()->run_git_status() ==
 // == 2026-09-27 域收攏（舊 2 支 sc_ai_diagnostics__<x>() bridging 收成頂層單一入口） ==
 
 class sc_ai_diagnostics_Class

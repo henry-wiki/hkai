@@ -132,7 +132,7 @@ class sc_file_loader_Class
     //---------------------------------------------------------
     // 目錄掃描快取（scan_dir）
     // 1. per-request 記憶（同一目錄只掃一次）
-    // 2. 跨請求檔案快取（sc_storage/cache/file_loader_scan.json）
+    // 2. 跨請求檔案快取（web/sc_storage/cache/file_loader_scan.jsonon）
     // 3. 以目錄 mtime 驗證——目錄內容有加／刪檔即失效重掃（語義與逐次 scandir 完全一致）
     //---------------------------------------------------------
     private static $scan_memory     = null;

@@ -1,4 +1,4 @@
-// jsmods/bind/settings.js —— settings 按鈕綁定（bind 層——一檔一事）
+// web/sc_contents/sc_app/hkai/cls/settings/settings.php —— settings 按鈕綁定（bind 層——一檔一事）
 // 職責：settings（[data-btn='modal_open_settings'] 點擊 → 開 settings modal ＋ 渲染選單）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 

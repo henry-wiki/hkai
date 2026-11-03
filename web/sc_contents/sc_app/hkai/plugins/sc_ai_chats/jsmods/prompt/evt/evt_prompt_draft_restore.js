@@ -141,8 +141,8 @@ class _evt_prompt_draft_restore {
 
             // UI 同步（直接叫兩支——唔經 input 事件，避免觸發草稿寫入）
             const prompt_act_instance = prompt_instance.act();
-            const send_toggle_instance = await prompt_act_instance.prompt_send_button_toggle();
-            send_toggle_instance.prompt_send_button_toggle();
+            const send_toggle_instance = await prompt_act_instance.prompt_send_button_state();
+            send_toggle_instance.refresh();
 
             const prompt_obs_instance = prompt_instance.obs();
             const height_observer_instance = await prompt_obs_instance.prompt_input_height_observer();

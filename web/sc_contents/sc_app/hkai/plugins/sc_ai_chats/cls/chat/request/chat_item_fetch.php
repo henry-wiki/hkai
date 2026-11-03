@@ -23,7 +23,8 @@ trait chat_item_fetch
         }
 
         // 查表用純 sid（卡片身份＝段形——歸檔項會帶 archive@ 前綴；同一解析規則）
-        $chat_sid = sc_ai_chats()->chat()->get_bare_chat_sid($chat_sid);
+        $resolved_chat = sc_ai_chats()->chat()->resolve_chat_sid($chat_sid);
+        $chat_sid      = $resolved_chat["chat_sid"];
 
         // 判定：對話要真係存在（sid 查得到先算）
         $chat_row = sc_ai_chats()->chat()->get_chat_row_by_sid($chat_sid);

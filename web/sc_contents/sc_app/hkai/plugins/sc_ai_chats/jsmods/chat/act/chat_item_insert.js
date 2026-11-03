@@ -16,9 +16,6 @@ class _chat_item_insert {
         const chat_instance = await registry().sc_ai_chats().chat();
         const chat_item_fetch_req_instance = await chat_instance.req().chat_item_fetch();
 
-        // 橋接駁（同域 obs 橋——成功回呼要同步用佢、預先攞定；新項唔掛觀察器＝時間／count 永遠唔更新）
-        const chat_item_observer_instance = await chat_instance.obs().chat_item_observer();
-
         await chat_item_fetch_req_instance.chat_item_fetch(chat_sid, {
             success: async function (response_data) {
                 // 新項（離線解析——先落容器再搬）
@@ -32,13 +29,25 @@ class _chat_item_insert {
                 // 落清單尾（次序交排位者——同一拍 status_refresh 尾會重排）
                 jQuery(".sc_chat_list").append(j_new_item);
 
-                // 重掛觀察器（init 全量覆蓋——新項即納入觀察；data-update_time 一變 → 派 obs:chat_item_updated → 抓新內容換入）
-                chat_item_observer_instance.init();
-
                 // 排位（新卡按 data-update_time 歸位——唔會停在清單尾）
-                const chat_activity_instance = await chat_instance.act().chat_activity();
+                const chat_state_observer_instance = await chat_instance.obs().chat_state_observer();
 
-                chat_activity_instance.chat_list_rank_refresh(true);
+                chat_state_observer_instance.chat_list_rank_refresh(true);
+
+                // 新卡插入後按 store 现值補 polling 標記（插入 HTML 冇此 class）
+                const polling_state_observer_instance = await chat_instance.obs().polling_state_observer();
+
+                await polling_state_observer_instance.refresh_polling_cards_from_store();
+
+                // 新卡插入後補回選中（以 URL 為準——URL 係唯一真相；清單重繪／補插都唔會甩）
+                const current_chat_sid = chat_instance.get_chat_sid();
+
+                // 判定：主鍵係本對話 → 標記選中
+                if (current_chat_sid === chat_sid) {
+                    const chat_item_switch_instance = await chat_instance.act().chat_item_switch();
+
+                    await chat_item_switch_instance.chat_item_switch(chat_sid);
+                }
             },
             error: function (response_data) {
                 // 失敗 → 唔補（維持現狀——等下一輪再試）

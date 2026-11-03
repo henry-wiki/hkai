@@ -95,18 +95,25 @@ def _normalize_update(update: Any) -> tuple[str, dict[str, object]]:
     """SDK update 類別 → (kind, payload)。"""
     # 思考段（reasoning chunk）
     if isinstance(update, AgentThoughtChunk):
-        return "thought", {"text": _extract_chunk_text(update), "message_id": _extract_message_id(update)}
+        return "thought", {"text": _extract_chunk_text(update), "agent_turn_id": _extract_agent_turn_id(update)}
 
     # 主回答段（message chunk）
     if isinstance(update, AgentMessageChunk):
-        return "text", {"text": _extract_chunk_text(update), "message_id": _extract_message_id(update)}
+        return "text", {"text": _extract_chunk_text(update), "agent_turn_id": _extract_agent_turn_id(update)}
 
     # 工具活動（開始／進度）
     if isinstance(update, (ToolCallStart, ToolCallProgress)):
+        tool_detail = _extract_tool_detail(update)
+
         return "tool", {
-            "tool_call_id": str(getattr(update, "tool_call_id", "") or ""),
-            "title":        str(getattr(update, "title", "") or ""),
-            "message_id":   _extract_message_id(update),
+            "tool_call_id":   str(getattr(update, "tool_call_id", "") or ""),
+            "title":          str(getattr(update, "title", "") or ""),
+            "agent_turn_id":  _extract_agent_turn_id(update),
+            "tool_name":      tool_detail["tool_name"],
+            "extension_name": tool_detail["extension_name"],
+            "status":         tool_detail["status"],
+            "raw_input":      tool_detail["raw_input"],
+            "output_text":    tool_detail["output_text"],
         }
 
     # 用量更新（goose 報 context 用量／成本）
@@ -115,6 +122,39 @@ def _normalize_update(update: Any) -> tuple[str, dict[str, object]]:
 
     # 其餘（plan／commands／mode 變更等）——原樣轉存
     return "other", {"update_dump": dump_protocol_message(update.model_dump(by_alias=True))}
+
+
+def _extract_tool_detail(update: Any) -> dict[str, str]:
+    """工具事件 → 可顯示細節（工具名／擴展／狀態／輸入摘要／輸出摘要）。"""
+    tool_detail: dict[str, str] = {}
+
+    protocol_dump = update.model_dump(by_alias=True)
+    goose_meta = protocol_dump.get("_meta", {}).get("goose", {})
+    tool_meta = goose_meta.get("toolCall", {})
+
+    tool_detail["tool_name"] = str(tool_meta.get("toolName", "") or "")
+    tool_detail["extension_name"] = str(tool_meta.get("extensionName", "") or "")
+    tool_detail["status"] = str(getattr(update, "status", "") or "")
+
+    # 輸入摘要（rawInput → 單行、截短）
+    raw_input = str(getattr(update, "raw_input", "") or "")
+    tool_detail["raw_input"] = " ".join(raw_input.split())[:120]
+
+    # 輸出摘要（content[] 內 text → 首段、截短）
+    output_parts: list[str] = []
+
+    for content_item in (getattr(update, "content", None) or []):
+        content_text = getattr(content_item, "text", "")
+
+        # 判定：冇文字內容 → 跳過
+        if not content_text:
+            continue
+
+        output_parts.append(str(content_text))
+
+    tool_detail["output_text"] = " ".join(" ".join(output_parts).split())[:160]
+
+    return tool_detail
 
 
 def _extract_chunk_text(update: Any) -> str:
@@ -128,13 +168,13 @@ def _extract_chunk_text(update: Any) -> str:
     return str(getattr(content_block, "text", "") or "")
 
 
-def _extract_message_id(update: Any) -> str:
-    """抽訊息 id（SDK message_id 欄；舊格式 fallback 去 _meta.messageId——段落 index 判定用；缺＝空字串）。"""
-    message_id = str(getattr(update, "message_id", "") or "")
+def _extract_agent_turn_id(update: Any) -> str:
+    """抽 agent 每輪 id（SDK message_id 欄；舊格式 fallback 去 _meta.messageId——段落 index 判定用；缺＝空字串）。"""
+    agent_turn_id = str(getattr(update, "message_id", "") or "")
 
     # 判定：SDK 欄有值 → 回傳
-    if message_id != "":
-        return message_id
+    if agent_turn_id != "":
+        return agent_turn_id
 
     update_meta = getattr(update, "field_meta", None)
 

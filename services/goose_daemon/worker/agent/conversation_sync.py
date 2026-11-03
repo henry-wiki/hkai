@@ -28,6 +28,7 @@ import json
 import os
 import subprocess
 import sys
+import sd_trace
 import time
 import uuid
 
@@ -151,6 +152,8 @@ class conversation_sync_class:
         goose_env = dict(os.environ)
         goose_env["GOOSE_PATH_ROOT"] = str(paths.resolve_path_root(project_path))
 
+        sd_trace.probe("goose_session_list:before", os.getcwd())
+
         # session list（banner 建立 DB＋schema——輸出唔理）
         _ = subprocess.run(
             [goose_executable, "session", "list"],
@@ -164,6 +167,8 @@ class conversation_sync_class:
             timeout=60,
             creationflags=creationflags,
         )
+
+        sd_trace.probe("goose_session_list:after", os.getcwd())
 
     def _build_conversation_rows(self, chat_id: str, message_id: str, session_id: str) -> list[tuple[object, ...]]:
         """我方對話 → goose 訊息列（user／assistant 文字對——今次問題以外，按序）。"""

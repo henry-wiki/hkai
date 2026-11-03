@@ -13,6 +13,8 @@ require_once __DIR__ . "/start_single_check.php";
 require_once __DIR__ . "/start_single_install.php";
 require_once __DIR__ . "/switch_language.php";
 require_once __DIR__ . "/record_section.php";
+require_once __DIR__ . "/validate_section.php";
+require_once __DIR__ . "/check_migration_source.php";
 
 class request_Class
 {
@@ -21,6 +23,8 @@ class request_Class
     use start_single_install;
     use switch_language;
     use record_section;
+    use validate_section;
+    use check_migration_source;
 
     private static $instance = null;
 

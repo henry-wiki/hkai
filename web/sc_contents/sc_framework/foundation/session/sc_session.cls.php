@@ -53,7 +53,7 @@ class sc_session_Class
         restore_error_handler();
     }
 
-    // 分派 session driver（對齊 Laravel config/session.php 的 driver 選擇）
+    // 分派 session driver（對齊 Laravel web/sc_config/assets/session.php 的 driver 選擇）
     // default = 不呼叫 session_set_save_handler → PHP 原生 session
     public function set_driver($driver)
     {

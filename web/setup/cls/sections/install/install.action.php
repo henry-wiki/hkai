@@ -78,6 +78,11 @@ trait install_action
         $install_result_entry["ok"]        = ($install_step_result["ok"] === true);
         $install_result_entry["result"]    = $install_step_result["result"];
         $install_result_entry["detail"]    = $install_step_result["detail"];
+
+        // 判定：有建議 → 接在 detail 後面（畫面直接見得到）
+        if (isset($install_step_result["hint"]) === true && $install_step_result["hint"] !== "") {
+            $install_result_entry["detail"] = $install_result_entry["detail"] . " — " . $install_step_result["hint"];
+        }
         $install_result_entry["update_at"] = date("Y-m-d H:i:s");
 
         // 判定：動作帶備份檔名 → 入記錄

@@ -14,6 +14,7 @@ class process_Class
 {
     // 心跳停滯上限（秒——pid 還在但心跳停這麼久：pid 被重用或心跳執行緒卡死，仍視為死）
     const STATUS_STALE_SEC = 60;
+
     // 程序層級顯示順序（誰生誰的鏈序——計數與清單共用）
     const PROCESS_RANK = ["bridge" => 1, "aider_daemon" => 2, "goose_daemon" => 2, "openhands_api_daemon" => 2, "worker" => 3, "aider" => 4, "goose" => 4, "openhands_api" => 4];
 
@@ -259,48 +260,78 @@ class process_Class
         
         return $process_data;
     }
-    // bridge 的統一心跳記錄（process_status/bridge.*.json——檔案存在＋心跳新鮮＝在跑；過期殘檔即清）
-    // 說明（2026-10-02 定案）：純讀檔——唔再經 bridge 自問自答（bridge 死咗都判得死）；多份取最新鮮
-    public function read_bridge_heartbeat()
+    // 心跳檔清單（process_status/bridge.*.json——每次現掃，唔用快取；等待新檔時用）
+    public function list_bridge_heartbeat_files()
     {
         $process_status_dir = sc_get_config("hkai.process_status_dir");
 
-        // 判定：目錄不存在（從未有程序寫過心跳）→ null
+        // 判定：目錄不存在 → 空清單
         if (!is_dir($process_status_dir)) {
+            return [];
+        }
+
+        return glob($process_status_dir . "/bridge.*.json");
+    }
+
+    // 心跳檔路徑（process_status/bridge.*.json 第一份；冇＝空字串）
+    // 每次全新掃描（唔快取——狀態判斷必須即時）
+    public function get_bridge_heartbeat_file()
+    {
+        $heartbeat_paths = $this->list_bridge_heartbeat_files();
+
+        // 判定：冇心跳檔 → 空
+        if (count($heartbeat_paths) === 0) {
+            return "";
+        }
+
+        return $heartbeat_paths[0];
+    }
+
+    // 快速判斷 bridge 是否在跑（只睇心跳檔 mtime——約 0.3µs；唔讀內容）
+    public function is_bridge_alive($fresh_sec = 3)
+    {
+        $heartbeat_file = $this->get_bridge_heartbeat_file();
+
+        // 判定：冇心跳檔 → 唔在跑
+        if ($heartbeat_file === "") {
+            return false;
+        }
+
+        $heartbeat_age_sec = time() - filemtime($heartbeat_file);
+
+        return ($heartbeat_age_sec <= $fresh_sec);
+    }
+
+    // bridge 心跳記錄（process_status/bridge.<pid>.json——同一時間只有一個 server——只讀第一份）
+    // 說明：純讀檔（唔經 bridge 自問自答）；殘檔／壞檔只記 log，清檔交清道夫
+    public function read_bridge_heartbeat()
+    {
+        $heartbeat_file = $this->get_bridge_heartbeat_file();
+
+        // 判定：冇心跳檔 → null
+        if ($heartbeat_file === "") {
             return null;
         }
 
-        $now_time      = time();
-        $latest_record = null;
-        $latest_update = 0;
+        $heartbeat_record = json_decode(@file_get_contents($heartbeat_file), true);
 
-        foreach (glob($process_status_dir . "/bridge.*.json") as $heartbeat_path) {
-            $heartbeat_record = json_decode(@file_get_contents($heartbeat_path), true);
+        // 判定：非合法 JSON（半寫入／壞檔）→ null＋記 log（讀取層唔刪檔）
+        if (!is_array($heartbeat_record)) {
+            hkai()->runtime()->logger()->warn("read_bridge_heartbeat: invalid heartbeat file — " . $heartbeat_file);
 
-            // 判定：非合法 JSON（半寫入／壞檔）→ 跳過＋記 log（讀取層唔刪檔——清檔交清道夫）
-            if (!is_array($heartbeat_record)) {
-                hkai()->runtime()->logger()->warn("read_bridge_heartbeat: invalid heartbeat file — " . $heartbeat_path);
-
-                continue;
-            }
-
-            $updated_at = (int)($heartbeat_record["updated_at"] ?? 0);
-
-            // 判定：心跳過期（bridge 已死嘅殘檔）→ 跳過＋記 log（讀取層唔刪檔——清檔交清道夫）
-            if (($now_time - $updated_at) > self::STATUS_STALE_SEC) {
-                hkai()->runtime()->logger()->warn("read_bridge_heartbeat: stale heartbeat (" . ($now_time - $updated_at) . "s) — " . $heartbeat_path);
-
-                continue;
-            }
-
-            // 判定：比手上嘅更新鮮 → 換（多份時取最新一份）
-            if ($updated_at > $latest_update) {
-                $latest_record = $heartbeat_record;
-                $latest_update = $updated_at;
-            }
+            return null;
         }
 
-        return $latest_record;
+        $updated_at = (int)($heartbeat_record["updated_at"] ?? 0);
+
+        // 判定：心跳過期（bridge 已死嘅殘檔）→ null＋記 log
+        if ((time() - $updated_at) > self::STATUS_STALE_SEC) {
+            hkai()->runtime()->logger()->warn("read_bridge_heartbeat: stale heartbeat (" . (time() - $updated_at) . "s) — " . $heartbeat_file);
+
+            return null;
+        }
+
+        return $heartbeat_record;
     }
 
     // 讀心跳檔（每程序一檔——process_status/*.json）——以存活 pid 集比對；不活躍（或壞檔／心跳停滯）就刪檔

@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\prompt\request;
 
 // == sc_ai_chats prompt prompt_fetch：prompt 域動作（trait——掛入 prompt_Class；檔＝動作：prompt_fetch 端點（回傳三格 HTML）） ==
-// == 2026-09-27 歸 request 層（POST 端點）；自 prompt/view.php 分獨立檔（one file one function） ==
+// == 2026-09-27 歸 request 層（POST 端點）；自 web/sc_contents/sc_app/hkai/plugins/sc_ai_settings/cls/view/view.php 分獨立檔（one file one function） ==
 
 trait prompt_fetch
 {

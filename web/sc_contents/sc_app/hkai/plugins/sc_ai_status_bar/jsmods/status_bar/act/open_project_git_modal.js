@@ -1,11 +1,11 @@
-// jsmods/action/open_project_git_modal.js —— 開專案編輯 modal 停 Git tab（action 層——一 action 一檔）
+// web/sc_contents/sc_app/hkai/plugins/sc_ai_status_bar/jsmods/status_bar/act/open_project_git_modal.js —— 開專案編輯 modal 停 Git tab（action 層——一 action 一檔）
 // 職責：open_project_git_modal（目前選取專案 → projects modal 域 modal_open，tab_id="git"）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _open_project_git_modal {
     constructor() {}
 
-    // 開啟「目前選取專案」編輯 modal 並停在 Git tab（本 bar 專屬動作——sb_git item 點擊；2026-09-23 自 sc_ai_projects/project.js 搬入）
+    // 開啟「目前選取專案」編輯 modal 並停在 Git tab（本 bar 專屬動作——sb_git item 點擊；2026-09-23 自 web/sc_contents/sc_app/hkai/plugins/sc_ai_projects/jsmods/project/project.js 搬入）
     async open_project_git_modal() {
         // registry 取值（靜態——直回單例）
         const projects = registry().sc_ai_projects();

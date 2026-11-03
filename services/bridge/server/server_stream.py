@@ -3,9 +3,9 @@
 server_stream.py — SSE 串流端點（輸出監控）。
 
 職責：
-- build_router()：建立路由器（stream 路徑＝固定契約 "/stream"——Apache 反代同名）
-- stream_output()：GET /stream 端點（tail 訊息目錄檔案，push SSE 事件）
-- _resolve_message_dirs()：解析 polling／archive 兩個目錄
+- build_router()：建立路由器（單一路徑 /bridge_sse_for_message）
+- stream_output_for_message()：GET /bridge_sse_for_message（tail 訊息目錄檔案，push SSE 事件）
+- _build_message_dir()／_locate_message_dir()：由 identity（project_slug／chat_sid／prompt_id）即時定位目錄
 - message.get_msg_status()：讀 msg_status.txt 最後一行（bridge/message 提供）
 - _read_appended()：由指定位元偏移讀新增內容（回 (新內容, 新偏移)）
 - _format_event()：砌 SSE 幀（event ＋ JSON data）
@@ -13,13 +13,14 @@ server_stream.py — SSE 串流端點（輸出監控）。
 設計：
 1. 只讀檔案契約（msg_status.txt／msg_response.{n}.result.txt／msg_response.{n}.thinking.txt）
 2. 唔 import 任何 agent 模組——aider_daemon 同 goose_daemon 寫同一批檔，一套就够
-3. 訊息完成後 PHP 會將目錄搬去 archive——偵測 polling 消失即轉讀 archive 並收尾
+3. 訊息完成後 PHP 會將目錄搬去 archive——每輪用 identity 即時定位（polling → archive），冇快取路徑
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportExplicitAny=false, reportAny=false
 # （狀態／job JSON 動態——Unknown/Any 警告一律關，其餘照檢）
 
 import asyncio
+import hashlib
 import json
 import re
 import time
@@ -53,9 +54,9 @@ PROJECT_SLUG_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def build_router() -> APIRouter:
-    """建立串流路由器（stream 路徑＝固定契約 "/stream"）。"""
+    """建立串流路由器（單一契約：/bridge_sse_for_message）。"""
     router = APIRouter()
-    router.add_api_route("/stream", stream_output, methods=["GET"])
+    router.add_api_route("/bridge_sse_for_message", stream_output_for_message, methods=["GET"])
     return router
 
 
@@ -67,13 +68,13 @@ def get_active_stream_count() -> int:
     return _active_stream_count
 
 
-async def _counted_event_generator(request: Request, message_dirs: dict[str, Path], response_index: int, message_id: int):
-    """包一層：串流開／關時加減計數（閒置退出唔可以殺死進行中嘅串流）。"""
+async def _counted_message_event_generator(request: Request, project_slug: str, chat_sid: str, prompt_id: str, response_index: int):
+    """包一層：串流開／關時加減計數（bridge 閒置退出唔可以殺死進行中嘅串流）。"""
     global _active_stream_count
     _active_stream_count += 1
 
     try:
-        async for event_chunk in _event_generator(request, message_dirs, response_index, message_id):
+        async for event_chunk in _message_event_generator(request, project_slug, chat_sid, prompt_id, response_index):
             yield event_chunk
     finally:
         _active_stream_count -= 1
@@ -91,13 +92,21 @@ def _error_response(message: str, origin: str, status_code: int = 200) -> Stream
     return StreamingResponse(_error_stream(message), media_type="text/event-stream", headers=response_headers, status_code=status_code)
 
 
-async def stream_output(request: Request, project_slug: str, message_id: int, response_index: int = 0):
-    """GET /stream：tail 指定訊息目錄，逐段 push 內容（SSE）。"""
+async def stream_output_for_message(request: Request, project_slug: str, chat_sid: str, prompt_id: str, response_index: int = 0):
+    """GET /bridge_sse_for_message：訊息 SSE 串流（唯一入口；identity＝project_slug／chat_sid／prompt_id）。"""
     origin = request.headers.get("origin", "")
 
     # 判定：slug 唔合法 → 400（防路徑穿越）
     if PROJECT_SLUG_PATTERN.match(project_slug) is None:
         return _error_response("invalid project_slug", origin)
+
+    # 判定：chat_sid 唔合法 → 400（防路徑穿越）
+    if PROJECT_SLUG_PATTERN.match(chat_sid) is None:
+        return _error_response("invalid chat_sid", origin)
+
+    # 判定：prompt_id 唔合法 → 400（防路徑穿越）
+    if PROJECT_SLUG_PATTERN.match(prompt_id) is None:
+        return _error_response("invalid prompt_id", origin)
 
     allowed_origins = read_origin_allowlist()
 
@@ -105,13 +114,13 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
         return _error_response("origin not allowed", origin, 403)
 
-    message_dirs = _resolve_message_dirs(project_slug, message_id)
+    current_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
 
-    # 判定：兩個目錄都唔存在 → 404 串流（前端收到 error 事件即停）
-    if message_dirs["polling"].is_dir() is False and message_dirs["archive"].is_dir() is False:
+    # 判定：polling／archive 兩邊都搵唔到 → 404 串流（前端收到 error 事件即停）
+    if current_dir is None:
         return _error_response("message dir not found", origin)
 
-    generator = _counted_event_generator(request, message_dirs, response_index, int(message_id))
+    generator = _counted_message_event_generator(request, project_slug, chat_sid, prompt_id, response_index)
 
     response_headers = {
         "Cache-Control": "no-cache",
@@ -131,119 +140,233 @@ async def stream_output(request: Request, project_slug: str, message_id: int, re
     )
 
 
-def _find_message_dir(root: Path, project_slug: str, message_id: int) -> Path:
-    """喺 <root>/<slug>/<chat_sid>/<prompt_id>/ 找 message_id 相符嘅箱（目錄名＝prompt_id，已唔再係 message_id）。"""
-    project_root = root / project_slug
+def _read_poll_list_index(current_dir: Path) -> int:
+    """讀 msg_poll_list.jsonl → 最大 response_index（family=response；冇檔回 -1）。"""
+    poll_list_path = current_dir / "msg_poll_list.jsonl"
 
-    # 判定：專案目錄唔存在 → 回舊式路徑（呼叫端當唔存在）
-    if project_root.is_dir() is False:
-        return root / project_slug / str(int(message_id))
+    # 判定：未有 poll_list → 未知
+    if poll_list_path.is_file() is False:
+        return -1
 
-    # 逐個三層 meta.json 對 message_id（箱內 meta 係唯一真相）
-    for meta_path in project_root.glob("*/*/meta.json"):
-        try:
-            meta_data = json.loads(meta_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+    max_index = -1
+
+    for poll_list_line in poll_list_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        # 判定：空行 → 跳過
+        if poll_list_line.strip() == "":
             continue
 
-        # 判定：message_id 相符 → 回該箱目錄
-        if int(meta_data.get("message_id", 0)) == int(message_id):
-            return meta_path.parent
+        try:
+            poll_entry = json.loads(poll_list_line)
+        except ValueError:
+            continue
 
-    # 搵唔到 → 回舊式兩層路徑（舊訊息 fallback——正常唔會行）
-    return root / project_slug / str(int(message_id))
+        # 判定：摘要段（summarize）→ 唔計輪次
+        if poll_entry.get("family", "response") != "response":
+            continue
+
+        entry_index_raw = poll_entry.get("response_index", -1)
+
+        # 判定：舊記錄（冇 response_index／非數字）→ 跳過
+        if isinstance(entry_index_raw, int) is False:
+            continue
+
+        entry_index = int(entry_index_raw)
+
+        # 判定：更大輪次 → 記低
+        if entry_index > max_index:
+            max_index = entry_index
+
+    return max_index
 
 
-def _resolve_message_dirs(project_slug: str, message_id: int) -> dict[str, Path]:
-    """解析 polling／archive 兩個訊息目錄（三層：project_slug／chat_sid／prompt_id）。"""
-    message_dirs: dict[str, Path] = {}
-    message_dirs["polling"] = _find_message_dir(MESSAGES_POLLING_DIR, project_slug, message_id)
-    message_dirs["archive"] = _find_message_dir(MESSAGES_ARCHIVE_DIR, project_slug, message_id)
-    return message_dirs
+def _activity_log_entries(message_dir: Path, offset: int) -> tuple[list[dict[str, Any]], int]:
+    """讀 msg_log.txt 由 offset 起的新行 → 活動日誌條目（uid 同 PHP 一致：md5(datetime|event|level|message)）。"""
+    log_path = message_dir / "msg_log.txt"
+
+    # 判定：未有 log 檔 → 唔變
+    if log_path.is_file() is False:
+        return [], offset
+
+    with log_path.open("rb") as log_handle:
+        log_handle.seek(offset)
+        raw_chunk = log_handle.read()
+        new_offset = log_handle.tell()
+
+    log_entries: list[dict[str, Any]] = []
+
+    for raw_line in raw_chunk.splitlines():
+        try:
+            log_data = json.loads(raw_line.decode("utf-8", errors="replace"))
+        except ValueError:
+            continue
+
+        log_event = str(log_data.get("event", ""))
+        log_level = str(log_data.get("level", "INFO")).lower()
+        log_message = str(log_data.get("message", ""))
+        log_datetime = str(log_data.get("datetime", ""))
+
+        # 判定：缺 event／message → 跳過（同 PHP 驗證口徑一致）
+        if log_event == "" or log_message == "":
+            continue
+
+        uid_source = log_datetime + "|" + log_event + "|" + log_level + "|" + log_message
+
+        log_entries.append({
+            "activity_uid": hashlib.md5(uid_source.encode("utf-8")).hexdigest(),
+            "event": log_event,
+            "level": log_level,
+            "message": log_message,
+            "datetime": log_datetime,
+        })
+
+    return log_entries, new_offset
 
 
-async def _event_generator(request: Request, message_dirs: dict[str, Path], response_index: int, message_id: int):
-    """SSE 主迴圈：送快照 → 逐段送 delta → 終態收尾。"""
-    current_dir = message_dirs["polling"]
-    offsets = {"result": 0, "thinking": 0}
+async def _message_event_generator(request: Request, project_slug: str, chat_sid: str, prompt_id: str, response_index: int):
+    """訊息串流（新協定）——ready／turn／append／state／done；identity 即時定位目錄。"""
+    current_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
+
+    # 判定：開線一刻兩邊都冇 → 送 error 收線
+    if current_dir is None:
+        yield _format_event("error", {"message": "message dir not found"})
+
+        return
+
+    stream_meta = _read_meta_json(current_dir)
+    stream_message_id = int(stream_meta.get("message_id", 0))
+
+    current_index = int(response_index)
+    file_offsets = {"result": 0, "thinking": 0}
     last_status = ""
-    started_at = time.monotonic()
-    last_beat_at = started_at
+
+    # 首個事件：貼上當刻全文，偏移置檔尾（重連＝續傳，唔重播）
+    snapshot_texts: dict[str, str] = {}
+
+    for response_kind in ("thinking", "result"):
+        snapshot_path = _response_file_path(current_dir, response_kind, current_index)
+        snapshot_text, snapshot_offset, _snapshot_truncated = _read_appended(snapshot_path, 0)
+
+        snapshot_texts[response_kind] = snapshot_text
+        file_offsets[response_kind] = snapshot_offset
+
+    ready_logs, log_offset = _activity_log_entries(current_dir, 0)
 
     yield _format_event(
-        "snapshot",
+        "ready",
         {
-            "message_id": message_id,
+            "message_id": stream_message_id,
+            "index": current_index,
             "status": message.get_msg_status(current_dir),
-            "result": "",
-            "thinking": "",
-            "extract": message.extract_progress(current_dir),
+            "thinking": snapshot_texts["thinking"],
+            "result": snapshot_texts["result"],
+            "activity_log": ready_logs,
         },
     )
 
-    last_extract_json = ""
-
     while True:
-        # 判定：前端已斷線 → 直接結束（唔再讀檔）
+        # 判定：前端已斷線 → 直接結束
         if await request.is_disconnected():
             return
 
-        # 判定：polling 目錄消失（已被歸檔）→ 轉讀 archive
-        if current_dir.is_dir() is False and message_dirs["archive"].is_dir():
-            current_dir = message_dirs["archive"]
+        # 判定：現行目錄消失（歸檔搬遷）→ 用 identity 即時重新定位
+        if current_dir.is_dir() is False:
+            relocated_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
+
+            # 判定：兩邊都未見（搬遷中）→ 跳過今輪，唔准讀出空狀態
+            if relocated_dir is None:
+                await asyncio.sleep(POLL_INTERVAL_SECONDS)
+                continue
+
+            current_dir = relocated_dir
+
+        new_logs, log_offset = _activity_log_entries(current_dir, log_offset)
+
+        # 判定：有新活動日誌 → log 事件（前端同一行累加）
+        if len(new_logs) > 0:
+            yield _format_event("log", {"activity_log": new_logs})
 
         status = message.get_msg_status(current_dir)
 
-        # 判定：狀態有變 → 送 status 事件＋依轉換派工（stream 驅動）
+        # 判定：狀態有變 → state 事件（＋派工）
         if status != last_status:
             last_status = status
-            yield _format_event("status", {"status": status})
+            yield _format_event("state", {"status": status})
             await asyncio.to_thread(_dispatch_on_transition, current_dir)
 
-        extract_phase = message.extract_progress(current_dir)
-        extract_json = json.dumps(extract_phase, ensure_ascii=False, sort_keys=True)
+            # 判定：終態 → 先補齊所有輪次內容，再送 done 收線
+            if status in ("completed", "failed", "cancelled"):
+                for response_kind in ("thinking", "result"):
+                    final_path = _response_file_path(current_dir, response_kind, current_index)
+                    final_text, final_offset, _final_truncated = _read_appended(final_path, file_offsets[response_kind])
 
-        # 判定：抽取進度有變 → 送 phase 事件（前端 activity log 用）
-        if extract_json != last_extract_json:
-            last_extract_json = extract_json
-            yield _format_event("phase", {"status": status, "extract": extract_phase})
+                    # 判定：有最後增量 → 先送 append
+                    if final_text != "":
+                        file_offsets[response_kind] = final_offset
+                        yield _format_event("append", {"kind": response_kind, "text": final_text})
+
+                # 之後每一輪（> 本輪）→ turn ＋ 該輪全文（重連補齊）
+                last_index = _read_poll_list_index(current_dir)
+
+                for next_index in range(current_index + 1, last_index + 1):
+                    yield _format_event("turn", {"index": next_index})
+
+                    for response_kind in ("thinking", "result"):
+                        next_path = _response_file_path(current_dir, response_kind, next_index)
+                        next_text, _next_offset, _next_truncated = _read_appended(next_path, 0)
+
+                        # 判定：該輪有內容 → 送 append
+                        if next_text != "":
+                            yield _format_event("append", {"kind": response_kind, "text": next_text})
+
+                yield _format_event("done", {"status": status})
+
+                return
+
+        # 判定：poll_list 出現新輪次 → turn 事件＋新段由零開始
+        poll_list_index = _read_poll_list_index(current_dir)
+
+        if poll_list_index > current_index:
+            current_index = poll_list_index
+            file_offsets = {"result": 0, "thinking": 0}
+            yield _format_event("turn", {"index": current_index})
 
         for response_kind in ("result", "thinking"):
-            file_path = _response_file_path(current_dir, response_kind, response_index)
-            appended_text, new_offset, truncated = _read_appended(file_path, offsets[response_kind])
+            file_path = _response_file_path(current_dir, response_kind, current_index)
+            appended_text, new_offset, truncated = _read_appended(file_path, file_offsets[response_kind])
 
-            # 判定：檔案被截短（重寫）→ 重置偏移並通知前端重載
+            # 判定：檔案被截短 → 重設偏移，等下一拍重讀
             if truncated is True:
-                offsets[response_kind] = 0
-                yield _format_event("reset", {"kind": response_kind})
+                file_offsets[response_kind] = 0
                 continue
 
-            # 判定：有新內容 → 送 delta 事件
+            # 判定：有新內容 → append 事件
             if appended_text != "":
-                offsets[response_kind] = new_offset
-                yield _format_event("delta", {"kind": response_kind, "text": appended_text})
-
-        # 判定：已到終態 → 收尾（再讀一輪確保尾段已送）
-        if status in TERMINAL_STATUSES and current_dir == message_dirs["archive"]:
-            yield _format_event("done", {"status": status})
-            return
-
-        # 判定：polling 已終態（未歸檔）→ 收尾
-        if status in TERMINAL_STATUSES and current_dir == message_dirs["polling"]:
-            yield _format_event("done", {"status": status})
-            return
-
-        # 判定：接近上限 → 收尾（前端自動重連）
-        if time.monotonic() - started_at > STREAM_MAX_SECONDS:
-            yield _format_event("timeout", {"status": status})
-            return
-
-        # 判定：距上次心跳够久 → 送註釋幀（保持連線）
-        if time.monotonic() - last_beat_at > HEARTBEAT_INTERVAL_SECONDS:
-            last_beat_at = time.monotonic()
-            yield ": ping\n\n"
+                file_offsets[response_kind] = new_offset
+                yield _format_event("append", {"kind": response_kind, "text": appended_text})
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+
+def _build_message_dir(root: Path, project_slug: str, chat_sid: str, prompt_id: str) -> Path:
+    """由 identity 砌訊息目錄路徑（唔查存在——存在判斷交呼叫端）。"""
+    return root / project_slug / chat_sid / prompt_id
+
+
+def _locate_message_dir(project_slug: str, chat_sid: str, prompt_id: str) -> Path | None:
+    """即時定位訊息目錄：先 polling、後 archive；兩邊都冇 → None（唔准砌假路徑）。"""
+    polling_dir = _build_message_dir(MESSAGES_POLLING_DIR, project_slug, chat_sid, prompt_id)
+
+    # 判定：仲喺 polling → 回 polling
+    if polling_dir.is_dir():
+        return polling_dir
+
+    archive_dir = _build_message_dir(MESSAGES_ARCHIVE_DIR, project_slug, chat_sid, prompt_id)
+
+    # 判定：已歸檔 → 回 archive
+    if archive_dir.is_dir():
+        return archive_dir
+
+    return None
 
 
 def _read_meta_json(message_dir: Path) -> dict[str, Any]:

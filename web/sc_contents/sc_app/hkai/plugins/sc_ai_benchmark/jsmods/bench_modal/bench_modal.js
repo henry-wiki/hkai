@@ -1,5 +1,5 @@
 // jsmods/bench_modal/bench_modal.js —— bench_modal 域（唯一入口——出入口掛喺 prototype）
-// 用途：import { bench_modal } from "./bench_modal.js" 拎單例——bench_modal().evt()／act()／req().<動作>() 咁叫（F12 逐條跳得到）
+// 用途：import { bench_modal } from "web/sc_contents/sc_app/hkai/plugins/sc_ai_benchmark/jsmods/bench_modal/bench_modal.js" 拎單例——bench_modal().evt()／act()／req().<動作>() 咁叫（F12 逐條跳得到）
 // 契約：動作表住本檔尾（bridge class——act／evt／req 全部接喺度；每條自載）
 
 class _bench_modal {

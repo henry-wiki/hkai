@@ -14,10 +14,12 @@ class repo_update_Class
     use insert_queue_message_row;
     use insert_db_message_failed;
     use update_db_message_response_timing;
+    use reset_db_message_attempt;
     use update_db_message_status;
     use update_db_message_status_repair_meta;
     use update_db_message_timing;
     use upsert_db_message_response;
+    use touch_upstream_times;
 
     private static $instance = null;
 

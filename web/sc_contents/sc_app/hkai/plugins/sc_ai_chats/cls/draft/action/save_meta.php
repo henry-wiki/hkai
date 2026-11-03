@@ -73,6 +73,11 @@ trait save_meta
             $meta_patch["chat_mode"] = (string)$input_data["chat_mode"];
         }
 
+        // 寫入者（viewer id——同一頁自己寫的變更唔使套回自己畫面）
+        if (isset($input_data["viewer_id"])) {
+            $meta_patch["viewer_id"] = (string)$input_data["viewer_id"];
+        }
+
         // 判定：內容與現行完全相同 → 不寫（回音防護——rev／mtime 都唔動）
         $changed_field_keys = [];
 

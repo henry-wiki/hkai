@@ -27,7 +27,7 @@ trait dispatch_polling_item
 
         // 判定：等開工 → 交 agent 分支（回填＋放行＋通知）
         if ($message_status === "polling") {
-            //return sc_ai_chats()->queue()->dispatch_agent_item($poll_item, $box_dir);
+            return sc_ai_chats()->queue()->dispatch_agent_item($poll_item, $box_dir);
         }
 
         // 其餘狀態（replying／終態）→ 唔插手

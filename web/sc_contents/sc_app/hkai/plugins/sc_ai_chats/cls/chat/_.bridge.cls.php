@@ -10,6 +10,7 @@ namespace sc\app\hkai\plugins\sc_ai_chats\chat;
 class chat_Class
 {
     use action\cleanup_old_logs;
+    use init\get_chat_sid;
     use repo_select\get_chat_rows;
     use repo_select\get_latest_chat_row_by_project;
     use repo_select\get_project_chat_stats;
@@ -20,16 +21,14 @@ class chat_Class
     use repo_update\archive_db_chat;
     use repo_update\restore_db_chat;
     use resolver\resolve_selected_chat_sid;
-    use resolver\get_latest_activity_chat_sid;
     use resolver\get_latest_chat_sid;
     use resolver\is_archive_chat_segment;
-    use resolver\get_bare_chat_sid;
     use resolver\resolve_chat_sid;
     use resolver\is_valid_chat_sid;
     use resolver\resolve_chat_row;
     use view\render_chat_item;
+    use view\get_chat_item_html;
     use view\render_chat_list;
-    use view\render_archived_chat_list;
     use view\render_chat_sidebar;
     use request\chat_item_fetch;
     use request\chat_list_fetch;
@@ -79,46 +78,12 @@ class chat_Class
     }
 
 
-    // 目前選取的對話 sid：URL 第二段（chat_sid——URL 主鍵；歸檔語境形 archive@<chat_sid> → 回純 sid）
-    // 對話資料以 DB 為 SSOT（chats 表——repo_select 為唯一讀取入口）；查無此對話 → 回 null（不取 default）
-    public function get_selected_chat_sid()
-    {
-        $requestedChatSid = sc_get_friendly(1);
-
-        // URL 未指定對話 sid（根 URL）→ 無選取對話
-        if ($requestedChatSid === null) {
-            return null;
-        }
-
-        // 查表用純 sid（歸檔語境形 archive@<chat_sid> → @ 後；其餘 → 原值）
-        $lookup_chat_sid = $this->get_bare_chat_sid($requestedChatSid);
-
-        $chat_row = $this->get_chat_row_by_sid($lookup_chat_sid);
-
-        // chats 表查無此對話（sid 無效）→ 無選取對話
-        if ($chat_row === null) {
-            return null;
-        }
-
-        // 判定：歸檔語境（archive@<chat_sid>）→ 採用（瀏覽歸檔語境——歸檔對話喺此語境照顯示）
-        if ($this->is_archive_chat_segment($requestedChatSid)) {
-            return $lookup_chat_sid;
-        }
-
-        // 判定：已歸檔對話（顯示唔載——歸檔＝當未選中，右邊一律唔顯示）
-        if ($chat_row["chat_status"] !== "normal") {
-            return null;
-        }
-
-        return $lookup_chat_sid;
-    }
-
 
 
     // 是否有選取專案（空狀態顯隱判定——兩處輸出共用）
     public function is_project_selected()
     {
-        $selected_project_slug = sc_ai_projects()->project()->get_selected_project_slug();
+        $selected_project_slug = sc_ai_projects()->project()->get_project_slug();
         
         return (string)$selected_project_slug !== "";
     }
