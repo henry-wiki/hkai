@@ -12,6 +12,8 @@ Everything ships in one folder — UI, HTTP server, PHP runtime and agent engine
 
 ## Screenshots
 
+![HKAI walkthrough](docs/screenshots/00-demo.gif)
+
 ![HKAI chat interface](docs/screenshots/01-chat.png)
 
 ![Model picker](docs/screenshots/02-models.png)

@@ -12,6 +12,8 @@
 
 ## 截圖
 
+![HKAI 操作示範](docs/screenshots/00-demo.gif)
+
 ![HKAI 對話介面](docs/screenshots/01-chat.png)
 
 ![模型選擇器](docs/screenshots/02-models.png)
