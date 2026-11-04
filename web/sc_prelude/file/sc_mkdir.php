@@ -24,7 +24,13 @@ function sc_mkdir($dir_path, $mode = 0755, $recursive = true)
     }
 
     // 建立（遞迴與否由 $recursive 決定——預設 true）
-    $created = mkdir($dir_path, $mode, $recursive);
+    // 併發：另一個請求可能同一刻建好 → 抑制 warning，之後用 is_dir 再確認
+    $created = @mkdir($dir_path, $mode, $recursive);
+
+    // 判定：mkdir 回 false 但目錄已存在（另一個請求建成）→ 當成功
+    if ($created === false && is_dir($dir_path)) {
+        $created = true;
+    }
 
     // 判定：建立失敗 → 回報
     if ($created === false) {
