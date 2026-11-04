@@ -22,7 +22,7 @@
 
 - **本机运行**：源代码、对话与历史只留在你的电脑，无云端依赖。
 - **改文件前先批准**：代理每次修改文件前都会询问，批准后才会动手。
-- **自足运行**：`execute/HKAI.exe` 启动内置 Apache＋PHP-CGI，在本机随机端口打开控制台。
+- **自足运行**：双击产品文件夹内的 `HKAI.exe`——它会转去启动 `execute\HKAI.exe`，启动内置 Apache＋PHP-CGI，在本机随机端口打开控制台。
 - **离线可用**：前端 library（jQuery、Bootstrap、Markdown、Mermaid、CodeMirror…）随文件夹附带，不用 CDN。
 - **流式分段呈现**：回复分为 thinking／result／工具调用三段，各自计时；每条命令有独立复制按钮。
 - **问题队列**：连续发送多条，每个对话一次跑一条，完成后自动接续下一条。
@@ -52,7 +52,7 @@ Apache 2.4.54 与 PHP 8.4.26 已内置——无需另装 web server 或 PHP。
 **免安装**：解压即用，无需 admin、不写 registry；删除文件夹即移除（只有 WebView2 缓存与 log 写入 `%LOCALAPPDATA%\hkai.local.shell`）。
 
 1. 解压 release 文件夹，保持原有结构。位置由你决定——放在 SSD（尤其 `data` 文件夹）加载与串流会明显更快。
-2. 运行 `execute/HKAI.exe`：它会在本机随机端口启动内置 Apache＋PHP-CGI 并打开控制台；同一时间只运行一个实例。
+2. 双击产品文件夹内的 `HKAI.exe`：它会转去启动 `execute\HKAI.exe`，在本机随机端口启动内置 Apache＋PHP-CGI 并打开控制台；同一时间只运行一个实例。
 3. 首次运行会打开安装向导：
    - **欢迎**（选择安装界面语言）→ **前置检查**（runtime、扩展、Python、可写目录）
    - **数据库**：全新安装，或选择**升级**——指向既有站点文件夹导入其数据库（旧库会先改名为 `hkai_chat_data.sqlite.bak-<时间戳>`）

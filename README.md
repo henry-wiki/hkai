@@ -22,7 +22,7 @@ Everything ships in one folder — UI, HTTP server, PHP runtime and agent engine
 
 - **Runs locally**: source code, conversations and history stay on your machine; no cloud dependency.
 - **Approval before file changes**: the agent asks for permission before every edit; nothing happens until you approve.
-- **Self-contained**: `execute/HKAI.exe` starts a bundled Apache + PHP-CGI and opens the console on a free localhost port.
+- **Self-contained**: double-click `HKAI.exe` in the product folder; it launches `execute\HKAI.exe`, which starts a bundled Apache + PHP-CGI and opens the console on a free localhost port.
 - **Works offline**: every front-end library (jQuery, Bootstrap, Markdown, Mermaid, CodeMirror…) is shipped inside the folder; no CDN.
 - **Streaming transcript**: replies arrive as separated thinking, response and tool-call sections, each with its own timer; every tool command has its own copy button.
 - **Prompt queue**: sending several prompts runs them one per chat, relaying automatically when the previous one finishes.
@@ -52,7 +52,7 @@ Apache 2.4.54 and PHP 8.4.26 are included — no web server or PHP installation 
 **Portable**: extract and run — no installer, no admin rights, no registry writes. Deleting the folder removes the app; only the WebView2 cache and logs live in `%LOCALAPPDATA%\hkai.local.shell`.
 
 1. Extract the release folder and keep its structure intact. You can place it anywhere — an SSD (especially for the `data` folder) makes loading and streaming noticeably faster.
-2. Run `execute/HKAI.exe`. It starts its bundled Apache + PHP-CGI on a free localhost port and opens the console. Only one instance runs at a time.
+2. Double-click `HKAI.exe` in the product folder. It launches `execute\HKAI.exe`, which starts a bundled Apache + PHP-CGI on a free localhost port and opens the console. Only one instance runs at a time.
 3. The setup wizard opens on first run:
    - **Welcome** (choose the setup language) → **Prerequisite checks** (runtime, extensions, Python, writable folders)
    - **Database**: fresh install, or **upgrade** — pick an existing site folder and its database is imported (the previous database is renamed to `hkai_chat_data.sqlite.bak-<timestamp>` first)
