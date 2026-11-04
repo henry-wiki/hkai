@@ -32,10 +32,17 @@ return [
     "version"       => $about_version,
     "build"         => $about_build,
     "tech"          => $about_tech,
-    "update_status" => "已是最新",
     // 作者／支援機構（開源署名——License／Source 欄待上線後補）
     "author"        => "Henry Yau",
     "supported_by"  => "Seacorner",
+    // 更新檢查目標（無更新 API——直接跳 GitHub releases）
+    "update_url"    => "https://github.com/henry-wiki/hkai/releases",
+    // 對外連結（About 分頁——label 走 i18n settings.about.*；用戶可直接回報問題）
+    "links"         => [
+        ["label_key" => "settings.about.report_issue", "url" => "https://github.com/henry-wiki/hkai/issues/new"],
+        ["label_key" => "settings.about.issues",       "url" => "https://github.com/henry-wiki/hkai/issues"],
+        ["label_key" => "settings.about.repository",   "url" => "https://github.com/henry-wiki/hkai"],
+    ],
     // 版權（年份動態——跟行機時年；公司名可在此改）
     "copyright"     => "© " . date("Y") . " HKAI",
 ];

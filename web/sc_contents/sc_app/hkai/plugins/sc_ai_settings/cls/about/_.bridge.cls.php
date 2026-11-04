@@ -9,6 +9,7 @@ namespace sc\app\hkai\plugins\sc_ai_settings\about;
 class about_Class
 {
     use view\handle_fetch_about;
+    use action\check_latest_release;
 
     private static $instance = null;
 

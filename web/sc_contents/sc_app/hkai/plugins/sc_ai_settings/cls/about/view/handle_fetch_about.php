@@ -18,10 +18,12 @@ trait handle_fetch_about
         $about_version       = $about["version"];
         $about_build         = $about["build"];
         $about_tech          = $about["tech"];
-        $about_update_status = $about["update_status"];
+        $about_release_result = $this->check_latest_release($about_version);
         $about_copyright     = $about["copyright"];
         $about_author        = $about["author"];
         $about_supported_by  = $about["supported_by"];
+        $about_links         = $about["links"];
+        $about_update_url    = $about["update_url"];
 
         // 顯示文字（i18n——跟有效設定語言走）
         $about_title_label        = hkai()->i18n()->get("settings.about.title");
@@ -31,8 +33,23 @@ trait handle_fetch_about
         $about_updated_label      = hkai()->i18n()->get("settings.about.updated");
         $about_tagline            = hkai()->i18n()->get("settings.about.tagline");
         $about_check_update_label = hkai()->i18n()->get("settings.about.check_update");
+        $about_update_status      = hkai()->i18n()->get("settings.about.up_to_date");
+        $about_release_status     = $about_release_result["status"];
+        $about_release_latest     = $about_release_result["latest"];
+
+        // 判定：有新版本 → 顯示版本號
+        if ($about_release_status === "update_available") {
+            $about_update_available_text = hkai()->i18n()->get("settings.about.update_available");
+            $about_update_status         = sprintf($about_update_available_text, $about_release_latest);
+        }
+
+        // 判定：查唔到 → 顯示未能檢查
+        if ($about_release_status === "unknown") {
+            $about_update_status = hkai()->i18n()->get("settings.about.update_unknown");
+        }
         $about_author_label       = hkai()->i18n()->get("settings.about.author");
         $about_supported_by_label = hkai()->i18n()->get("settings.about.supported_by");
+        $about_links_label        = hkai()->i18n()->get("settings.about.links");
 
         // 品牌 logo（app 資產——磁碟路徑正規化後轉 web URL）
         $brand_logo_src = sc_to_web_path(SC_DIR_APP . "/hkai/asset/hkai-logo.png");
@@ -68,7 +85,10 @@ trait handle_fetch_about
                     $modal_body[] = "<div class='sc_about__row'>";
                         $modal_body[] = "<span class='sc_about__label'>" . $about_updated_label . "</span>";
                         $modal_body[] = "<span class='sc_about__value'>{$about_update_status}</span>";
-                        $modal_body[] = "<button class='sc_about__check' type='button' data-cmd='coming_soon' title='" . $about_check_update_label . "'>" . $about_check_update_label . "</button>";
+                        // 判定：只有「有新版本」才出檢查更新連結（已最新＝唔需要按）
+                        if ($about_release_status === "update_available") {
+                            $modal_body[] = "<a class='sc_about__check' href='{$about_update_url}' target='_blank' rel='noopener noreferrer' title='" . $about_check_update_label . "'>" . $about_check_update_label . "</a>";
+                        }
                     $modal_body[] = "</div>";
                     $modal_body[] = "<div class='sc_about__row'>";
                         $modal_body[] = "<span class='sc_about__label'>" . $about_author_label . "</span>";
@@ -77,6 +97,20 @@ trait handle_fetch_about
                     $modal_body[] = "<div class='sc_about__row'>";
                         $modal_body[] = "<span class='sc_about__label'>" . $about_supported_by_label . "</span>";
                         $modal_body[] = "<span class='sc_about__value'>{$about_supported_by}</span>";
+                    $modal_body[] = "</div>";
+                    $modal_body[] = "<div class='sc_about__row'>";
+                        $modal_body[] = "<span class='sc_about__label'>" . $about_links_label . "</span>";
+                        $modal_body[] = "<span class='sc_about__value sc_about__links'>";
+
+                        // 逐個對外連結（新視窗開；label 由 i18n 查）
+                        foreach ($about_links as $about_link_item) {
+                            $about_link_url   = $about_link_item["url"];
+                            $about_link_label = hkai()->i18n()->get($about_link_item["label_key"]);
+
+                            $modal_body[] = "<a class='sc_about__link' href='{$about_link_url}' target='_blank' rel='noopener noreferrer'>{$about_link_label}</a>";
+                        }
+
+                        $modal_body[] = "</span>";
                     $modal_body[] = "</div>";
                 $modal_body[] = "</div>";
                 $modal_body[] = "<div class='sc_about__foot'>";

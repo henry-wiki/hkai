@@ -6,9 +6,9 @@
 
 > 没有做不到，只有想不到。
 
-本机 AI 开发控制台：PHP 网页界面＋Python 引擎 daemon＋SQLite。源代码与对话不会离开你的电脑。
+本机 AI 开发控制台：PHP 网页界面＋Python 代理服务＋SQLite。源代码与对话不会离开你的电脑。
 
-所有功能都在同一个文件夹内运行——内置 Apache 与 PHP-CGI 提供界面，安装后无需联网。
+界面、HTTP 服务器、PHP 运行环境与代理引擎全部放在同一个文件夹——无需另装 web server，也无需联网即可运行。
 
 ## 截图
 
@@ -20,17 +20,17 @@
 
 ## 功能
 
-- **本机运行**：源代码与对话只留在你的电脑，无云端依赖。
-- **改文件前先批准**：AI 每次修改文件都会先询问，你批准后才会动手。
-- **一个文件夹安装**：`execute/HKAI.exe` 会启动内置 Apache＋PHP-CGI 并打开界面，无需另装 PHP、Apache 或配置 vhost。
-- **离线可用**：前端所有 library（jQuery、Bootstrap、Markdown、Mermaid、CodeMirror…）随文件夹附带，不用 CDN。
+- **本机运行**：源代码、对话与历史只留在你的电脑，无云端依赖。
+- **改文件前先批准**：代理每次修改文件前都会询问，批准后才会动手。
+- **自足运行**：`execute/HKAI.exe` 启动内置 Apache＋PHP-CGI，在本机随机端口打开控制台。
+- **离线可用**：前端 library（jQuery、Bootstrap、Markdown、Mermaid、CodeMirror…）随文件夹附带，不用 CDN。
+- **流式分段呈现**：回复分为 thinking／result／工具调用三段，各自计时；每条命令有独立复制按钮。
+- **问题队列**：连续发送多条，每个对话一次跑一条，完成后自动接续下一条。
+- **Draft 上传**：每条问题最多 13 张图，先落 draft 文件夹、抽取完成才派工。
 - **项目互相隔离**：对话、历史、工作目录各自独立。
-- **队列自动接力**：可以连续发送多条问题，上一条完成后自动接续下一条。
-- **长任务可观察**：进程查看＋activity log，随时可以中止。
-- **内置排行榜**：SWE-bench、LMArena、AA、LLM Stats，选择模型有依据。
-- **安全升级**：在既有站点上升级时，旧数据库会先改名为时间戳备份，再建立新库。
-
-<!-- screenshot: 02-chat-permission（对话＋权限卡） -->
+- **模型目录与排行榜**：OpenRouter、Kilo、DeepSeek，配 SWE-bench、LMArena、AA、LLM Stats。
+- **诊断**：进程查看、activity log、git 状态与 stage／commit 操作。
+- **界面三语**：English、繁體中文、简体中文。
 
 ## 系统需求
 
@@ -39,49 +39,187 @@
 | 操作系统 | Windows 10/11（x64） |
 | WebView2 | Evergreen Runtime（Windows 11 已内置） |
 | C++ runtime | Microsoft Visual C++ 2015–2022 Redistributable（x64） |
-| Python | 3.13（引擎 daemon 使用） |
+| Python | 3.13（运行代理服务） |
 | 磁盘 | 约 3 GB |
+| 网络 | 运行不需要；只有你配置的模型供应商需要 |
 
-运行时无需联网；只有你配置的模型供应商需要网络。
+Apache 2.4.54 与 PHP 8.4.26 已内置——无需另装 web server 或 PHP。
 
 <!-- screenshot: 03-settings（设置页） -->
 
 ## 快速开始
 
-1. 解压 release 文件夹，保持原有结构。
-2. 双击 `execute/HKAI.exe`——它会在本机随机端口启动内置 Apache＋PHP-CGI，再打开控制台。
-3. 首次运行进入 setup：选择**全新安装**，或选择**升级**并指向旧站点文件夹以导入该数据库。
-4. 在设置中填入供应商 API key、选择模型，即可开始对话。
+**免安装**：解压即用，无需 admin、不写 registry；删除文件夹即移除（只有 WebView2 缓存与 log 写入 `%LOCALAPPDATA%\hkai.local.shell`）。
+
+1. 解压 release 文件夹，保持原有结构。位置由你决定——放在 SSD（尤其 `data` 文件夹）加载与串流会明显更快。
+2. 运行 `execute/HKAI.exe`：它会在本机随机端口启动内置 Apache＋PHP-CGI 并打开控制台；同一时间只运行一个实例。
+3. 首次运行会打开安装向导：
+   - **欢迎**（选择安装界面语言）→ **前置检查**（runtime、扩展、Python、可写目录）
+   - **数据库**：全新安装，或选择**升级**——指向既有站点文件夹导入其数据库（旧库会先改名为 `hkai_chat_data.sqlite.bak-<时间戳>`）
+   - **设置**：供应商 API key
+   - **安装** → 逐项结果 → **完成**
+4. 在设置中填入 API key、准备模型列表：
+   - 设置 → **供应商** → 粘贴 **API Token** → 保存
+   - 按 **下载模型列表**（拉取该供应商的目录）
+   - 在对话顶部打开模型选择器（显示「请选择模型」），选择模型后按 **套用**
+   - 列表是实时快照；需要更新时再按 **下载模型列表**
 
 ### 手动模式（可选）
 
-如果你想使用自己的 web server：将站点根设为 document root，PHP 8.4 以 FCGI 执行，再用浏览器打开。内置的 `execute/bin/apache-2.4.54` 与 `execute/bin/php-8.4.26` 可以直接复用。
+将站点根设为 document root，PHP 8.4 以 FCGI 执行，再用浏览器打开。内置的 `execute/bin/apache-2.4.54` 与 `execute/bin/php-8.4.26` 可以直接复用。
+
+### 更新到新版本
+
+没有自动更新（应用是免安装，数据放在你指定的位置）：
+
+1. 关闭 `HKAI.exe`
+2. 解压新版本覆盖旧文件夹，但保留你的 `data` 文件夹与 `.env`
+3. 再运行 `HKAI.exe`——会直接使用既有数据库，无需重跑安装
+
+### 切换运行环境版本
+
+`execute/config.toml` 用文件夹名指向内置 runtime（`apache_dir`、`php_dir`）与外部设置接口（`custom_dir`）。放入新版本文件夹、修改这几个 key 即生效——无需 rebuild。
 
 ### 引擎
 
-Goose CLI 已附带在 `externals/goose`。若 `python` 不在 `PATH`，在 `.env` 设置 `python_executable=`。
+Goose CLI 已附带在 `externals/goose`，经 ACP 驱动。若 `python` 不在 `PATH`，在 `.env` 设置 `python_executable=`。
+
+## 你的数据、备份与迁移
+
+所有数据都在产品文件夹内：
+
+| 内容 | 位置 |
+|---|---|
+| **对话、项目、消息（数据库）** | `data/localdb/hkai_chat_data.sqlite` |
+| 消息文件与图片 | `data/messages/`（`draft`、`polling`、`archive`；附件就在每条消息目录内） |
+| 供应商密钥与机器设置 | `.env` 与 `data/runtime.json` |
+| 日志 | `data/logs/` |
+
+**SQLite 文件是最重要的一个**——所有对话与项目都在里面。图片以文件形式存放在消息目录内，不会存入数据库。
+
+### 保留期
+
+从 0.2.0 开始，本机文件默认保留。已归档的消息文件夹超过**一年**会自动删除（连同图片）；每日 log 保留 **30 天**。想提前删除，可在应用内删除对话，或直接删除 `data/messages/archive` 下的文件夹。
+
+### 备份
+
+1. 关闭 `HKAI.exe`
+2. 复制整个 `data` 文件夹（数据库＋所有消息文件）到你的备份位置
+3. 可选：一并复制 `.env`（保留供应商密钥）
+
+### 迁移到另一台机器
+
+复制整个产品文件夹（含 `data`），在新机器运行 `HKAI.exe`。由于已有数据库，安装向导会跳过。
+
+### 还原
+
+关闭应用，用备份的 `data` 覆盖回去，再启动应用。
+
+## 故障排查
+
+先查两个最常见原因：**已有另一份在运行**，或者**文件被其他程序锁住**。
+
+| 症状 | 做法 |
+|---|---|
+| 打不开，或白屏 | 等几秒，再运行一次 `HKAI.exe`——它会聚焦现有窗口，不会开第二份 |
+| 提示「已有一个实例运行中」 | 上一次未关闭：从任务栏关闭，再启动 |
+| 安装／升级在数据库一步失败 | 关闭所有 `HKAI.exe` 与数据库工具，再按 **Install**。旧数据库不会被改动 |
+| 消息一直「排队中」或转圈不停 | 看右下角状态点；重启应用——排队消息保存在磁盘，会续跑 |
+| 模型列表空白 | 粘贴供应商 key、保存，再按 **下载模型列表** |
+| 供应商返回 401／403 | key 错误或过期——重新创建并粘贴 |
+| 完全连不上网 | 应用本身离线可用；回答问题需要供应商网络。检查 proxy／VPN |
+| Windows 拦截（SmartScreen） | **更多信息** → **仍要运行**；可执行文件未做代码签名 |
+| 杀毒软件删除了文件 | 将产品文件夹加入杀毒排除，再重新解压 |
+
+### 仍然无法解决？
+
+- 打开 **About**（左侧 rail 最底部的 **?**）→ **报告问题**，或前往 <https://github.com/henry-wiki/hkai/issues>
+- 请附上：版本（About 有显示）、Windows 版本、`data/logs/hkai.<日期>.log` 最后几行
+
+### 日志位置
+
+- `data/logs/hkai.<日期>.log`——应用日志
+- `data/logs/goose_daemon.audit.log`——代理活动
+- `%LOCALAPPDATA%\hkai.local.shell\logs\hkai.log`——桌面外壳日志
+
+### 重置
+
+删除 `data` 文件夹，再运行安装向导。此步会清除对话与历史——要保留请先复制文件夹。
+
+## 卸载
+
+HKAI 是免安装：无安装程序、无 registry 项、无 Windows 服务。
+
+1. 关闭 `HKAI.exe`
+2. 删除产品文件夹
+
+这样会连同所有对话、项目与附件（`data/`）一起移除。想保留请先备份 `data` 文件夹。
+
+### 会残留的东西
+
+有几项位于产品文件夹之外，**删除文件夹不会**帮你清理：
+
+- `%LOCALAPPDATA%\hkai.local.shell`——WebView2 缓存与外壳 log（可自行删除）
+- Python 3.13、WebView2 Runtime、Visual C++ Redistributable（若你为 HKAI 另行安装）——其他软件若使用请保留
+
+删除文件夹后不可回头：应用已不存在，无法再替你清理这些残留项。
 
 ## 适用范围
 
 单一工作站、单一操作者；AI 协作范围限于本机项目。支持平台为 Windows 10/11。
 
+## 数据与隐私
+
+- **保存在本机**：对话、消息、附件、历史、log 与流快照全部在 `data/`；供应商密钥在 `.env`。
+- **会离开本机的只有**：你发送的内容——问题文本、附加图片，以及代理读取的项目上下文——经 HTTPS 发送到你配置的模型供应商（OpenRouter、Kilo 或 DeepSeek）。它们保留哪些数据，受其自身政策约束。
+- **排行榜**：打开 benchmark 分页时会抓取 SWE-bench、LMArena、Artificial Analysis、LLM Stats 的公开页面。
+- **无 telemetry**：无 analytics、无使用统计、无更新检查、无 CDN 请求——前端 library 全部本地。
+- **网络暴露**：控制台只绑定 `127.0.0.1`，其他机器无法连接。
+- **密钥存储**：API key 以明文存放在磁盘上的 `.env`；请保管好该文件夹。
+- **代理范围**：代理可以读取项目工作目录内的文件、执行命令；每次修改文件前都需要你批准。
+- **清除数据**：删除文件夹即可；只剩 `%LOCALAPPDATA%\hkai.local.shell` 内的 WebView2 缓存与 log。
+
 ## 引擎（Agent）
 
 | 引擎 | 说明 | 额外需求 |
 |---|---|---|
-| `goose` | Goose CLI 引擎（经 ACP 驱动） | 已附带在 `externals/goose` |
+| `goose` | Goose CLI（经 ACP 协议驱动） | 已附带在 `externals/goose` |
 
 引擎由站点配置的 `daemon_engine` 决定；当前支持值为 `goose_daemon`。
 
 ## 支持的供应商
 
-| 供应商 | 获取 API key | 备注 |
+| 供应商 | 网站 | 备注 |
 |---|---|---|
-| OpenRouter | <https://openrouter.ai/keys> | 有免费模型 |
-| Kilo | <https://kilo.ai> | 注册后获取 API key |
-| DeepSeek | <https://platform.deepseek.com/api_keys> | 按用量收费 |
+| OpenRouter | <https://openrouter.ai> | 有免费模型 |
+| Kilo | <https://kilo.ai> | Kilo AI Gateway 账户 |
+| DeepSeek | <https://platform.deepseek.com> | 按用量收费 |
 
-以上三个已测试；其他供应商未经测试，配置风险自负。
+### 如何获取 API key
+
+**OpenRouter**
+
+1. 前往 <https://openrouter.ai> 登录
+2. 打开 <https://openrouter.ai/keys>，创建新 key
+3. 复制 key——只显示一次
+
+**Kilo**（Kilo AI Gateway）
+
+1. 前往 <https://app.kilo.ai> 登录
+2. 在**个人账户**（不是组织）打开 **Your Profile**
+3. 拉到页面最底部，复制 API key
+
+**DeepSeek**
+
+1. 前往 <https://platform.deepseek.com> 登录
+2. 打开 <https://platform.deepseek.com/api_keys>，创建新 key
+3. 复制 key
+
+### 粘贴位置
+
+设置 → **供应商** → 粘贴到 **API Token** → 保存。密钥只存在本机 `.env`；除你配置的供应商外，不会发送到其他地方。
+
+其他供应商未经测试，配置风险自负。
 
 ## 基准数据来源
 
@@ -96,4 +234,4 @@ Goose CLI 已附带在 `externals/goose`。若 `python` 不在 `PATH`，在 `.en
 
 MIT License · Copyright (c) 2026 Henry Yau
 
-随附组件（Apache、PHP 及前端 library）各自保留原有授权；详见 `THIRD_PARTY_LICENSES.md`。
+Apache、PHP 及随附前端 library 各自保留原有授权——详见 `THIRD_PARTY_LICENSES.md`。

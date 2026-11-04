@@ -6,9 +6,9 @@
 
 > Nothing is impossible — only unimagined.
 
-Local AI development console: a PHP web interface, a Python engine daemon, and SQLite. Your source code and conversations never leave your machine.
+Local AI development console: a PHP web interface, a Python agent service, and SQLite. Your source code and conversations never leave your machine.
 
-Everything runs from one folder — the bundled Apache and PHP-CGI serve the UI, and no internet connection is required after installation.
+Everything ships in one folder — UI, HTTP server, PHP runtime and agent engine — so the product runs without installing a web server or connecting to the internet.
 
 ## Screenshots
 
@@ -20,17 +20,17 @@ Everything runs from one folder — the bundled Apache and PHP-CGI serve the UI,
 
 ## Features
 
-- **Runs locally**: source code and conversations stay on your machine; no cloud dependency.
-- **Approval before file changes**: the AI requests permission before every edit; nothing happens until you approve.
-- **One-folder install**: `execute/HKAI.exe` starts its bundled Apache + PHP-CGI and opens the console; no PHP, Apache, or virtual host setup required.
-- **Works offline**: every front-end library (jQuery, Bootstrap, Markdown, Mermaid, CodeMirror…) ships inside the folder — no CDN.
-- **Per-project isolation**: conversations, history, and working directories stay separate.
-- **Queue with auto relay**: send several prompts in a row; each one starts automatically when the previous finishes.
-- **Observable long tasks**: process viewer plus activity log; abort at any time.
-- **Built-in leaderboards**: SWE-bench, LMArena, AA, and LLM Stats help you choose models on evidence.
-- **Safe upgrades**: installing over an existing site renames the old database to a timestamped backup before creating a fresh one.
-
-<!-- screenshot: 02-chat-permission (chat with permission card) -->
+- **Runs locally**: source code, conversations and history stay on your machine; no cloud dependency.
+- **Approval before file changes**: the agent asks for permission before every edit; nothing happens until you approve.
+- **Self-contained**: `execute/HKAI.exe` starts a bundled Apache + PHP-CGI and opens the console on a free localhost port.
+- **Works offline**: every front-end library (jQuery, Bootstrap, Markdown, Mermaid, CodeMirror…) is shipped inside the folder; no CDN.
+- **Streaming transcript**: replies arrive as separated thinking, response and tool-call sections, each with its own timer; every tool command has its own copy button.
+- **Prompt queue**: sending several prompts runs them one per chat, relaying automatically when the previous one finishes.
+- **Draft upload**: up to 13 images per prompt are staged in a draft folder and extracted before dispatch.
+- **Per-project isolation**: conversations, history and working directories stay separate.
+- **Model catalogue and leaderboards**: OpenRouter, Kilo and DeepSeek, with SWE-bench, LMArena, AA and LLM Stats for evidence-based choice.
+- **Diagnostics**: process viewer, activity log, git status and stage/commit actions.
+- **Three UI languages**: English, 繁體中文 and 简体中文.
 
 ## Requirements
 
@@ -39,49 +39,187 @@ Everything runs from one folder — the bundled Apache and PHP-CGI serve the UI,
 | OS | Windows 10/11 (x64) |
 | WebView2 | Evergreen Runtime (preinstalled on Windows 11) |
 | C++ runtime | Microsoft Visual C++ 2015–2022 Redistributable (x64) |
-| Python | 3.13 (used by the engine daemon) |
+| Python | 3.13 (runs the agent service) |
 | Disk | approximately 3 GB |
+| Network | not required to run; needed only for the model provider you configure |
 
-No internet connection is needed to run; only the model provider you configure requires network access.
+Apache 2.4.54 and PHP 8.4.26 are included — no web server or PHP installation is required.
 
 <!-- screenshot: 03-settings (settings page) -->
 
 ## Quick start
 
-1. Extract the release folder and keep its structure intact.
-2. Double-click `execute/HKAI.exe`. It starts its bundled Apache + PHP-CGI on a free localhost port and opens the console.
-3. On first run the setup wizard opens: choose **fresh install**, or **upgrade** and point it at an existing site folder to import that database.
-4. Add a provider API key in Settings, pick a model, and start a conversation.
+**Portable**: extract and run — no installer, no admin rights, no registry writes. Deleting the folder removes the app; only the WebView2 cache and logs live in `%LOCALAPPDATA%\hkai.local.shell`.
+
+1. Extract the release folder and keep its structure intact. You can place it anywhere — an SSD (especially for the `data` folder) makes loading and streaming noticeably faster.
+2. Run `execute/HKAI.exe`. It starts its bundled Apache + PHP-CGI on a free localhost port and opens the console. Only one instance runs at a time.
+3. The setup wizard opens on first run:
+   - **Welcome** (choose the setup language) → **Prerequisite checks** (runtime, extensions, Python, writable folders)
+   - **Database**: fresh install, or **upgrade** — pick an existing site folder and its database is imported (the previous database is renamed to `hkai_chat_data.sqlite.bak-<timestamp>` first)
+   - **Settings**: provider API keys
+   - **Install** → per-step results → **Completed**
+4. Add a provider key in Settings and prepare the model list:
+   - Settings → **Providers** → paste the key into **API Token** → save
+   - Press **Download model list** to fetch that provider's catalogue
+   - Open the model picker in the chat header (`Select a model`), choose a model, press **Apply**
+   - The list is a live snapshot; press **Download model list** again whenever you want it refreshed
 
 ### Manual mode (optional)
 
-If you prefer your own web server, serve the site root as the document root with PHP 8.4 (FCGI) and open it in a browser. The bundled `execute/bin/apache-2.4.54` and `execute/bin/php-8.4.26` can be reused as-is.
+Serve the site root as the document root with PHP 8.4 over FCGI and open it in a browser. The bundled `execute/bin/apache-2.4.54` and `execute/bin/php-8.4.26` can be reused as-is.
+
+### Updating to a new release
+
+There is no automatic updater (the app is portable and your data lives where you put it):
+
+1. Close `HKAI.exe`
+2. Extract the new release over the old folder, but keep your `data` folder and `.env`
+3. Start `HKAI.exe` again — the existing database is picked up, no setup needed
+
+### Switching runtime versions
+
+`execute/config.toml` points at the bundled runtime by folder name (`apache_dir`, `php_dir`) and to the external settings interface (`custom_dir`). Dropping a new version folder and editing those keys is enough — no rebuild.
 
 ### Engine
 
-The Goose CLI is bundled at `externals/goose`. If `python` is not on `PATH`, set `python_executable=` in `.env`.
+The Goose CLI is bundled at `externals/goose` and driven over ACP. If `python` is not on `PATH`, set `python_executable=` in `.env`.
+
+## Your data, backups and moving to another machine
+
+Everything is stored in one folder inside the product:
+
+| What | Where |
+|---|---|
+| **Chats, projects, messages (database)** | `data/localdb/hkai_chat_data.sqlite` |
+| Message files and images | `data/messages/` (`draft`, `polling`, `archive`; attachments sit next to each message) |
+| Provider keys and machine settings | `.env` and `data/runtime.json` |
+| Logs | `data/logs/` |
+
+The SQLite file is the most important one — it holds every conversation and project. Images are stored as files next to the message, not inside the database.
+
+### Retention
+
+Starting with 0.2.0, local files are kept by default. Archived message folders older than **one year** are removed automatically (including their images); daily logs are kept for **30 days**. You can always delete a conversation earlier from the app, or by removing its folder under `data/messages/archive`.
+
+### Backup
+
+1. Close `HKAI.exe`
+2. Copy the whole `data` folder (the database and all message files) to your backup location
+3. Optional: also copy `.env` if you want to keep your provider keys
+
+### Move to another machine
+
+Copy the whole product folder, `data` included, and run `HKAI.exe` on the new machine. The setup wizard is skipped because a database already exists.
+
+### Restore
+
+Close the app, replace the `data` folder with the backup, start the app again.
+
+## Troubleshooting
+
+Start with the two most common causes: **another copy is already running**, or **a file is locked by another program**.
+
+| Symptom | Do this |
+|---|---|
+| Nothing opens, or a blank window | Wait a few seconds, then run `HKAI.exe` again — it focuses the existing window instead of starting a second copy |
+| "Already running" | A previous instance is still alive: close it from the taskbar, then start again |
+| Install or upgrade fails at the database step | Close every `HKAI.exe`, any database tool, then press **Install** again. The previous database is left untouched |
+| A message stays "queued" or the spinner never stops | Check the status dot (bottom right). Restart the app; queued prompts are kept on disk and resume |
+| Model list is empty | Paste the provider key, save, then press **Download model list** |
+| Provider error 401 / 403 | The key is wrong or expired — create a new one and paste it again |
+| Nothing reaches the internet | The app itself works offline; answering requires your provider. Check proxy/VPN settings |
+| Windows blocks the app (SmartScreen) | **More info** → **Run anyway**. The binary is not code-signed |
+| Antivirus removed a file | Add the product folder to the antivirus exclusion list, then extract the release again |
+
+### Still stuck?
+
+- Open **About** (the **?** at the bottom of the left rail) → **Report an issue**, or go to <https://github.com/henry-wiki/hkai/issues>
+- Please include: the version (shown in About), your Windows version, and the last lines of `data/logs/hkai.<date>.log`
+
+### Where the logs are
+
+- `data/logs/hkai.<date>.log` — application log
+- `data/logs/goose_daemon.audit.log` — agent activity
+- `%LOCALAPPDATA%\hkai.local.shell\logs\hkai.log` — desktop shell log
+
+### Reset
+
+Delete the `data` folder and run the setup wizard again. This removes conversations and history — copy the folder first if you want to keep them.
+
+## Uninstalling
+
+HKAI is portable: there is no installer, no registry entry and no Windows service.
+
+1. Close `HKAI.exe`
+2. Delete the product folder
+
+That removes the application together with all conversations, projects and attachments (`data/`). Back up the `data` folder first if you want to keep them.
+
+### What stays behind
+
+A few files live outside the product folder and are **not** removed by deleting it:
+
+- `%LOCALAPPDATA%\hkai.local.shell` — WebView2 cache and shell logs (safe to delete manually)
+- Python 3.13, the WebView2 Runtime and the Visual C++ Redistributable, if you installed them for HKAI — keep them if other software uses them
+
+Deleting the folder is final: once it is gone the application cannot clean those items up for you.
 
 ## Scope
 
 Single workstation, single operator; AI collaboration scoped to local projects. Windows 10/11 is the supported platform.
 
+## Data and privacy
+
+- **Stored on this machine**: conversations, messages, attachments, history, logs and stream snapshots live under `data/`; provider keys live in `.env`.
+- **What leaves the machine**: only what you send — your prompt text, attached images, and the project context the agent reads — is transmitted over HTTPS to the model provider you configured (OpenRouter, Kilo or DeepSeek). That provider's own policy governs what it keeps.
+- **Leaderboards**: opening a benchmark tab fetches public pages from SWE-bench, LMArena, Artificial Analysis and LLM Stats.
+- **No telemetry**: there is no analytics, no usage reporting, no update check, and no CDN request — all front-end libraries are local.
+- **Network exposure**: the console listens on `127.0.0.1` only, so it is not reachable from other machines.
+- **Key storage**: API keys are stored as plain text in `.env` on your disk; keep the folder private.
+- **Agent scope**: the agent may read files in the project working folder and run commands; every file edit asks for your approval first.
+- **Removing data**: delete the folder. The only leftovers are WebView2 cache and logs in `%LOCALAPPDATA%\hkai.local.shell`.
+
 ## Engine (Agent)
 
 | Engine | Description | Additional requirement |
 |---|---|---|
-| `goose` | Goose CLI engine driven over ACP | Bundled at `externals/goose` |
+| `goose` | Goose CLI driven over the ACP protocol | Bundled at `externals/goose` |
 
 The engine is selected by `daemon_engine` in the site configuration; `goose_daemon` is the supported value.
 
 ## Supported providers
 
-| Provider | Get an API key | Notes |
+| Provider | Website | Notes |
 |---|---|---|
-| OpenRouter | <https://openrouter.ai/keys> | Free models available |
-| Kilo | <https://kilo.ai> | Sign up to obtain an API key |
-| DeepSeek | <https://platform.deepseek.com/api_keys> | Pay per usage |
+| OpenRouter | <https://openrouter.ai> | Free models available |
+| Kilo | <https://kilo.ai> | Kilo AI Gateway account |
+| DeepSeek | <https://platform.deepseek.com> | Pay per usage |
 
-The three above are tested. Other providers are untested; configure them at your own risk.
+### Getting an API key
+
+**OpenRouter**
+
+1. Sign in at <https://openrouter.ai>
+2. Open <https://openrouter.ai/keys> and create a new key
+3. Copy the key — it is shown only once
+
+**Kilo** (Kilo AI Gateway)
+
+1. Sign in at <https://app.kilo.ai>
+2. Open **Your Profile** on your personal account (not an organization)
+3. Scroll to the bottom of the page and copy your API key
+
+**DeepSeek**
+
+1. Sign in at <https://platform.deepseek.com>
+2. Open <https://platform.deepseek.com/api_keys> and create a new key
+3. Copy the key
+
+### Where to paste it
+
+Settings → **Providers** → paste into **API Token** → save. The key is stored only in the local `.env` file; it is never sent anywhere except to the provider you configured.
+
+Other providers are untested; configure them at your own risk.
 
 ## Benchmark sources
 
@@ -96,4 +234,4 @@ The three above are tested. Other providers are untested; configure them at your
 
 MIT License · Copyright (c) 2026 Henry Yau
 
-Bundled components (Apache, PHP, and the front-end libraries) keep their own licenses; see `THIRD_PARTY_LICENSES.md`.
+Apache, PHP and the bundled front-end libraries keep their own licenses — see `THIRD_PARTY_LICENSES.md`.

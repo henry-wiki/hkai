@@ -597,6 +597,7 @@
     color: var(--set_text_mute);
     font-size: 11px;
     cursor: pointer;
+    text-decoration: none;
 }
 .sc_about__check:hover {
     color: var(--set_text);
@@ -643,4 +644,21 @@
 .provider_key_row[data-provider_state='empty'] [data-provider_part='reset'],
 .provider_key_row[data-provider_state='empty'] [data-provider_part='cancel'] {
     display: none;
+}
+
+/* About：對外連結（橫排、可換行；沿用文字色） */
+.sc_about__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.sc_about__link {
+    color: inherit;
+    text-decoration: underline;
+    opacity: 0.9;
+}
+
+.sc_about__link:hover {
+    opacity: 1;
 }
