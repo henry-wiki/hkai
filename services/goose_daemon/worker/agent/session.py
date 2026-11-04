@@ -24,6 +24,7 @@ from ...context import (
     message_store,
 )
 from ...msg import message_context
+from ...utils.timer import timer_class
 from ..message_events import (
     EVENT_CANCELLATION_REQUESTED,
     EVENT_CONNECTION_ESTABLISHED,
@@ -246,6 +247,8 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
 
     # 判定：新一輪 → 先關上一輪，段落 index 再前進（每輪一對檔）
     if is_new_turn:
+        _close_open_tool_calls(stream_state, "completed")
+
         message_log().close_response_turn(int(stream_state["response_index"]), "completed")
 
         stream_state["response_index"] += 1
@@ -298,6 +301,43 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
             return
 
         stream_state["tool_signatures"][tool_call_id] = tool_signature
+
+        # 工具調用全文記錄（每輪一檔；start／done 兩行，靠 tool_call_id 合併）
+        tool_seq_by_id = stream_state.setdefault("tool_seq_by_id", {})
+
+        # 判定：首次見到呢個 id → 派次序（輪內顯示次序）
+        if tool_call_id != "" and tool_call_id not in tool_seq_by_id:
+            tool_seq_by_id[tool_call_id] = len(tool_seq_by_id) + 1
+
+        tool_phase = "start"
+
+        # 判定：終態 → 呢行係 done
+        if tool_status in ("completed", "failed", "cancelled"):
+            tool_phase = "done"
+
+        tool_record: dict[str, object] = {}
+        tool_record["seq"] = tool_seq_by_id.get(tool_call_id, 0)
+        tool_record["tool_call_id"] = tool_call_id
+        tool_record["phase"] = tool_phase
+        tool_record["tool"] = display_name
+        tool_record["input_full"] = str(update_payload.get("raw_input_full", ""))
+        tool_record["output_full"] = str(update_payload.get("output_text_full", ""))
+        tool_record["status"] = tool_status
+        tool_record["datetime"] = timer_class.get_datetime()
+
+        tool_has_content = tool_record["input_full"] != "" or tool_record["output_full"] != "" or tool_phase == "done"
+
+        # 判定：有內容／終態才寫（in_progress 空事件唔記）
+        if tool_has_content is True:
+            message_log().append_tool_call(int(stream_state["response_index"]), tool_record)
+
+            tool_open_ids = stream_state.setdefault("tool_open_ids", {})
+
+            # 判定：start → 記住未收尾；done → 除名
+            if tool_phase == "start":
+                tool_open_ids[tool_call_id] = True
+            else:
+                tool_open_ids.pop(tool_call_id, None)
 
         tool_parts: list[str] = []
 
@@ -515,6 +555,8 @@ def _on_prompt_finished(prompt_response: object, stream_state: StreamState) -> N
 
     # 判定：協定報 cancelled（本側曾發取消）→ 唔記完成（收尾交取消路徑）
     if stop_reason == "cancelled":
+        _close_open_tool_calls(stream_state, "aborted")
+
         _ = message_log().append_info_log(EVENT_CANCELLATION_REQUESTED, "ACP turn cancelled")
         return
 
@@ -524,6 +566,8 @@ def _on_prompt_finished(prompt_response: object, stream_state: StreamState) -> N
         "context_size":  usage.get("size", 0),
         "cost_usd":      usage.get("cost_usd", 0),
     }
+    _close_open_tool_calls(stream_state, "completed")
+
     _ = message_log().append_success_log(EVENT_RESPONSE_COMPLETED, "ACP stream completed", usage_metadata)
     _ = message_status().apply(EVENT_RESPONSE_COMPLETED)
 
@@ -531,6 +575,28 @@ def _on_prompt_finished(prompt_response: object, stream_state: StreamState) -> N
 def _on_cancelled() -> None:
     """使用者取消（watchdog 測到）——記事件一次（終止緊隨其後）。"""
     _ = message_log().append_info_log(EVENT_CANCELLATION_REQUESTED, "Cancelled by user — stopping goose (ACP)")
+
+
+def _close_open_tool_calls(stream_state: dict, status: str) -> None:
+    """未收尾嘅工具調用補 done 行（goose 對快命令唔發 completed——收尾時自行埋單）。"""
+    open_ids = stream_state.setdefault("tool_open_ids", {})
+    seq_by_id = stream_state.setdefault("tool_seq_by_id", {})
+
+    # 逐個未收尾嘅 id：補 done
+    for tool_call_id in list(open_ids.keys()):
+        tool_record: dict[str, object] = {}
+        tool_record["seq"] = seq_by_id.get(tool_call_id, 0)
+        tool_record["tool_call_id"] = tool_call_id
+        tool_record["phase"] = "done"
+        tool_record["tool"] = ""
+        tool_record["input_full"] = ""
+        tool_record["output_full"] = ""
+        tool_record["status"] = status
+        tool_record["datetime"] = timer_class.get_datetime()
+
+        message_log().append_tool_call(int(stream_state["response_index"]), tool_record)
+
+        open_ids.pop(tool_call_id, None)
 
 
 def _append_job_stdout(job_stdout_file: Path, raw_line: str) -> None:

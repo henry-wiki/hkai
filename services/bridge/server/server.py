@@ -126,6 +126,7 @@ class server_class:
         from .server_process import router as process_router
         from .server_projects import router as projects_router
         from .server_stream import build_router as build_stream_router
+        from .server_workspace import router as workspace_router
 
         app.include_router(daemon_router)
         app.include_router(diagnostics_router)
@@ -134,3 +135,4 @@ class server_class:
         app.include_router(process_router)
         app.include_router(projects_router)
         app.include_router(build_stream_router())
+        app.include_router(workspace_router)

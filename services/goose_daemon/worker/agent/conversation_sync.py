@@ -28,7 +28,6 @@ import json
 import os
 import subprocess
 import sys
-import sd_trace
 import time
 import uuid
 
@@ -152,7 +151,6 @@ class conversation_sync_class:
         goose_env = dict(os.environ)
         goose_env["GOOSE_PATH_ROOT"] = str(paths.resolve_path_root(project_path))
 
-        sd_trace.probe("goose_session_list:before", os.getcwd())
 
         # session list（banner 建立 DB＋schema——輸出唔理）
         _ = subprocess.run(
@@ -168,11 +166,11 @@ class conversation_sync_class:
             creationflags=creationflags,
         )
 
-        sd_trace.probe("goose_session_list:after", os.getcwd())
 
     def _build_conversation_rows(self, chat_id: str, message_id: str, session_id: str) -> list[tuple[object, ...]]:
         """我方對話 → goose 訊息列（user／assistant 文字對——今次問題以外，按序）。"""
         our_message_rows, answer_text_by_message = chat_db().read_exchange_source(chat_id, message_id)
+        tool_text_by_message = chat_db().read_tool_call_summaries(chat_id, message_id)
 
         conversation_rows: list[tuple[object, ...]] = []
         last_created_timestamp = 0
@@ -196,6 +194,12 @@ class conversation_sync_class:
             conversation_rows.append(self._build_message_row("user", our_message_text, created_timestamp, session_id))
 
             answer_text = answer_text_by_message.get(our_message_id, "")
+
+            # 判定：該訊息有工具調用記錄 → 附喺答案後面（agent 恢復後仍知做過咩命令）
+            tool_lines = tool_text_by_message.get(our_message_id, [])
+
+            if len(tool_lines) > 0:
+                answer_text = answer_text + chr(10) + chr(10) + "[執行過嘅命令]" + chr(10) + chr(10).join("- " + line for line in tool_lines)
 
             # 判定：有答案文字 → 補 assistant 列（無＝略——例如取消咗嗰啲）
             if answer_text != "":

@@ -14,6 +14,8 @@ class message_Class
     use get_snapshot_diff;
 
     private static $instance = null;
+    // 重推次數（1 tick ＝ 1 秒；null ＝ 唔重推）
+    private $repeat_tick_count = null;
 
     public static function getInstance()
     {

@@ -30,7 +30,6 @@ import asyncio
 import contextlib
 import subprocess
 import sys
-import sd_trace
 from collections.abc import Awaitable, Callable
 from typing import TypedDict, cast
 
@@ -247,8 +246,6 @@ class acp_client:
         if sys.platform == "win32":
             subprocess_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
 
-        sd_trace.probe("goose_acp_spawn:before", project_path)
-
         agent_process = await asyncio.create_subprocess_exec(
             *agent_command,
             cwd=project_path,
@@ -259,7 +256,6 @@ class acp_client:
             **subprocess_kwargs,
         )
 
-        sd_trace.probe("goose_acp_spawn:after", project_path)
 
         return agent_process
 

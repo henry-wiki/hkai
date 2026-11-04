@@ -1,9 +1,7 @@
 // jsmods/message/act/message_stream.js —— 訊息串流（act 層——一檔一事）
 // 職責：開／關 SSE；按事件（ready／turn／append／state／done）直接貼文字上畫面
 // 上游：頁面載入（回應中卡片）／prompt act_prompt_send（送出成功）
-// 下游：sc_stream start／stop；turn／done 交 message_poll.render_once 補骨架同收尾
-
-import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
+// 下游：sc_stream start／stop；turn 自己開新段（唔問後端）；done 只收尾（唔發請求）
 
 class _message_stream {
     constructor() {
@@ -15,6 +13,15 @@ class _message_stream {
 
         // 各段全文緩衝（append 累加——餵 writer 用）
         this.seg_texts = {};
+
+        // 本輪仲未開段嘅類型（turn 設 true——首次寫入時開新段；防新一輪貼入上一段）
+        this.turn_new_kinds = {};
+
+        // 每秒用時 ticker（全頁一個；ready 時起）
+        this.tick_timer = null;
+
+        // 本輪工具段（turn 時清空——每輪一個）
+        this.tool_segment = null;
 
         // 已開線嘅 prompt（防重開）
         this.opened_prompt_ids = {};
@@ -105,14 +112,13 @@ class _message_stream {
         this.opened_prompt_ids[String(prompt_id)] = true;
         this.applied_activity_uids = {};
 
-        const message_instance_stream = await registry().sc_ai_chats().message();
-        const stream_singleton = await message_instance_stream.act().message_stream_singleton();
+        const stream_singleton = await registry().sc_stream().message();
 
         sc_console("message", "stream").log("URL", stream_url);
 
         return stream_singleton.start(
             stream_url,
-            ["ready", "append", "turn", "state", "log", "done"],
+            ["ready", "append", "turn", "turn_done", "tool", "state", "log", "done"],
             this._handle_event.bind(this),
         );
     }
@@ -147,8 +153,7 @@ class _message_stream {
 
     // 關串流（清本條 identity／緩衝——切換對話或專案時舊事件一律作廢）
     async stop() {
-        const message_instance_stream = await registry().sc_ai_chats().message();
-        const stream_singleton = await message_instance_stream.act().message_stream_singleton();
+        const stream_singleton = await registry().sc_stream().message();
 
         stream_singleton.stop();
 
@@ -161,6 +166,119 @@ class _message_stream {
         this.pending_appends = [];
         this.applied_activity_uids = {};
         this.turn_switching = false;
+        this.turn_new_kinds = {};
+    }
+
+    // 用時計：起每秒 ticker＋落本卡片基準（未有基準時用當下時間）
+    // 上游：_apply_ready（每條線接上時）
+    // 下游：start_tick_timer／tick_elapsed
+    _start_elapsed_clock() {
+        this.start_tick_timer();
+
+        const j_message_panel = this._get_panel();
+
+        // 判定：卡片未喺畫面 → 唔做
+        if (j_message_panel.length === 0) {
+            return;
+        }
+
+        const j_total_elapsed = j_message_panel.find(".total_elapsed").first();
+
+        // 判定：已有基準（後端帶過秒數）→ 唔覆蓋
+        if (Number(j_total_elapsed.attr("data-elapsed_ts")) > 0) {
+            return;
+        }
+
+        j_total_elapsed.attr("data-elapsed_ts", Date.now());
+    }
+
+    // 起每秒 ticker（只起一次——全頁一個）
+    // 上游：_start_elapsed_clock
+    // 下游：tick_elapsed（每秒）
+    start_tick_timer() {
+        // 判定：已起 → 唔重複
+        if (this.tick_timer) {
+            return;
+        }
+
+        const thisObject = this;
+
+        this.tick_timer = setInterval(function () {
+            thisObject.tick_elapsed();
+        }, 1000);
+    }
+
+    // 用時 tick（掃工作中卡片：總用時＋段用時＋權限倒數；每秒一次）
+    // 上游：start_tick_timer
+    // 下游：format_elapsed_sec／_tick_permission_countdowns
+    tick_elapsed() {
+        const thisObject = this;
+
+        // 總用時（每張工作緊嘅卡片一個）
+        jQuery(".message_wrapper[data-working='1'] .total_elapsed").each(function () {
+            const j_total_elapsed = jQuery(this);
+
+            const elapsed_sec = Number(j_total_elapsed.attr("data-elapsed_sec"));
+            const elapsed_ts  = Number(j_total_elapsed.attr("data-elapsed_ts"));
+
+            // 判定：未有基準（未落過時間戳）→ 唔動
+            if (elapsed_ts === 0) {
+                return;
+            }
+
+            const now_elapsed_sec = elapsed_sec + Math.floor((Date.now() - elapsed_ts) / 1000);
+
+            j_total_elapsed.find(".total_elapsed_time").text(thisObject.format_elapsed_sec(now_elapsed_sec));
+        });
+
+        // 段用時（thinking／result 計時器）
+        jQuery(".message_wrapper[data-working='1'] .response_elapsed").each(function () {
+            const j_response_elapsed = jQuery(this);
+
+            const elapsed_sec = Number(j_response_elapsed.attr("data-elapsed_sec"));
+            const elapsed_ts  = Number(j_response_elapsed.attr("data-elapsed_ts"));
+
+            // 判定：未有基準（未落過時間戳）→ 唔動
+            if (elapsed_ts === 0) {
+                return;
+            }
+
+            const now_elapsed_sec = elapsed_sec + Math.floor((Date.now() - elapsed_ts) / 1000);
+
+            j_response_elapsed.text(thisObject.format_elapsed_sec(now_elapsed_sec));
+        });
+
+        this._tick_permission_countdowns();
+    }
+
+    // 權限卡倒數（每秒一次）
+    _tick_permission_countdowns() {
+        jQuery(".permission_prompt[data-deadline_ts]").each(function () {
+            const j_permission_prompt = jQuery(this);
+
+            const deadline_ts = Number(j_permission_prompt.attr("data-deadline_ts"));
+
+            // 判定：無有效期限 → 唔動
+            if (!deadline_ts) {
+                return;
+            }
+
+            const remain_sec = Math.max(0, Math.ceil(deadline_ts - Date.now() / 1000));
+
+            const j_permission_countdown = j_permission_prompt.find(".permission_prompt__countdown");
+
+            const remain_suffix = j_permission_countdown.attr("data-suffix") || "";
+
+            j_permission_countdown.text(remain_sec + "s" + remain_suffix);
+        });
+    }
+
+    // 秒 → m:ss（段用時／總用時共用）
+    format_elapsed_sec(elapsed_sec) {
+        const elapsed_minutes = Math.floor(elapsed_sec / 60);
+        const elapsed_seconds = elapsed_sec % 60;
+
+        return elapsed_minutes + ":" + String(elapsed_seconds).padStart(2, "0");
     }
 
     // 事件入口（名＋內容由 sc_stream 傳入）
@@ -179,6 +297,20 @@ class _message_stream {
         // 判定：append → 續貼增量
         if (event_name === "append") {
             await this._apply_append(payload);
+
+            return;
+        }
+
+        // 判定：tool → 本輪工具調用（一條命令一格）
+        if (event_name === "tool") {
+            this._apply_tool_event(payload);
+
+            return;
+        }
+
+        // 判定：turn_done → 該回合該型已完結（用完整內容重寫該段＋停寫）
+        if (event_name === "turn_done") {
+            await this._apply_turn_done(payload);
 
             return;
         }
@@ -215,7 +347,7 @@ class _message_stream {
         return jQuery(".message_wrapper[data-message_id='" + this.message_id + "']").first();
     }
 
-    // 取段（kind＝thinking／result；冇就照骨架造一個）
+    // 取段（kind＝thinking／result）：換輪後第一次寫入＝開新段；其餘寫返最後一段；冇段＝造骨架
     _get_segment(response_kind) {
         const j_message_panel = this._get_panel();
 
@@ -226,29 +358,98 @@ class _message_stream {
 
         const j_agent_message = j_message_panel.find(".agent_message").first();
 
+        // 模型顯示文（wrapper attribute——同後端工具列同一口徑）
+        const message_model_text = String(j_message_panel.attr("data-model_text") || "");
+
+        // 判定：本輪首次寫入呢一型 → 先落旗標（下面決定開新段抑或重用空段）
+        const is_turn_first_write = this.turn_new_kinds[response_kind] === true;
+
+        this.turn_new_kinds[response_kind] = false;
+
         let j_segment = j_agent_message.find(".seg--" + response_kind).last();
 
-        // 判定：未有段 → 造骨架（同後端 seg 結構一致；data-text＝writer 定位）
+        // 判定：換輪首次寫入 且 最後一段已用過 → 唔可以再寫入（開新段）
+        if (is_turn_first_write === true && this._is_segment_used(j_segment) === true) {
+            j_segment = jQuery();
+        }
+
+        // 判定：未有可寫段 → 造骨架（thinking／result 兩種結構，同後端輸出一致）
         if (j_segment.length === 0) {
-            const segment_html = "<div class='seg seg--" + response_kind + "' data-response_id=''>"
-                + "<div class='seg__body'>"
-                + "<div class='seg__scroll noscroll'>"
-                + "<div class='seg__text' data-text='" + response_kind + "'></div>"
-                + "</div>"
-                + "</div>"
-                + "</div>";
+            let segment_html = "";
+
+            // 判定：thinking 段 → 工具列喺上、計時格獨立、冇 seg__head、有水印
+            if (response_kind === "thinking") {
+                segment_html = "<div class='seg seg--thinking' data-response_id='' data-start_at='' data-response_status='' data-content_length='0'>"
+                    + "<div class='seg__body'>"
+                    + "<div class='seg__bar'>"
+                    + "<button type='button' class='seg__action' data-action='thinking_zoom' data-zoom_scope='.seg--thinking' data-zoom_target='[data-text=thinking]' data-zoom_title='Thinking' title='Zoom'><i class='fa-solid fa-up-right-and-down-left-from-center'></i></button>"
+                    + "<button type='button' class='seg__action' data-action='message_copy' data-copy_scope='.seg--thinking' data-copy_target='[data-text=thinking]' title='Copy'><i class='fa-regular fa-copy'></i></button>"
+                    + "</div>"
+                    + "<div class='seg__elapsed'><span class='response_elapsed' data-response_id='' data-elapsed_sec='0' data-elapsed_ts='" + Date.now() + "'>0:00</span></div>"
+                    + "<div class='seg__scroll'><div data-text='thinking' class='seg__text'></div></div>"
+                    + "</div>"
+                    + "<div class='seg__mark'><div>thinking</div></div>"
+                    + "</div>";
+            } else {
+                segment_html = "<div class='seg seg--result' data-response_id='' data-start_at='' data-response_status='' data-content_length='0'>"
+                    + "<div class='seg__head'></div>"
+                    + "<div class='seg__body'>"
+                    + "<div class='seg__scroll noscroll'><div data-text='result' class='seg__text sc_markdown_body'></div></div>"
+                    + "<div class='seg__bar'>"
+                    + "<div class='seg__bar_actions'>"
+                    + "<button type='button' class='seg__action' data-action='response_zoom' data-zoom_scope='[data-message_id]' data-zoom_target='[data-text=result]' data-zoom_title='Answer' title='Zoom'>"
+                    + "<i class='fa-solid fa-up-right-and-down-left-from-center'></i>"
+                    + "</button>"
+                    + "<button type='button' class='seg__action' data-action='message_copy' data-copy_scope='[data-message_id]' data-copy_target='[data-text=result]' title='Copy'>"
+                    + "<i class='fa-regular fa-copy'></i>"
+                    + "</button>"
+                    + "</div>"
+                    + "<span class='response_elapsed' data-response_id='' data-elapsed_sec='0' data-elapsed_ts='" + Date.now() + "'>0:00</span>"
+                    + "</div>"
+                    + "</div>"
+                    + "</div>";
+            }
 
             j_agent_message.append(segment_html);
 
             j_segment = j_agent_message.find(".seg--" + response_kind).last();
+
+            // 判定：result 段且有模型資訊 → 補 message_model（工具列右邊，同後端一致）
+            if (response_kind === "result" && message_model_text !== "") {
+                const j_bar_actions = j_segment.find(".seg__bar_actions").first();
+                const j_model_text = jQuery("<span class='message_model'></span>").text(message_model_text);
+
+                j_bar_actions.append(j_model_text);
+            }
         }
 
         return j_segment;
     }
 
+    // 段用過未（有內容 或 已綁真 response_id 即算用過——重連攞返嘅空段可以重用）
+    _is_segment_used(j_segment) {
+        // 判定：冇段 → 當用過（呼叫端要開新段）
+        if (j_segment.length === 0) {
+            return true;
+        }
+
+        const segment_response_id = String(j_segment.attr("data-response_id") || "");
+
+        // 判定：已綁真身份 → 用過
+        if (segment_response_id !== "") {
+            return true;
+        }
+
+        const segment_text = j_segment.find(".seg__text").text().trim();
+
+        return segment_text !== "";
+    }
+
     // ready：貼全文（餵 writer——自動接續印）
     async _apply_ready(payload) {
         this.message_id = Number(payload.message_id || this.message_id);
+
+        this._start_elapsed_clock();
 
         this._apply_state({ status: payload.status });
 
@@ -346,19 +547,226 @@ class _message_stream {
         await this._write_segment_text(response_kind, this.seg_texts[response_kind]);
     }
 
-    // turn：換輪（補骨架；新段由後端重新渲染）
+    // turn_done：該回合該型已完結 → 用完整內容重寫該段（Markdown 最終化）然後停寫
+    // 上游：bridge SSE turn_done（{kind, text}——每段只發一次）
+    // 下游：_get_segment／_get_writer／writer.write＋complete
+    async _apply_turn_done(payload) {
+        const response_kind = String(payload.kind || "");
+        const full_text = String(payload.text || "");
+
+        // 判定：只認內文兩型 → 其餘唔理
+        if (response_kind !== "thinking" && response_kind !== "result") {
+            return;
+        }
+
+        this.seg_texts[response_kind] = full_text;
+
+        const j_segment = this._get_segment(response_kind);
+
+        // 判定：冇段 → 唔做
+        if (j_segment.length === 0) {
+            return;
+        }
+
+        const j_seg_text = j_segment.find("[data-text='" + response_kind + "']").first();
+
+        // 判定：冇內容節點 → 唔做
+        if (j_seg_text.length === 0) {
+            return;
+        }
+
+        // 先停寫（避免打字動畫覆蓋最終渲染）
+        if (j_seg_text[0].writer_instance) {
+            j_seg_text[0].writer_instance.stop();
+        }
+
+        j_seg_text.text(full_text);
+
+        // 判定：result 段 → 最終 Markdown 渲染（同後端 render 一致）；thinking 段保持純文字
+        if (response_kind === "result") {
+            const markdown = await registry().sc_markdown();
+
+            markdown.render_element(j_seg_text);
+        }
+
+        // 脫離 writer（done 唔會再重繪呢段）
+        j_seg_text[0].writer_instance = null;
+    }
+
+    // tool 事件（{seq,tool_call_id,phase,tool,input_full,output_full,status}）→ 本輪工具段加／更新一格
+    // 上游：bridge SSE tool（tools.jsonl 逐行）
+    // 下游：_get_tool_segment／DOM
+    _apply_tool_event(tool_record) {
+        const j_message_panel = this._get_panel();
+
+        // 判定：卡片未喺畫面 → 唔做
+        if (j_message_panel.length === 0) {
+            return;
+        }
+
+        const tool_call_id = String(tool_record.tool_call_id || "");
+
+        // 判定：冇 id → 唔做
+        if (tool_call_id === "") {
+            return;
+        }
+
+        const j_tool_segment = this._get_tool_segment();
+
+        // 判定：冇工具段（建唔到）→ 唔做
+        if (j_tool_segment.length === 0) {
+            return;
+        }
+
+        const j_tool_text = j_tool_segment.find("[data-text='tool']").first();
+
+        let j_tool_item = j_tool_text.find(".tool_item[data-tool_call_id='" + tool_call_id + "']").first();
+
+        // 判定：未見過 → 建一格
+        if (j_tool_item.length === 0) {
+            j_tool_item = this._build_tool_item(tool_record);
+
+            j_tool_text.append(j_tool_item);
+        }
+
+        const record_phase = String(tool_record.phase || "start");
+
+        // 判定：start → 記低命令原文
+        if (record_phase === "start") {
+            const tool_input = String(tool_record.input_full || "");
+
+            // 判定：有輸入 → 寫入命令原文（後續 in_progress 冇輸入，唔清走）
+            if (tool_input !== "") {
+                j_tool_item.find(".tool_item__input").first().text(this._extract_tool_command(tool_input));
+            }
+
+            // 記開始時間（用時顯示用）
+    
+            return;
+        }
+
+        // done → 更新狀態（同輸出）
+        j_tool_item.find(".tool_item__status").first().text(String(tool_record.status || ""));
+
+        this._freeze_tool_segment_when_done(j_tool_segment, String(tool_record.datetime || ""));
+
+        const tool_output = String(tool_record.output_full || "");
+
+        // 判定：有輸出 → 出輸出塊
+        if (tool_output !== "") {
+            const j_tool_output = j_tool_item.find(".tool_item__output").first();
+
+            j_tool_output.text(tool_output);
+            j_tool_output.removeAttr("hidden");
+        }
+    }
+
+    // 由 {'command': '...'} 抽命令原文（唔係 dict 就原樣回）
+    _extract_tool_command(raw_input) {
+        const raw_text = String(raw_input || "").trim();
+
+        // 判定：唔係 command dict → 原樣
+        const command_match = raw_text.match(/^\{\s*'command'\s*:\s*'([\s\S]*)'\s*\}$/);
+
+        // 判定：冇配對 → 原樣
+        if (command_match === null) {
+            return raw_text;
+        }
+
+        return command_match[1];
+    }
+
+    // 取（或建立）本輪工具段（結構同後端一致：head／scroll／bar＋copy）
+    _get_tool_segment() {
+        const j_message_panel = this._get_panel();
+
+        // 判定：卡片未喺畫面 → 冇段
+        if (j_message_panel.length === 0) {
+            return jQuery();
+        }
+
+        // 判定：本輪已有工具段 → 重用
+        if (this.tool_segment !== null && this.tool_segment.closest(".message_wrapper").length > 0) {
+            return this.tool_segment;
+        }
+
+        const j_agent_message = j_message_panel.find(".agent_message").first();
+
+        const segment_html = "<div class='seg seg--tool'>"
+            + "<div class='seg__head'></div>"
+            + "<div class='seg__body'>"
+            + "<div class='seg__scroll noscroll'>"
+            + "<div data-text='tool' class='seg__text seg__text--tool'></div>"
+            + "</div>"
+            + "<div class='seg__bar'>"
+            + "<div class='seg__bar_actions'></div>"
+            + "<span class='response_elapsed' data-response_id='' data-elapsed_sec='0' data-elapsed_ts='" + Date.now() + "'>0:00</span>"
+            + "</div>"
+            + "</div>"
+            + "</div>";
+
+        j_agent_message.append(segment_html);
+
+        this.tool_segment = j_agent_message.find(".seg--tool").last();
+        this.tool_segment.attr("data-started_ms", String(Date.now()));
+
+        return this.tool_segment;
+    }
+
+    // 砌一格工具（head＝#seq／工具名／狀態；主體＝命令原文 pre）
+    _build_tool_item(tool_record) {
+        const j_tool_item = jQuery("<div class='tool_item'></div>");
+
+        j_tool_item.attr("data-tool_call_id", String(tool_record.tool_call_id || ""));
+
+        const j_tool_head = jQuery("<div class='tool_item__head'></div>");
+        const j_tool_seq = jQuery("<span class='tool_item__seq'></span>").text("#" + String(tool_record.seq || ""));
+        const j_tool_name = jQuery("<span class='tool_item__name'></span>").text(String(tool_record.tool || ""));
+        const j_tool_status = jQuery("<span class='tool_item__status'></span>").text(String(tool_record.status || ""));
+
+        j_tool_head.append(j_tool_seq);
+        j_tool_head.append(j_tool_name);
+        j_tool_head.append(j_tool_status);
+
+        j_tool_item.append(j_tool_head);
+
+        const tool_command_text = this._extract_tool_command(tool_record.input_full);
+
+        const j_tool_line = jQuery("<div class='tool_item__line'></div>");
+        const j_tool_input = jQuery("<pre class='tool_item__input'></pre>").text(tool_command_text);
+        const j_tool_copy = jQuery("<button type='button' class='seg__action tool_item__copy' data-action='message_copy' data-copy_scope='.tool_item' data-copy_target='.tool_item__input' title='Copy'><i class='fa-regular fa-copy'></i></button>");
+
+        j_tool_line.append(j_tool_input);
+        j_tool_line.append(j_tool_copy);
+
+        const j_tool_output = jQuery("<pre class='tool_item__output' hidden></pre>");
+
+        j_tool_item.append(j_tool_line);
+        j_tool_item.append(j_tool_output);
+
+        return j_tool_item;
+    }
+
+    // turn：換輪（本輪兩型都未開段——首次寫入由 _get_segment 開新段；唔再問後端攞骨架）
     async _apply_turn(payload) {
         sc_console("message", "stream").log("新一輪", payload.index);
 
         this.turn_switching = true;
         this.seg_texts = {};
 
-        const message_instance_poll = await registry().sc_ai_chats().message();
-        const message_poll_instance = await message_instance_poll.act().message_poll();
+        // 本輪 thinking／result 都未開段（寫入時各開一個新段）
+        this.turn_new_kinds["thinking"] = true;
+        this.turn_new_kinds["result"] = true;
 
-        const chat_instance = await registry().sc_ai_chats().chat();
+        // 新一輪 → 上一輪工具段收邊（補狀態＋凍結用時），下一個工具段另開
+        this._close_tool_items("completed");
 
-        message_poll_instance.render_once(chat_instance.get_chat_sid());
+        // 判定：有上一輪工具段 → 凍結
+        if (this.tool_segment !== null) {
+            this._freeze_tool_segment_when_done(this.tool_segment, "");
+        }
+
+        this.tool_segment = null;
 
         this.turn_switching = false;
 
@@ -391,20 +799,78 @@ class _message_stream {
         }
     }
 
-    // done：最後一次完整渲染（Markdown／工具列交返 poll 渲染器）
+    // done：收尾（狀態同步＋全部段印完；唔再問後端攞 HTML）
     async _apply_done(payload) {
         this._apply_state({ status: payload.status });
 
         this._complete_all_writers();
 
-        const message_instance_poll = await registry().sc_ai_chats().message();
-        const message_poll_instance = await message_instance_poll.act().message_poll();
-
-        const chat_instance = await registry().sc_ai_chats().chat();
-
-        message_poll_instance.render_once(chat_instance.get_chat_sid());
+        this._close_tool_items(payload.status);
 
         await this.stop();
+    }
+
+    // 工具段用時凍結（全部格都有狀態＝本段完成 → 定住秒數，唔再跳）
+    // 上游：_apply_tool_event（done）
+    // 下游：DOM（data-elapsed_ts=0 令 ticker 跳過）
+    _freeze_tool_segment_when_done(j_tool_segment, finished_text) {
+        // 判定：冇段 → 唔做
+        if (j_tool_segment.length === 0) {
+            return;
+        }
+
+        // 判定：仲有格未有狀態 → 未完成，唔凍結
+        if (j_tool_segment.find(".tool_item__status").filter(function () { return jQuery(this).text().trim() === ""; }).length > 0) {
+            return;
+        }
+
+        const j_elapsed = j_tool_segment.find(".response_elapsed").first();
+
+        // 判定：已凍結 → 唔再做
+        if (String(j_elapsed.attr("data-elapsed_ts")) === "0") {
+            return;
+        }
+
+        const started_ms = Number(j_tool_segment.attr("data-started_ms") || 0);
+
+        // 判定：冇開始基準 → 唔做
+        if (started_ms < 1) {
+            return;
+        }
+
+        const finished_ms = Date.parse(String(finished_text).replace(" ", "T"));
+        const end_ms = isNaN(finished_ms) ? Date.now() : finished_ms;
+
+        const elapsed_sec = Math.max(0, Math.round((end_ms - started_ms) / 1000));
+
+        j_elapsed.text(this.format_elapsed_sec(elapsed_sec));
+        j_elapsed.attr("data-elapsed_ts", "0");
+    }
+
+    // 收尾：未收到 done 嘅工具格，用訊息終態補狀態（同 DB 渲染一致）
+    // 上游：_apply_done
+    // 下游：DOM
+    _close_tool_items(message_status) {
+        const j_message_panel = this._get_panel();
+
+        // 判定：卡片未喺畫面 → 唔做
+        if (j_message_panel.length === 0) {
+            return;
+        }
+
+        const close_status_text = String(message_status || "completed");
+
+        // 逐格工具：狀態空白 → 補
+        j_message_panel.find(".seg--tool .tool_item__status").each(function () {
+            const j_status = jQuery(this);
+
+            // 判定：已有狀態 → 唔覆蓋
+            if (j_status.text().trim() !== "") {
+                return;
+            }
+
+            j_status.text(close_status_text);
+        });
     }
 
     // 段文字：餵 writer（全文；自動接續印）；result 段帶 markdown 串流渲染

@@ -211,6 +211,21 @@ class message_log_class:
         message_dir = message_store().get_message_dir()
         return message_context.get_msg_file_path(message_dir, f"response.{response_index}.result")
 
+    def _response_tools_path(self, response_index: int) -> Path:
+        message_dir = message_store().get_message_dir()
+        return message_dir / f"msg_response.{response_index}.tools.jsonl"
+
+    # 工具調用記錄（append 一行 JSONL——每輪一檔；start／done 兩行靠 tool_call_id 合）
+    def append_tool_call(self, response_index: int, record: dict[str, object]) -> None:
+        tools_path = self._response_tools_path(response_index)
+
+        record_line = json.dumps(record, ensure_ascii=False)
+
+        with tools_path.open("a", encoding="utf-8", newline="") as output_file:
+            _ = output_file.write(record_line + chr(10))
+
+        self._update_poll_list(tools_path)
+
     # response thinking 純文字 append（reasoning_content——帶 response index）
     def append_response_thinking(self, response_index: int, text: str) -> None:
         if not self._stream_log_enabled:

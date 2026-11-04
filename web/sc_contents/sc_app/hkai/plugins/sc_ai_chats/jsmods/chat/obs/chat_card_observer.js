@@ -4,8 +4,6 @@
 // 下游：hook obs:chat_card_changed（action＋chat_sid）；本檔唔判斷做咩
 // 結構：eager 單例 closure factory（域接駁動態 import 解構後呼叫 init）
 
-import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
-
 class _chat_card_observer {
     constructor() {
         // 觀察器（重掛先 disconnect）

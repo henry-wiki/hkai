@@ -42,7 +42,7 @@ trait handle_fetch_models
         $provider_footer_lines[] = "<div id='model_selector_efforts' class='modal__content-model_selector_efforts'></div>";
         $provider_footer_lines[] = "<div class='modal__content-footer'>";
             $provider_footer_lines[] = "<div class='modal__content-footer-info'></div>";
-            $provider_footer_lines[] = "<button id='model_selector_apply' type='button' class='button button--primary'>Apply</button>";
+            $provider_footer_lines[] = "<button id='model_selector_apply' type='button' class='button button--primary'>" . hkai()->i18n()->get("provider.apply") . "</button>";
         $provider_footer_lines[] = "</div>";
         
         // html：provider 頁（大 table——後端砌，前端只 insert；同設定 modal 做法）

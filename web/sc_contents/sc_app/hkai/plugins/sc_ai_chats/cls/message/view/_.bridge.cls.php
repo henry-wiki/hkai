@@ -13,6 +13,7 @@ class view_Class
     use get_agent_summarize_toolbar;
     use get_agent_response_thinking;
     use get_agent_response_result;
+    use get_agent_response_tool;
     use get_agent_response_result_toolbar;
     use get_agent_response_thinking_toolbar;
     use get_response_elapsed_sec;

@@ -55,14 +55,59 @@ class snapshot_Class
         return $this->view_id;
     }
 
-    // 計 view 檔路徑：data/stream/<target>/view/<view_id>.json
+    // 本頁 view 檔身份段（同一 view_id 之下，按 target 所屬語境分檔——換對話／換專案唔會撞基準）
+    public function get_view_identity($target_name)
+    {
+        $chat_targets = ["message", "prompt"];
+
+        // 判定：訊息類 → 用對話身份
+        if (in_array($target_name, $chat_targets, true) === true) {
+            return $this->sanitize_view_identity(sc_stream()->resolve_chat_sid());
+        }
+
+        $project_targets = ["chat"];
+
+        // 判定：專案範圍 → 用專案身份
+        if (in_array($target_name, $project_targets, true) === true) {
+            return $this->sanitize_view_identity(sc_stream()->resolve_project_slug());
+        }
+
+        return "";
+    }
+
+    // 清身份段（只准英數、_、-；有怪字元 → 當冇身份）
+    private function sanitize_view_identity($identity)
+    {
+        // 判定：空 → 空
+        if ($identity === "") {
+            return "";
+        }
+
+        // 判定：格式唔合法 → 當冇身份
+        if (preg_match("/^[A-Za-z0-9_-]+$/", $identity) !== 1) {
+            return "";
+        }
+
+        return $identity;
+    }
+
+    // 計 view 檔路徑：data/stream/<target>/view/<view_id>__<身份>.json（冇身份 → <view_id>.json）
     public function get_snapshot_view_file($target_name, $view_id)
     {
         $stream_dir = sc_get_config("hkai.stream_dir");
 
         $target_view_dir = $stream_dir . "/" . $target_name . "/view";
 
-        $snapshot_view_file = $target_view_dir . "/" . $view_id . ".json";
+        $view_identity = $this->get_view_identity($target_name);
+
+        $view_file_name = $view_id . ".json";
+
+        // 判定：有身份 → 檔名加身份段
+        if ($view_identity !== "") {
+            $view_file_name = $view_id . "__" . $view_identity . ".json";
+        }
+
+        $snapshot_view_file = $target_view_dir . "/" . $view_file_name;
 
         return $snapshot_view_file;
     }
@@ -107,26 +152,7 @@ class snapshot_Class
             $live_entries = $live_state["entries"] ?? [];
             $view_entries = ($view_state === null) ? [] : ($view_state["entries"] ?? []);
 
-            $added_items   = sc_stream()->monitor()->get_snapshot_diff_for_added($target_name, $live_entries, $view_entries);
-            $updated_items = sc_stream()->monitor()->get_snapshot_diff_for_updated($target_name, $live_entries, $view_entries);
-            $deleted_items = sc_stream()->monitor()->get_snapshot_diff_for_deleted($target_name, $live_entries, $view_entries);
-
-            $diff_count = count($added_items) + count($updated_items) + count($deleted_items);
-
-            // 判定：三類都無 → changed 0
-            if ($diff_count < 1) {
-                $snapshot_changes[$target_name]["changed"] = 0;
-                $snapshot_changes[$target_name]["added"]   = [];
-                $snapshot_changes[$target_name]["updated"] = [];
-                $snapshot_changes[$target_name]["deleted"] = [];
-                continue;
-            }
-
-            // 有變 → 直接交三類結果（唔再比較）
-            $snapshot_changes[$target_name]["changed"] = 1;
-            $snapshot_changes[$target_name]["added"]   = $added_items;
-            $snapshot_changes[$target_name]["updated"] = $updated_items;
-            $snapshot_changes[$target_name]["deleted"] = $deleted_items;
+            $snapshot_changes[$target_name] = sc_stream()->monitor()->get_snapshot_diff($target_name, $live_entries, $view_entries);
         }
 
         return $snapshot_changes;

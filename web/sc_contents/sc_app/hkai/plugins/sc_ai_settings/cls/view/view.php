@@ -52,7 +52,7 @@ class view_Class
 
         $navigation[] = "<div class='modal__search_wrap'>";
             $navigation[] = "<i class='fa-solid fa-magnifying-glass modal__search_icon'></i>";
-            $navigation[] = "<input type='text' class='modal__search_input' placeholder='Search settings...' />";
+            $navigation[] = "<input type='text' class='modal__search_input' placeholder='" . hkai()->i18n()->get("settings.search") . "' />";
         $navigation[] = "</div>";
         $navigation[] = "<div class='modal__navigation-content'>";
 

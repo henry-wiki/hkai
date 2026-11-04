@@ -23,6 +23,7 @@ trait fetch_source_entries
         $project_counts = [];
         $chat_counts    = [];
 
+
         foreach ($meta_files as $meta_file_item) {
             $relative_path = substr($meta_file_item, strlen($messages_polling_dir) + 1);
             $path_segments = explode("/", $relative_path);

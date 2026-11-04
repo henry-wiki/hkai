@@ -31,7 +31,6 @@ import json
 import os
 import subprocess
 import sys
-import sd_trace
 from typing import cast
 
 import psutil
@@ -55,7 +54,6 @@ def spawn_detached(command: list[str]) -> None:
     # 註：不可用 DETACHED_PROCESS——console 程式（python.exe）會被 Windows 新開一個可見黑窗
     if sys.platform == "win32":
         creation_flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-        sd_trace.probe("launcher_spawn:before", SERVICES_DIR)
 
         _ = subprocess.Popen(
             command,
@@ -66,7 +64,6 @@ def spawn_detached(command: list[str]) -> None:
             stderr=subprocess.DEVNULL,
         )
 
-        sd_trace.probe("launcher_spawn:after", SERVICES_DIR)
     else:
         _ = subprocess.Popen(
             command,

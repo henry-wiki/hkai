@@ -30,7 +30,7 @@ trait render_message_body
                 $outputLines[] = "</button>";
                 $outputLines[] = "<button class='sc_topbar__nav_btn' data-action='nav_refresh' title='重新整理'>⟳</button>";
                 // 專案路徑列（空殼——路徑由前端動態載入；未填＝placeholder 顯；bdi＝隔離路徑 LTR 內容——配合 CSS direction:rtl 令長路徑顯尾、開頭省略號）
-                $outputLines[] = "<div class='sc_topbar__path' data-placeholder='Project path'>";
+                $outputLines[] = "<div class='sc_topbar__path' data-placeholder='" . hkai()->i18n()->get("message.project_path") . "'>";
                     $outputLines[] = "<bdi></bdi>";
                     // 複製路徑掣（列右側——目標由按鈕聲明 data-copy-target；撳＝複製條列顯示嘅專案路徑）
                     $outputLines[] = "<button class='sc_topbar__path_copy' data-copy-target='.sc_topbar__path bdi' title='複製專案路徑'><i class='fa-regular fa-copy'></i></button>";
@@ -38,7 +38,7 @@ trait render_message_body
                 // 右上工具按鈕（margin-left:auto 推至最右——照 reference3 topnav（模型／成員／分享／通知／帳戶）——未接功能：自帶 data-cmd='coming_soon'（撳＝提示即將推出））
                 $outputLines[] = "<div class='sc_topbar__actions'>";
                     // 模型顯示（MODEL 細標＋型號名——名由後續鏈填；空＝淨顯標籤）
-                    $outputLines[] = "<button class='sc_topbar__model' data-cmd='coming_soon' title='目前模型與對話設定'><small>MODEL</small><bdi></bdi></button>";
+                    $outputLines[] = "<button class='sc_topbar__model' data-cmd='coming_soon' title='目前模型與對話設定'><small>" . hkai()->i18n()->get("message.model_label") . "</small><bdi></bdi></button>";
                     // 協作成員（預留——成員 stack；現時＝你＋AI）
                     $outputLines[] = "<button class='sc_topbar__people' data-cmd='coming_soon' title='協作成員'>";
                         $outputLines[] = "<span class='sc_topbar__people_stack'>";

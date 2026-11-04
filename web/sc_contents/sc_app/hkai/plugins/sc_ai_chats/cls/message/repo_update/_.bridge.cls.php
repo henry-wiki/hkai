@@ -19,6 +19,7 @@ class repo_update_Class
     use update_db_message_status_repair_meta;
     use update_db_message_timing;
     use upsert_db_message_response;
+    use upsert_db_message_tool_calls;
     use touch_upstream_times;
 
     private static $instance = null;

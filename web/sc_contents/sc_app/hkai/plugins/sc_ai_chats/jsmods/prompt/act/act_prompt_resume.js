@@ -13,7 +13,7 @@ class _act_prompt_resume {
 
         // 判定：後端有補派 → 記錄（除錯用；畫面交 poll 反映）
         if (result && result.ok === true && result.notified > 0) {
-            console.info("prompt_resume: notified=" + result.notified);
+            sc_console("prompt", "resume").log("notified=" + result.notified);
         }
 
         return result;

@@ -29,7 +29,7 @@ trait get_message_response_rows_by_message_id
 
         $selectStmt = $pdo->prepare(
             "SELECT * FROM message_response WHERE message_id IN (" . $placeholders . ") 
-            ORDER BY message_id ASC, response_id ASC"
+            ORDER BY message_id ASC, response_index ASC, CASE response_type WHEN 'response_thinking' THEN 0 WHEN 'response_tool' THEN 1 WHEN 'response_result' THEN 2 ELSE 3 END ASC, response_id ASC"
         );
         $selectStmt->execute($bindings);
 

@@ -43,6 +43,9 @@ class _sc_ai_status_bar {
         // 專案選取觀察器（DOM——卡片變 active 即對齊 project 區；唔靠 URL）
         (await status_bar_domain.obs().project_observer()).init();
 
+        // 工作區工具線（workspace_stream 的 git 事件 → sb_git）
+        (await status_bar_domain.obs().workspace_git_observer()).init();
+
         // 出值（唯一路徑——URL 變化與首載共用；init 只接線，唔出值）
         this.register_hook("obs:url_changed", {
             after: async function (goto_url, prev_url) {
@@ -141,9 +144,6 @@ async function refresh_status_bar_regions(status_bar_domain, include_project, in
 
         chat_fetch_instance.chat_fetch();
     }
-
-    const refresh_git_item_instance = await status_bar_domain.act().refresh_git_item();
-    refresh_git_item_instance.refresh_git_item();
 
     const tick_clock_instance = await status_bar_domain.act().tick_clock();
     tick_clock_instance.start_clock();

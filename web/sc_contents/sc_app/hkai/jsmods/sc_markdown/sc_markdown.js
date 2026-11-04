@@ -50,6 +50,20 @@ const INLINE_CODE_BLOCK_MIN_LENGTH = 200;
 
 class _sc_markdown {
     // 單一元素：讀純文字 → markdown → 消毒 → 寫回 HTML（並高亮 code ＋ 渲染 mermaid）
+    // 初始化（開機一次）：marked 開 GFM 換行（單換行＝<br>——純文字清單唔會被壓成一坨）
+    init() {
+        // 判定：已設過 → 唔重設
+        if (this.breaks_enabled === true) {
+            return this;
+        }
+
+        window.marked.setOptions({ breaks: true, gfm: true });
+
+        this.breaks_enabled = true;
+
+        return this;
+    }
+
     render_element(j_element) {
         // 原始文字優先取元素上保留的 markdown（串流已渲染過 HTML → 從 .text() 反推會丟失結構）
         const raw_text = j_element[0].sc_raw_text || j_element.text();
@@ -62,7 +76,7 @@ class _sc_markdown {
         // 保留原文（歷史訊息首次渲染時存下——之後複製／再渲染都只讀它，不再從已渲染 DOM 反推）
         j_element[0].sc_raw_text = raw_text;
 
-        const raw_html  = window.marked.parse(raw_text);
+        const raw_html  = window.marked.parse(raw_text, { breaks: true, gfm: true });
         const safe_html = window.DOMPurify.sanitize(raw_html);
 
         j_element.addClass("sc_markdown_body");
@@ -127,7 +141,7 @@ class _sc_markdown {
         let stream_html = "";
         // 判定：有完整內容 → 渲染為消毒後 HTML
         if (complete_text !== "") {
-            stream_html += window.DOMPurify.sanitize(window.marked.parse(complete_text));
+            stream_html += window.DOMPurify.sanitize(window.marked.parse(complete_text, { breaks: true, gfm: true }));
         }
         // 判定：有未完成尾巴 → 以純文字附在後方
         if (tail_text !== "") {

@@ -237,17 +237,17 @@ class system_env_class:
 
         # 逐 runtime 檢查（表序＝輸出序）
         for (runtime_name, command_name, version_pattern) in RUNTIME_CHECKS:
+            # 判定：python → 直接讀本程序版本（零 spawn——唔跑任何外部命令，跨平台零副作用）
+            if runtime_name == "python":
+                runtimes_found[runtime_name] = platform.python_version()
+
+                continue
+
             binary_path = shutil.which(command_name)
             version_match = None
 
             # 命令存在 → 跑版本命令擷取
             if binary_path is not None:
-                output_text = self.run_version_command(binary_path, ["--version"])
-                version_match = re.search(version_pattern, output_text)
-
-            # python：PATH 無／命中壞存根（WindowsApps stub 輸出空）→ 以當前直譯器補位（本程序即 python）
-            if runtime_name == "python" and (binary_path is None or version_match is None):
-                binary_path = sys.executable
                 output_text = self.run_version_command(binary_path, ["--version"])
                 version_match = re.search(version_pattern, output_text)
 

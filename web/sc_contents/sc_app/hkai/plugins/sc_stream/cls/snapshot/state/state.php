@@ -4,12 +4,12 @@ namespace sc\app\hkai\plugins\sc_stream\snapshot\state;
 
 // == state_Class：state 線刷新（singleton——經 sc_stream()->snapshot()->state() 取得） ==
 // == 上游：sse_state::get_snapshot_changes_for_state()（每 tick 步驟①） ==
-// == 下游：monitor()->{chat,project,polling,git,conn,message}()->init_snapshot() ==
+// == 下游：monitor()->{chat,project,polling,git,message}()->init_snapshot() ==
 
 class state_Class
 {
-    // 本線監視 target 清單（state 線六個）
-    public $snapshot_targets = ["chat", "project", "message", "polling", "git", "conn"];
+    // 本線監視 target 清單（state 線四個——git 交 workspace_stream）
+    public $snapshot_targets = ["chat", "project", "message", "polling"];
 
     private static $instance = null;
 
@@ -34,11 +34,10 @@ class state_Class
         sc_stream()->monitor()->chat()->init_snapshot();
         sc_stream()->monitor()->project()->init_snapshot();
         sc_stream()->monitor()->polling()->init_snapshot();
-        sc_stream()->monitor()->git()->init_snapshot();
-        sc_stream()->monitor()->conn()->init_snapshot();
 
         // message：必須有 chat_sid（is_ready() 判斷；冇 → 跳過）
         sc_stream()->monitor()->message()->init_snapshot();
+
     }
 
     // 刷新快照本體（state 線每 tick——同 init_snapshot 同一份工作）
@@ -47,7 +46,7 @@ class state_Class
         $this->init_snapshot();
     }
 
-    // 讀當刻六個 target 快照（唔適用嘅 target 交 null——唔參與比對）
+    // 讀當刻五個 target 快照（唔適用嘅 target 交 null——唔參與比對）
     public function get_live_snapshot_states()
     {
         $target_states = [];
@@ -56,8 +55,6 @@ class state_Class
         $target_states["project"] = $this->get_ready_target_snapshot("project");
         $target_states["message"] = $this->get_ready_target_snapshot("message");
         $target_states["polling"] = $this->get_ready_target_snapshot("polling");
-        $target_states["git"]     = $this->get_ready_target_snapshot("git");
-        $target_states["conn"]    = $this->get_ready_target_snapshot("conn");
 
         return $target_states;
     }
@@ -75,7 +72,7 @@ class state_Class
         return sc_stream()->monitor()->get_target_snapshot($target_name);
     }
 
-    // 讀本頁已見版本（六個 state target——view/<target>/<view_id>.json → {target: state}）
+    // 讀本頁已見版本（五個 state target——view/<target>/<view_id>.json → {target: state}）
     public function get_view_snapshot_states($view_id)
     {
         // 判定：冇 view id → 空
@@ -121,8 +118,6 @@ class state_Class
         sc_stream()->monitor()->chat()->sync_snapshot_to_view($view_id);
         sc_stream()->monitor()->project()->sync_snapshot_to_view($view_id);
         sc_stream()->monitor()->polling()->sync_snapshot_to_view($view_id);
-        sc_stream()->monitor()->git()->sync_snapshot_to_view($view_id);
-        sc_stream()->monitor()->conn()->sync_snapshot_to_view($view_id);
         sc_stream()->monitor()->message()->sync_snapshot_to_view($view_id);
     }
 }

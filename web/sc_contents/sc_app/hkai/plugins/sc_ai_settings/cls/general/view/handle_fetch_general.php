@@ -12,7 +12,7 @@ trait handle_fetch_general
     {
         // === header ===
         $modal_header   = [];
-        $modal_header[] = "<div class='modal__title'>General</div>";
+        $modal_header[] = "<div class='modal__title'>" . hkai()->i18n()->get("settings.general") . "</div>";
 
         // General 偏好清單（聲明式一檔表——加項／改選項＝只改呢份表；讀＝hkai()->settings()->get〔出廠默認＋web/sc_contents/sc_app/hkai/cls/settings/settings.phpon 覆蓋〕／寫 settings_save_general）
         // 有 options＝已開放（出下拉）；淨 label＝未開放（右欄暫示「努力製作中」）

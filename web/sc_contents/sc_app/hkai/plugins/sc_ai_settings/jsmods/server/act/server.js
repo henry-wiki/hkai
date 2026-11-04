@@ -106,7 +106,7 @@ class _server {
             stream_config.base_url = "";
             meta_element.setAttribute("content", JSON.stringify(stream_config));
         } catch (parse_error) {
-            console.error("clear stream base_url failed: " + parse_error.message);
+            sc_console("settings", "server").error("clear stream base_url failed: " + parse_error.message);
         }
     }
 
@@ -130,7 +130,7 @@ class _server {
             stream_config.base_url = "http://" + server_host + ":" + server_port;
             meta_element.setAttribute("content", JSON.stringify(stream_config));
         } catch (parse_error) {
-            console.error("update stream base_url failed: " + parse_error.message);
+            sc_console("settings", "server").error("update stream base_url failed: " + parse_error.message);
         }
     }
 

@@ -15,7 +15,6 @@ daemon_wake.py — 現行agent daemon 拉起（wake）。
 
 import subprocess
 import sys
-import sd_trace
 import time
 from pathlib import Path
 from typing import cast
@@ -80,8 +79,6 @@ def wake_daemon(agent: str = "") -> dict[str, object]:
     # 註：不可用 DETACHED_PROCESS——console 程式（python.exe）會被 Windows 新開一個可見黑窗
     if sys.platform == "win32":
         creation_flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
-        sd_trace.probe("daemon_wake_spawn:before", services_dir)
-
         _ = subprocess.Popen(
             command,
             cwd=str(services_dir),
@@ -90,8 +87,6 @@ def wake_daemon(agent: str = "") -> dict[str, object]:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-
-        sd_trace.probe("daemon_wake_spawn:after", services_dir)
     else:
         _ = subprocess.Popen(
             command,

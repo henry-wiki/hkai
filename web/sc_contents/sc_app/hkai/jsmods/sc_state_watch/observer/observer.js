@@ -5,7 +5,6 @@
 // 界線：只觀察自己容器，唔碰任何外部節點
 
 import { observer_chat }    from "./observer_chat.js";
-import { observer_project } from "./observer_project.js";
 import { observer_polling } from "./observer_polling.js";
 import { observer_prompt }  from "./observer_prompt.js";
 
@@ -76,8 +75,7 @@ class _observer {
     dispatch(change_entry) {
         const handler_items = this.handlers.get(change_entry.target) || [];
 
-        console.log("[hkai][state-watch-observer] " + new Date().toISOString()
-            + " action=" + change_entry.action
+        sc_console("state_watch", "observer").log("action=" + change_entry.action
             + " modify_type=" + change_entry.modify_type
             + " target=" + change_entry.target
             + " unit=" + change_entry.unit
@@ -120,10 +118,8 @@ class _observer {
             return;
         }
 
-        // 判定：project → 用 project 觀察器
+        // 判定：project → 暫時唔監視（未有消費者）
         if (target_name === "project") {
-            this._attach_target_observer(target_element, observer_project());
-
             return;
         }
 
@@ -144,7 +140,7 @@ class _observer {
             return;
         }
 
-        console.warn("sc_state_watch observer: 未知 target", target_name);
+        sc_console("state_watch", "observer").warn("未知 target", target_name);
     }
 
     // 掛上一個 target 觀察器（watch＋記住實例）

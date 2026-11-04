@@ -44,7 +44,7 @@ trait render_chat_sidebar
             $outputLines[] = "<div class='sc_panel_header'>";
                 $outputLines[] = "<div class='sc_panel_header__label'>";
                     $outputLines[] = "<div class='sc_panel_header__kicker'>" . sc_html_encode($project_name) . "</div>";
-                    $outputLines[] = "<span class='sc_panel_header__title'>對話 <span>Chats</span></span>";
+                    $outputLines[] = "<span class='sc_panel_header__title'>對話 <span>" . hkai()->i18n()->get("sidebar.chats") . "</span></span>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='sc_panel_header__actions'>";
                     $outputLines[] = "<button class='sc_icon_btn' title='搜尋'>⌕</button>";

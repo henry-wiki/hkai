@@ -53,7 +53,7 @@ trait build_tab_rule_body
                         $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_bullet_list' title='無序列表'>•</button>";
                         $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--bold' data-btn='insert_bold' title='粗體'>B</button>";
                         $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--italic' data-btn='insert_italic' title='斜體'>I</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_code_block' title='Code block（三連 backtick）'>```</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_code_block' title='" . hkai()->i18n()->get("rule.code_block") . "'>```</button>";
                     $outputLines[] = "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='instructions-editor__mount' data-readonly='1'></div>";

@@ -44,9 +44,13 @@ class sse_state_Class
 
         $view_id = sc_stream()->get_view_id();
 
+        // 連接身份（本頁一格；冇合法 view_id → 唔登記）
+        $sse_owner_file = sc_stream()->sse_owner()->open($view_id, "state_stream");
+
         $stream_start   = time();
         $last_ping_time = time();
-        $is_first_tick  = true;
+
+        $is_first_tick = true;
 
         while (true) {
             // 判定：客戶端已斷 → 結束
@@ -59,12 +63,16 @@ class sse_state_Class
                 break;
             }
 
+            // （接管判斷已移除：EventSource 自動重連會造成互殺乒乓——只靠 MAX_SECONDS 換線）
+
+
             $stream_events = $this->get_snapshot_changes_for_state($view_id);
 
             // 判定：有事件 → 逐個推
             if ($stream_events !== null) {
                 foreach ($stream_events as $event_name => $event_payload) {
                     sc_stream()->sse()->send_event($event_name, $event_payload);
+
                 }
 
                 $last_ping_time = time();
@@ -77,27 +85,39 @@ class sse_state_Class
                 }
             }
 
-            // 清逾時 view 檔（函數自行 60 秒節流——每 tick 叫即可）
-            sc_stream()->snapshot()->sweep_expired_view_files();
-
-            // 清舊歸檔目錄／舊備份檔（函數自行 60 秒節流——每 tick 叫即可）
-            sc_stream()->snapshot()->sweep_old_archive_and_backup_files();
-
-            // 終態輪詢工作收尾（3 秒節流＋flock 互斥；開線第一 tick 強制掃一次）
-            sc_stream()->snapshot()->sweep_terminal_poll_jobs($is_first_tick);
+            $this->run_sweeps($is_first_tick);
 
             $is_first_tick = false;
 
             usleep(self::TICK_USEC);
         }
 
+        // 收工：刪自己身份檔（格內冇其它連線 → 連格一齊刪）
+        sc_stream()->sse_owner()->close($sse_owner_file);
+
         sc_stream()->sse()->send_close();
     }
 
+    // 每 tick 三個收尾掃描
+    private function run_sweeps($is_first_tick)
+    {
+        // 清逾時 view 檔（函數自行 60 秒節流——每 tick 叫即可）
+        sc_stream()->snapshot()->sweep_expired_view_files();
+
+        // 清舊歸檔目錄／舊備份檔（函數自行 60 秒節流——每 tick 叫即可）
+        sc_stream()->snapshot()->sweep_old_archive_and_backup_files();
+
+        // 終態輪詢工作收尾（3 秒節流＋flock 互斥；開線第一 tick 強制掃一次）
+        sc_stream()->snapshot()->sweep_terminal_poll_jobs($is_first_tick);
+    }
     // -------------------------------------------------------------------------------------------------------------------------
     // 狀態快照比對：刷新快照 → 讀本頁已見 → 逐 target 比對 → 篩有變
     // 上游：run_state_stream()（每 tick）
-    // 下游：state()->refresh_snapshot()、state()->get_live_snapshot_states()、state()->get_view_snapshot_states()、get_snapshot_diff()、state()->sync_snapshot_views()
+    // 下游：state()->refresh_snapshot()
+    //       state()->get_live_snapshot_states()
+    //       state()->get_view_snapshot_states()
+    //       snapshot()->get_snapshot_diff()
+    //       state()->sync_snapshot_views()
     // 出口：① 無變 → null　② 有變 → 同步本頁版本、回 event
     // -------------------------------------------------------------------------------------------------------------------------
     public function get_snapshot_changes_for_state($view_id)
@@ -107,10 +127,8 @@ class sse_state_Class
         $snapshot_changes["project"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
         $snapshot_changes["message"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
         $snapshot_changes["polling"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
-        $snapshot_changes["git"]     = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
-        $snapshot_changes["conn"]    = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
 
-        // 步驟①：刷新快照（state 線六個 target——只寫，唔讀）
+        // 步驟①：刷新快照（state 線四個 target——只寫，唔讀）
         sc_stream()->snapshot()->state()->refresh_snapshot();
 
         // 步驟②：讀刷新後最新快照
@@ -119,9 +137,12 @@ class sse_state_Class
         // 步驟③：讀本頁已見版本（<target>/view/{view_id}.json）
         $view_snapshot_states = sc_stream()->snapshot()->state()->get_view_snapshot_states($view_id);
 
-        // 步驟④：直接比對「當刻六個 target」與「本頁已見」
+
+        // 步驟④：直接比對「當刻四個 target」與「本頁已見」
         $target_changes   = sc_stream()->snapshot()->get_snapshot_diff($live_snapshot_states, $view_snapshot_states);
+
         $snapshot_changes = array_replace($snapshot_changes, $target_changes);
+
 
         // 同步本頁已見版本（每 tick 更新；下一 tick 只推真正有變嘅）
         sc_stream()->snapshot()->state()->sync_snapshot_views($view_id);

@@ -18,7 +18,7 @@ class _queue_list {
                 thisObject.refresh_queue_list(result.html.queue_list);
             },
             error: function (result) {
-                console.error("queue_list failed", result);
+                sc_console("queue", "list").error("failed", result);
             }
         });
     }

@@ -13,6 +13,9 @@ const SYNC_INTERVAL_MS = 10000;
 // 其他 tab 嘅數目幾耐冇更新當過期（毫秒——頁面已關）
 const TAB_COUNT_STALE_MS = 30000;
 
+// 狀態線預先換線間隔（毫秒——伺服器單線上限 280 秒，提早換避開被切）
+const STATE_STREAM_REFRESH_MS = 240000;
+
 class _sc_stream {
     constructor() {
         // 本頁登記表（connection_id → kind）
@@ -26,6 +29,26 @@ class _sc_stream {
         this.sync_timer = null;
 
         this.warned_full = false;
+
+        // 狀態線身份（最近一次開線嘅 project_slug＋chat_sid——URL 真變才重開）
+        this.state_stream_identity = "";
+
+        // 狀態線預換 timer（每條線 240 秒主動換——overlap 零空隙）
+        this.state_stream_refresh_timer = null;
+    }
+
+    // 逐訊息 SSE 連線單例（message 域用——外部經 registry().sc_stream().message() 取）
+    async message() {
+        const message_module = await import("./message/message.js");
+
+        return message_module.message_stream();
+    }
+
+    // 工作區工具狀態線單例（狀態列等用——外部經 registry().sc_stream().workspace() 取）
+    async workspace() {
+        const workspace_module = await import("./workspace/workspace_stream.js");
+
+        return workspace_module.workspace_stream();
     }
 
     // bootstrap 自動呼叫：開跨 tab 同步＋presence（只做一次）
@@ -34,12 +57,42 @@ class _sc_stream {
 
         const stream_config = this.get_config();
 
+        // presence 連線狀態 → 狀態欄（presence 係唯一在線狀態來源）
+        const thisObject = this;
+
+        registry().sc_presence().register_status_listener(function (status_text) {
+            thisObject.apply_presence_status(status_text);
+        });
+
         // 判定：已啟用且有 base_url → 開 presence
         if (stream_config.enabled === true && stream_config.base_url) {
             await registry().sc_presence().ensure_open(stream_config.base_url);
+
+            // 判定：已經連住（其他 tab 開咗）→ 即時同步一次
+            const presence_instance = registry().sc_presence();
+
+            if (presence_instance.is_connected === true) {
+                this.apply_presence_status("connected");
+            }
         }
 
+        // 狀態線：URL 身份真變（project_slug／chat_sid）→ 自己收線重開
+        this.watch_url_identity();
+
+        // 工作區工具線（每頁一條；開頁先開一次）
+        await this.open_workspace_stream();
+
         return this;
+    }
+
+    // presence 狀態 → 狀態欄（connected／disconnected 兩態；唯一在線來源）
+    async apply_presence_status(status_text) {
+        const status_bar_domain = await registry().sc_ai_status_bar().status_bar();
+        const conn_status_item_instance = await status_bar_domain.act().conn_status_item();
+
+        const is_alive = (status_text === "connected");
+
+        await conn_status_item_instance.apply_conn_status({ is_alive: is_alive, base_url: "" });
     }
 
     // 登記一條連線（回 connection_id；滿額回 null 並彈警告）
@@ -90,6 +143,68 @@ class _sc_stream {
         const state_stream_module = await import("./state/state_stream.js");
 
         await state_stream_module.state_stream().open(project_slug, chat_sid, view_id);
+
+        this.state_stream_identity = project_slug + "|" + chat_sid;
+
+        this.schedule_state_stream_refresh();
+    }
+
+    // 排定下次預換（每次開線重排——舊 timer 先清）
+    schedule_state_stream_refresh() {
+        const thisObject = this;
+
+        // 判定：已有 timer → 先清（避免疊住）
+        if (this.state_stream_refresh_timer !== null) {
+            window.clearTimeout(this.state_stream_refresh_timer);
+        }
+
+        this.state_stream_refresh_timer = window.setTimeout(function () {
+            thisObject.open_state_stream();
+        }, STATE_STREAM_REFRESH_MS);
+    }
+
+    // 狀態線身份監察（URL 一變即比對——只有 project_slug／chat_sid 真變才重開）
+    watch_url_identity() {
+        const thisObject = this;
+
+        registry().shared().sc_http().on_url_change(function () {
+            thisObject.reopen_state_stream_if_identity_changed();
+
+            // 工作區工具線跟專案（切專案即重開；同專案唔郁）
+            thisObject.open_workspace_stream();
+        });
+    }
+
+    // 工作區工具狀態線（每頁一條；位置變即重開）
+    async open_workspace_stream() {
+        const project_instance = await registry().sc_ai_projects().project();
+        const project_slug = project_instance.get_project_slug();
+
+        const chat_instance = await registry().sc_ai_chats().chat();
+        const chat_sid = chat_instance.get_chat_sid();
+
+        const workspace_module = await import("./workspace/workspace_stream.js");
+        const workspace_stream_instance = workspace_module.workspace_stream();
+
+        workspace_stream_instance.open(project_slug, chat_sid);
+    }
+
+    // 比對當前頁身份（同上次開線唔同 → 收線重開）
+    async reopen_state_stream_if_identity_changed() {
+        const project_instance = await registry().sc_ai_projects().project();
+        const project_slug = project_instance.get_project_slug();
+
+        const chat_instance = await registry().sc_ai_chats().chat();
+        const chat_sid = chat_instance.get_chat_sid();
+
+        const page_identity = project_slug + "|" + chat_sid;
+
+        // 判定：身份冇變 → 唔郁（例如只用同一對話內切訊息）
+        if (page_identity === this.state_stream_identity) {
+            return;
+        }
+
+        await this.open_state_stream();
     }
 
     // 讀頁面 stream 設定（meta stream-config——PHP 由 hkai_config.json 輸出）

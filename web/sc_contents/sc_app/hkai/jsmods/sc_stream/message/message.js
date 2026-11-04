@@ -23,18 +23,18 @@ class _message_stream {
 
     // 啟動（同一條 URL 已連 → 只換回呼）
     start(stream_url, event_names, on_event) {
-        console.log("[stream] start 敲門", stream_url);
+        sc_console("stream", "message").log("start 敲門", stream_url);
 
         // 判定：冇 URL（未啟用／未設定）→ 唔開
         if (stream_url === "") {
-            console.log("[stream] 無 URL → 唔開");
+            sc_console("stream", "message").log("無 URL → 唔開");
 
             return false;
         }
 
         // 判定：同一條連線已經開緊 → 只換回呼
         if (this.event_source && this.stream_url === stream_url) {
-            console.log("[stream] 同 URL 已開 → 唔重開，只換 callback");
+            sc_console("stream", "message").log("同 URL 已開 → 唔重開，只換 callback");
 
             this.event_names = event_names;
             this.on_event = on_event;
@@ -44,13 +44,13 @@ class _message_stream {
 
         this.stop();
 
-        console.log("[stream] 開新連線", stream_url);
+        sc_console("stream", "message").log("開新連線", stream_url);
 
         this.connection_id = registry().sc_stream().open("stream");
 
         // 判定：連線額滿（其他 tab／presence 用晒）→ 唔開
         if (this.connection_id === null) {
-            console.log("[stream] 連線額滿 → 唔開");
+            sc_console("stream", "message").log("連線額滿 → 唔開");
 
             return false;
         }
@@ -86,12 +86,12 @@ class _message_stream {
             try {
                 event_payload = JSON.parse(event_message.data || "{}");
             } catch (parse_error) {
-                console.log("[stream] payload 解析失敗", event_name, parse_error.message);
+                sc_console("stream", "message").log("payload 解析失敗", event_name, parse_error.message);
 
                 return;
             }
 
-            console.log("[stream] 收到", event_name, event_payload);
+            sc_console("stream", "message").log("收到", event_name, event_payload);
 
             // 判定：有回呼 → 交出去
             if (thisObject.on_event !== null) {

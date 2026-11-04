@@ -16,6 +16,7 @@ agent啟動前準備（單一職責：每次發問前備妥 goose 子程序環�
 
 import json
 import os
+import sys
 from pathlib import Path
 
 from ...context import DATA_DIR, message_store
@@ -56,6 +57,18 @@ def prepare_goose_env(goose_env: dict[str, str]) -> None:
 
     # 落 ACP 子程序環境（GOOSE_MODE——get_chat_mode 必有值，未對映＝auto）
     goose_env["GOOSE_MODE"] = chat_mode
+
+    # Windows：cmd 出口強制 UTF-8（ComSpec 指向包裝 bat——chcp 65001 再交真 cmd）
+    if sys.platform == "win32":
+        cmd_wrapper = Path(__file__).resolve().parents[2] / "tools" / "cmd_utf8.bat"
+
+        # 判定：包裝檔存在 → 換 ComSpec（保留原本）
+        if cmd_wrapper.is_file() is True:
+            goose_env.setdefault("SC_REAL_COMSPEC", goose_env.get("ComSpec", os.environ.get("ComSpec", "")))
+            goose_env["ComSpec"] = str(cmd_wrapper)
+
+        goose_env["PYTHONUTF8"] = "1"
+        goose_env["PYTHONIOENCODING"] = "utf-8"
 
 
 def write_goose_hints_file(goose_path_root: str) -> None:

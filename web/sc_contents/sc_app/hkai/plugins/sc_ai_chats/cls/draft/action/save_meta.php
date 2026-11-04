@@ -70,7 +70,14 @@ trait save_meta
 
         // 判定：有帶 chat mode → 更新
         if (isset($input_data["chat_mode"])) {
-            $meta_patch["chat_mode"] = (string)$input_data["chat_mode"];
+            $chat_mode = (string)$input_data["chat_mode"];
+
+            // 判定：Home（空 slug 已 fallback 成 home）→ 一律用第一條模式（後端強制）
+            if (in_array($project_slug, ["", "home"])) {
+                $chat_mode = sc_ai_chats()->chat_option()->get_chat_mode("");
+            }
+
+            $meta_patch["chat_mode"] = $chat_mode;
         }
 
         // 寫入者（viewer id——同一頁自己寫的變更唔使套回自己畫面）

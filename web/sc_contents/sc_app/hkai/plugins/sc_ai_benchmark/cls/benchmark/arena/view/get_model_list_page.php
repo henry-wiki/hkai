@@ -77,20 +77,20 @@ trait get_model_list_page
         $output_lines[] = "<div class='model_selector_bench_source_head'>";
         $output_lines[] = "<div class='modal__search_wrap'>";
         $output_lines[] = "<i class='fa-solid fa-magnifying-glass modal__search_icon'></i>";
-        $output_lines[] = "<input class='modal__search_input model_selector_table_search' type='text' placeholder='search / model filtering'>";
+        $output_lines[] = "<input class='modal__search_input model_selector_table_search' type='text' placeholder='" . hkai()->i18n()->get("benchmark.search_filter") . "'>";
         $output_lines[] = "</div>";
         $output_lines[] = "<span class='model_selector_bench_source_meta'>";
         $output_lines[] = "<span class='model_selector_bench_source_time'>" . $bench_source_time_text . "</span>";
-        $output_lines[] = "<button class='model_selector_bench_source_refresh' title='download leaderboard' data-bench_source_id='" . $bench_source_id . "'>Refresh</button>";
+        $output_lines[] = "<button class='model_selector_bench_source_refresh' title='" . hkai()->i18n()->get("benchmark.download") . "' data-bench_source_id='" . $bench_source_id . "'>" . hkai()->i18n()->get("common.refresh") . "</button>";
         $output_lines[] = "</span>";
         $output_lines[] = "</div>";
         $output_lines[] = "</td>";
         $output_lines[] = "</tr>";
         $output_lines[] = "<tr>";
         $output_lines[] = "<td class='model_selector_td_rank'>#</td>";
-        $output_lines[] = "<td>Model</td>";
-        $output_lines[] = "<td class='model_selector_td_score'>Score</td>";
-        $output_lines[] = "<td class='model_selector_td_votes'>Votes</td>";
+        $output_lines[] = "<td>" . hkai()->i18n()->get("common.model") . "</td>";
+        $output_lines[] = "<td class='model_selector_td_score'>" . hkai()->i18n()->get("benchmark.score") . "</td>";
+        $output_lines[] = "<td class='model_selector_td_votes'>" . hkai()->i18n()->get("benchmark.votes") . "</td>";
         $output_lines[] = "</tr>";
         $output_lines[] = "</tbody>";
 

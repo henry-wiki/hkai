@@ -29,10 +29,10 @@ trait get_user_prompt
         $content[] = "<div class='user_prompt_bar'>";
             $content[] = "{$message_model_html}";
             $content[] = "
-            <button data-action='prompt_fav' class='prompt_action' title='Favorite' style='display:none;'>
+            <button data-action='prompt_fav' class='prompt_action' title='" . hkai()->i18n()->get("message.favorite") . "' style='display:none;'>
             <i class='fa-regular fa-star'></i>
             </button>
-            <button data-action='prompt_forward' class='prompt_action' title='Forward' style='display:none;'>
+            <button data-action='prompt_forward' class='prompt_action' title='" . hkai()->i18n()->get("message.forward") . "' style='display:none;'>
             <i class='fa-solid fa-share'></i>
             </button>
             <button data-action='user_zoom' data-zoom_scope='[data-message_id]' data-zoom_target='[data-text=user_content]' data-zoom_title='{$user_zoom_title}' class='prompt_action' title='{$answer_zoom}'>
@@ -41,7 +41,7 @@ trait get_user_prompt
             <button data-action='message_copy' data-copy_scope='[data-message_id]' data-copy_target='[data-text=user_content]' class='prompt_action' title='{$answer_copy}'>
             <i class='fa-regular fa-copy'></i>
             </button>
-            <button data-action='message_delete' data-confirm_msg='{$delete_confirm}' class='prompt_action' title='Delete'>
+            <button data-action='message_delete' data-confirm_msg='{$delete_confirm}' class='prompt_action' title='" . hkai()->i18n()->get("message.delete") . "'>
             <i class='fa-regular fa-trash-can'></i>
             </button>
             ";

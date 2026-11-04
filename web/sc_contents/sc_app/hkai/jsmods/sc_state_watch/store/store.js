@@ -23,21 +23,21 @@ class _store {
     write(entry) {
         // 判定：契約唔認得此 target／field → 拒寫（連接方違規——穩定器唔遷就）
         if (is_known_entry(entry.target, entry.field) === false) {
-            console.warn("sc_state_watch: 契約外寫入（target／field）", entry);
+            sc_console("state_watch", "store").warn("契約外寫入（target／field）", entry);
 
             return false;
         }
 
         // 判定：單位空白 → 拒寫（冇身份，無從投影）
         if (typeof entry.unit !== "string" || entry.unit === "") {
-            console.warn("sc_state_watch: 契約外寫入（unit）", entry);
+            sc_console("state_watch", "store").warn("契約外寫入（unit）", entry);
 
             return false;
         }
 
         // 判定：單位唔在契約清單內 → 拒寫（例如 polling 只准 project／chat）
         if (is_known_unit(entry.target, entry.unit) === false) {
-            console.warn("sc_state_watch: 契約外寫入（unit 唔准）", entry);
+            sc_console("state_watch", "store").warn("契約外寫入（unit 唔准）", entry);
 
             return false;
         }

@@ -4,7 +4,7 @@ namespace sc\app\hkai\plugins\sc_stream\monitor;
 
 // == monitor_Class：監視對象容器（singleton——清單＋逐個取快照／比對） ==
 // == 上游：sc_stream()->monitor()；下游：各監視對象 class（fetch_source_entries／get_snapshot／write_snapshot／get_snapshot_diff_for_*） ==
-// == 契約：對象需 fetch_source_entries()／get_live_snapshot()／write_snapshot()／is_ready()／init_snapshot()／get_snapshot_diff_for_*()；清單在此一處宣告 ==
+// == 契約：對象需 fetch_source_entries()／get_live_snapshot()／write_snapshot()／is_ready()／init_snapshot()／get_snapshot_diff()；清單在此一處宣告 ==
 
 class monitor_Class
 {
@@ -67,16 +67,6 @@ class monitor_Class
     }
 
     /**
-     * git 監視對象（當前專案 git 狀態）
-     *
-     * @return \sc\app\hkai\plugins\sc_stream\monitor\git\git_Class
-     */
-    public function git()
-    {
-        return git\git_Class::getInstance();
-    }
-
-    /**
      * polling 監視對象（輸送帶 polling 目錄——檔案層）
      *
      * @return \sc\app\hkai\plugins\sc_stream\monitor\polling\polling_Class
@@ -84,16 +74,6 @@ class monitor_Class
     public function polling()
     {
         return polling\polling_Class::getInstance();
-    }
-
-    /**
-     * conn 監視對象（後端 bridge 連線狀態）
-     *
-     * @return \sc\app\hkai\plugins\sc_stream\monitor\conn\conn_Class
-     */
-    public function conn()
-    {
-        return conn\conn_Class::getInstance();
     }
 
     // 逐 target 讀自己嘅快照檔（冇檔 → null）
@@ -145,49 +125,19 @@ class monitor_Class
     }
 
 
-    // 交由 target 自己比對——added（各 target 寫死自己 entries 結構）
-    public function get_snapshot_diff_for_added($target_name, $live_entries, $view_entries)
+    // 交由 target 自己比對（一個入口——target 回 {changed, added, updated, deleted}）
+    public function get_snapshot_diff($target_name, $live_entries, $view_entries)
     {
         $target_monitors = self::get_target_monitors();
 
         $monitor_instance = $target_monitors[$target_name] ?? null;
 
-        // 判定：冇此對象 → 空
+        // 判定：冇此對象 → 空結果
         if ($monitor_instance === null) {
-            return [];
+            return ["changed" => 0, "added" => [], "updated" => [], "deleted" => []];
         }
 
-        return $monitor_instance->get_snapshot_diff_for_added($live_entries, $view_entries);
-    }
-
-    // 交由 target 自己比對——updated
-    public function get_snapshot_diff_for_updated($target_name, $live_entries, $view_entries)
-    {
-        $target_monitors = self::get_target_monitors();
-
-        $monitor_instance = $target_monitors[$target_name] ?? null;
-
-        // 判定：冇此對象 → 空
-        if ($monitor_instance === null) {
-            return [];
-        }
-
-        return $monitor_instance->get_snapshot_diff_for_updated($live_entries, $view_entries);
-    }
-
-    // 交由 target 自己比對——deleted
-    public function get_snapshot_diff_for_deleted($target_name, $live_entries, $view_entries)
-    {
-        $target_monitors = self::get_target_monitors();
-
-        $monitor_instance = $target_monitors[$target_name] ?? null;
-
-        // 判定：冇此對象 → 空
-        if ($monitor_instance === null) {
-            return [];
-        }
-
-        return $monitor_instance->get_snapshot_diff_for_deleted($live_entries, $view_entries);
+        return $monitor_instance->get_snapshot_diff($live_entries, $view_entries);
     }
 
     // 取監視對象實例清單（第一次呼叫才建立）
@@ -210,8 +160,6 @@ class monitor_Class
         $target_monitors["chat"]    = self::getInstance()->chat();
         $target_monitors["message"] = self::getInstance()->message();
         $target_monitors["project"] = self::getInstance()->project();
-        $target_monitors["git"]     = self::getInstance()->git();
-        $target_monitors["conn"]    = self::getInstance()->conn();
         $target_monitors["polling"] = self::getInstance()->polling();
 
         return $target_monitors;

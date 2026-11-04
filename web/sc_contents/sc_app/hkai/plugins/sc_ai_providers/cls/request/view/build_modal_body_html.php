@@ -14,7 +14,7 @@ trait build_modal_body_html
         $output_lines[] = "<div class='modal__navigation'>";
         $output_lines[] = "<div class='modal__search_wrap'>";
         $output_lines[] = "<i class='fa-solid fa-magnifying-glass modal__search_icon'></i>";
-        $output_lines[] = "<input id='model_selector_search' class='modal__search_input' type='text' placeholder='search / provider filtering'>";
+        $output_lines[] = "<input id='model_selector_search' class='modal__search_input' type='text' placeholder='" . hkai()->i18n()->get("provider.search_filter") . "'>";
         $output_lines[] = "</div>";
         $output_lines[] = "<div id='side_provider_list' class='modal__navigation-content'>";
 

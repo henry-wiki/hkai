@@ -12,7 +12,14 @@ main.py — bridge 入口（薄——初始化與啟動集中於 server_class，
     Phase 2  主程序（context 載入 → server 初始化 → server 啟動）
 """
 
+import os
+import pathlib
 import traceback
+
+# 入工作目錄（副作用檔一律落 services/_runtime_junk——可整夾刪；避免第三方套件喺源碼目錄寫檔）
+_runtime_junk_dir = pathlib.Path(__file__).resolve().parents[1] / "_runtime_junk"
+_runtime_junk_dir.mkdir(parents=True, exist_ok=True)
+os.chdir(_runtime_junk_dir)
 
 # ===== Phase 1：日誌（最頂部——主程序尚未載入，不碰 context）=====
 try:

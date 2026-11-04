@@ -43,6 +43,14 @@ trait get_agent_response
                 $error_message = $response_content;
             }
 
+            // 判定：tool 型 → 索引對歸位（同輪第 1.5 位）
+            if ($response_type === "response_tool") {
+                $response_pair_map[$response_index]["tool"] = [
+                    "content" => $response_content,
+                    "row"     => $message_response_row,
+                ];
+            }
+
             // 判定：response 兩型 → 索引對歸位（thinking／result 各一邊）
             if (in_array($response_type, ["response_thinking", "response_result"])) {
                 $pair_kind = ($response_type === "response_thinking") ? "thinking" : "result";
@@ -76,13 +84,20 @@ trait get_agent_response
             // 逐索引對出盒（thinking 先、result 後——同一索引；有內容先出）
             foreach ($response_pair_map as $response_pair_item) {
                 $pair_thinking         = (string)($response_pair_item["thinking"]["content"] ?? "");
+                $pair_tool             = (string)($response_pair_item["tool"]["content"] ?? "");
                 $pair_result           = (string)($response_pair_item["result"]["content"] ?? "");
                 $response_thinking_row = $response_pair_item["thinking"]["row"] ?? [];
+                $response_tool_row     = $response_pair_item["tool"]["row"] ?? [];
                 $response_result_row   = $response_pair_item["result"]["row"] ?? [];
 
                 // 判定：有思考內容 → 出思考段（空＝唔出——等 poll 骨架）
                 if ($pair_thinking !== "") {
                     $content[] = sc_ai_chats()->message()->view()->get_agent_response_thinking($message_row, $response_thinking_row);
+                }
+
+                // 判定：有工具記錄 → 出 tool 段（thinking 之後、result 之前）
+                if ($pair_tool !== "") {
+                    $content[] = sc_ai_chats()->message()->view()->get_agent_response_tool($message_row, $response_tool_row);
                 }
 
                 // 判定：有答案內容 → 出答案段
@@ -118,13 +133,20 @@ trait get_agent_response
         // 逐索引對出盒（thinking 先、result 後——同一索引）
         foreach ($response_pair_map as $response_pair_item) {
             $pair_thinking         = (string)($response_pair_item["thinking"]["content"] ?? "");
+            $pair_tool             = (string)($response_pair_item["tool"]["content"] ?? "");
             $pair_result           = (string)($response_pair_item["result"]["content"] ?? "");
             $response_thinking_row = $response_pair_item["thinking"]["row"] ?? [];
+            $response_tool_row     = $response_pair_item["tool"]["row"] ?? [];
             $response_result_row   = $response_pair_item["result"]["row"] ?? [];
 
             // 判定：有思考內容 → 顯示思考段
             if ($pair_thinking !== "") {
                 $content[] = sc_ai_chats()->message()->view()->get_agent_response_thinking($message_row, $response_thinking_row);
+            }
+
+            // 判定：有工具記錄 → 顯示 tool 段（thinking 之後、result 之前）
+            if ($pair_tool !== "") {
+                $content[] = sc_ai_chats()->message()->view()->get_agent_response_tool($message_row, $response_tool_row);
             }
 
             // 失敗＝冇答案（error 盒代替）——有失敗 → result 一律唔出

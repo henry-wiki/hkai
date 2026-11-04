@@ -81,6 +81,11 @@ trait get_chat_options
 
         // --------------------------------------------------------------------------------
         
+        // 判定：Home（空 slug 或 home）→ 模式固定第一條（後端強制，唔跟舊記錄）
+        if (in_array($project_slug, ["", "home"])) {
+            $chat_mode = sc_ai_chats()->chat_option()->get_chat_mode("");
+        }
+
         $_chat_options = [];
         $_chat_options["source"] = $model_source;
         $_chat_options["provider_id"] = $provider_id;

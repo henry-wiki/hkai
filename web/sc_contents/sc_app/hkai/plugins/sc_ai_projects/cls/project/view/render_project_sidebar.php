@@ -24,8 +24,8 @@ trait render_project_sidebar
         $output_lines[] = "<aside class='sc_sidebar sc_sidebar--projects'{$sidebar_width_attr}>";
             $output_lines[] = "<div class='sc_panel_header'>";
                 $output_lines[] = "<div class='sc_panel_header__label'>";
-                    $output_lines[] = "<div class='sc_panel_header__kicker'>Workspace</div>";
-                    $output_lines[] = "<a class='sc_panel_header__title' href='/'>專案 <span>Projects</span></a>";
+                    $output_lines[] = "<div class='sc_panel_header__kicker'>" . hkai()->i18n()->get("sidebar.workspace") . "</div>";
+                    $output_lines[] = "<a class='sc_panel_header__title' href='/'>專案 <span>" . hkai()->i18n()->get("sidebar.projects") . "</span></a>";
                 $output_lines[] = "</div>";
                 $output_lines[] = "<div class='sc_panel_header__actions'>";
                     $output_lines[] = "<button class='sc_icon_btn' data-btn='modal_open_add' title='新增專案'>+</button>";

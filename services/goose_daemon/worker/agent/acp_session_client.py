@@ -113,7 +113,9 @@ def _normalize_update(update: Any) -> tuple[str, dict[str, object]]:
             "extension_name": tool_detail["extension_name"],
             "status":         tool_detail["status"],
             "raw_input":      tool_detail["raw_input"],
+            "raw_input_full": tool_detail["raw_input_full"],
             "output_text":    tool_detail["output_text"],
+            "output_text_full": tool_detail["output_text_full"],
         }
 
     # 用量更新（goose 報 context 用量／成本）
@@ -122,6 +124,15 @@ def _normalize_update(update: Any) -> tuple[str, dict[str, object]]:
 
     # 其餘（plan／commands／mode 變更等）——原樣轉存
     return "other", {"update_dump": dump_protocol_message(update.model_dump(by_alias=True))}
+
+
+def _clip_text(raw_text: str, limit: int) -> str:
+    """截短顯示文字；超過上限時尾加 ...（一眼睇出仲有內容）。"""
+    # 判定：未超限 → 原樣
+    if len(raw_text) <= limit:
+        return raw_text
+
+    return raw_text[:limit] + "..."
 
 
 def _extract_tool_detail(update: Any) -> dict[str, str]:
@@ -136,9 +147,10 @@ def _extract_tool_detail(update: Any) -> dict[str, str]:
     tool_detail["extension_name"] = str(tool_meta.get("extensionName", "") or "")
     tool_detail["status"] = str(getattr(update, "status", "") or "")
 
-    # 輸入摘要（rawInput → 單行、截短）
+    # 輸入：完整原文（記錄用）＋摘要（顯示用——單行截短）
     raw_input = str(getattr(update, "raw_input", "") or "")
-    tool_detail["raw_input"] = " ".join(raw_input.split())[:120]
+    tool_detail["raw_input"] = _clip_text(" ".join(raw_input.split()), 120)
+    tool_detail["raw_input_full"] = raw_input
 
     # 輸出摘要（content[] 內 text → 首段、截短）
     output_parts: list[str] = []
@@ -152,7 +164,8 @@ def _extract_tool_detail(update: Any) -> dict[str, str]:
 
         output_parts.append(str(content_text))
 
-    tool_detail["output_text"] = " ".join(" ".join(output_parts).split())[:160]
+    tool_detail["output_text"] = _clip_text(" ".join(" ".join(output_parts).split()), 160)
+    tool_detail["output_text_full"] = "".join(output_parts)
 
     return tool_detail
 

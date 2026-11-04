@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_stream\monitor\polling;
 
 // == polling_Class：輸送帶監視對象（polling 目錄——檔案層，唔關 DB） ==
-// == 上游：monitor_Class 清單、monitor::get_snapshot_diff_for_*() ==
+// == 上游：monitor_Class 清單、monitor::get_snapshot_diff() ==
 // == 下游：fetch_source_entries／get_live_snapshot／write_snapshot／get_snapshot_diff／sync_snapshot_to_view ==
 
 class polling_Class
@@ -15,6 +15,8 @@ class polling_Class
     use sync_snapshot_to_view;
 
     private static $instance = null;
+    // 重推次數（1 tick ＝ 1 秒；null ＝ 唔重推）
+    private $repeat_tick_count = 3;
 
     public static function getInstance()
     {
@@ -28,6 +30,7 @@ class polling_Class
 
     public function __construct()
     {}
+
 
     // 此刻可否初始化
     public function is_ready()

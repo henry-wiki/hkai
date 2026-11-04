@@ -19,13 +19,13 @@ class _sc_i18n {
             const response = await fetch(this.options.lang_url);
             const result = await response.json();
             if (!response.ok) {
-                console.error("i18n fetch failed:", result.error);
+                sc_console("i18n").error("fetch failed:", result.error);
                 return;
             }
             this.lang_data = result.lang_data;
         } catch (fetch_error) {
             // 網路／解析失敗 → console.error（native 錯誤訊息）
-            console.error("i18n fetch failed:", fetch_error.message);
+            sc_console("i18n").error("fetch failed:", fetch_error.message);
         }
     }
 

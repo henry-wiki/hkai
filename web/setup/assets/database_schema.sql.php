@@ -76,6 +76,23 @@ CREATE TABLE IF NOT EXISTS message_response (
     response_updated_at DATETIME NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS message_tool_call (
+    tool_call_id   VARCHAR(64) PRIMARY KEY,
+    project_id     INTEGER NOT NULL DEFAULT 0,
+    chat_id        INTEGER NOT NULL DEFAULT 0,
+    message_id     INTEGER NOT NULL DEFAULT 0,
+    response_index INTEGER NOT NULL DEFAULT 0,
+    seq            INTEGER NOT NULL DEFAULT 0,
+    tool_name      VARCHAR(120) NOT NULL DEFAULT '',
+    input_text     TEXT NOT NULL DEFAULT '',
+    output_text    TEXT NOT NULL DEFAULT '',
+    status         VARCHAR(32) NOT NULL DEFAULT '',
+    started_at     DATETIME NOT NULL DEFAULT '',
+    finished_at    DATETIME NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_tool_call_message ON message_tool_call (message_id, response_index, seq);
+
 CREATE TABLE IF NOT EXISTS activity (
             activity_id        INTEGER PRIMARY KEY AUTOINCREMENT,
             project_id         INTEGER NOT NULL DEFAULT 0,

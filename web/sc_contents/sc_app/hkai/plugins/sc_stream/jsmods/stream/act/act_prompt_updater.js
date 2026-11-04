@@ -41,7 +41,7 @@ class _act_prompt_updater {
             return;
         }
 
-        console.log(prompt_change_items);
+        sc_console("stream", "prompt_updater").log(prompt_change_items);
 
         // 直接套用事件內容（免 draft_fetch request）
         await prompt_draft_restore_instance.apply_draft(draft_result, true);

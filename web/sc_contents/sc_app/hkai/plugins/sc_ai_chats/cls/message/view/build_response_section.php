@@ -28,6 +28,8 @@ trait build_response_section
             $_skeleton[] = sc_ai_chats()->message()->view()->get_agent_response_thinking($message_row, $response_row);
         } elseif ($_response_type === "response_result") {
             $_skeleton[] = sc_ai_chats()->message()->view()->get_agent_response_result($message_row, $response_row);
+        } elseif ($_response_type === "response_tool") {
+            $_skeleton[] = sc_ai_chats()->message()->view()->get_agent_response_tool($message_row, $response_row);
         }
         
         // 段用時（秒——計時器每輪基準；無 timing → 0）

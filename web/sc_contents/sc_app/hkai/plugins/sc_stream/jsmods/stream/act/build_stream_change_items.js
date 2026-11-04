@@ -170,9 +170,9 @@ export function build_stream_change_items(stream_delta, depth) {
     return build_one_level_changes(stream_delta);
 }
 
-// polling 專用：由 delta 重建完整 snapshot（{project:[], chat:[]}）
+// polling 專用：由 delta 重建完整 snapshot（{project:{}, chat:{}}）
 export function build_stream_polling_snapshot(stream_delta) {
-    const polling_snapshot = { project: [], chat: [] };
+    const polling_snapshot = { project: {}, chat: {} };
 
     const added_map = stream_delta.added || {};
     const updated_map = stream_delta.updated || {};

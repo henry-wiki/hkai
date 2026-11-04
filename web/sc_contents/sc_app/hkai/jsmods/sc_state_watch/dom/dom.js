@@ -52,7 +52,7 @@ class _dom {
             return;
         }
 
-        console.log("[hkai][polling-dom] " + new Date().toISOString() + " " + unit_name + "/" + field_name + "=" + next_text + " target_children=" + target_element.children.length);
+        sc_console("state_watch", "dom").log(unit_name + "/" + field_name + "=" + next_text + " target_children=" + target_element.children.length);
     }
 
     // 取根容器（冇就建立——監視器自己嘅節點）

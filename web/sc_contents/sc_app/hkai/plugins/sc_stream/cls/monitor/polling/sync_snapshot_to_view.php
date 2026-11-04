@@ -35,7 +35,7 @@ trait sync_snapshot_to_view
             return false;
         }
 
-        $view_file = sc_get_config("hkai.stream_dir") . "/polling/view/" . $view_id . ".json";
+        $view_file = sc_stream()->snapshot()->get_snapshot_view_file("polling", $view_id);
 
         $view_data          = [];
         $view_data["state"] = $snapshot_state;

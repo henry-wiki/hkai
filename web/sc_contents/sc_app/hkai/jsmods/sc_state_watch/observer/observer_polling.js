@@ -32,7 +32,7 @@ class _observer_polling {
             characterData: true,
         });
 
-        console.log("[hkai][state_watch-observer] " + new Date().toISOString() + " watch_target polling");
+        sc_console("state_watch", "observer_polling").log("watch_target polling");
 
         return true;
     }
@@ -49,7 +49,7 @@ class _observer_polling {
         this.target_element = null;
         this.dispatch = null;
 
-        console.log("[hkai][state_watch-observer] " + new Date().toISOString() + " unwatch_target polling");
+        sc_console("state_watch", "observer_polling").log("unwatch_target polling");
     }
 
     // 由節點讀出 entry 身份（unit／field；唔屬 entry＝null）

@@ -116,7 +116,6 @@ class _status_bar_act_bridge {
     async open_project_git_modal()  { return (await import("./act/open_project_git_modal.js")).open_project_git_modal(); }
     async project_fetch()           { return (await import("./act/project_fetch.js")).project_fetch(); }
     async chat_fetch()              { return (await import("./act/chat_fetch.js")).chat_fetch(); }
-    async refresh_git_item()        { return (await import("./act/refresh_git_item.js")).refresh_git_item(); }
     async git_status_item()         { return (await import("./act/git_status_item.js")).git_status_item(); }
 }
 
@@ -136,4 +135,5 @@ class _status_bar_obs_bridge {
     async url_changed_observer() { return (await import("./obs/url_changed_observer.js")).url_changed_observer(); }
     async chat_observer() { return (await import("./obs/chat_observer.js")).chat_observer(); }
     async project_observer() { return (await import("./obs/project_observer.js")).project_observer(); }
+    async workspace_git_observer() { return (await import("./obs/workspace_git_observer.js")).workspace_git_observer(); }
 }

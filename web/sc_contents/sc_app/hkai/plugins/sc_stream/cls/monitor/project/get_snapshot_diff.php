@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_stream\monitor\project;
 
 // == project get_snapshot_diff：project entries 一層結構比對（trait——掛入 project_Class） ==
-// == 上游：monitor::get_snapshot_diff_for_added/updated/deleted() ==
+// == 上游：monitor::get_snapshot_diff()（三合一入口） ==
 // == 下游：無（純比較） ==
 //
 // ── 輸入：state.entries（一層，key => item）───────────────────────────────────
@@ -24,6 +24,9 @@ namespace sc\app\hkai\plugins\sc_stream\monitor\project;
 
 trait get_snapshot_diff
 {
+    // 重推窗口：待輸出存貨（每份一模一樣，每次燒一份）
+    private $snapshot_change_copies = [];
+
     // 當刻有、舊版本冇 → added
     public function get_snapshot_diff_for_added($live_entries, $view_entries)
     {
@@ -59,5 +62,50 @@ trait get_snapshot_diff
     public function get_snapshot_diff_for_deleted($live_entries, $view_entries)
     {
         return array_diff_key($view_entries, $live_entries);
+    }
+
+    // 三合一比對＋重推窗口（target 唯一入口）
+    public function get_snapshot_diff($live_entries, $view_entries)
+    {
+        $added_items   = $this->get_snapshot_diff_for_added($live_entries, $view_entries);
+        $updated_items = $this->get_snapshot_diff_for_updated($live_entries, $view_entries);
+        $deleted_items = $this->get_snapshot_diff_for_deleted($live_entries, $view_entries);
+
+        $diff_count = count($added_items) + count($updated_items) + count($deleted_items);
+
+        $changed = intval($diff_count > 0);
+
+        $snapshot_change = [];
+        $snapshot_change["changed"] = $changed;
+        $snapshot_change["added"]   = $added_items;
+        $snapshot_change["updated"] = $updated_items;
+        $snapshot_change["deleted"] = $deleted_items;
+
+        // 判定：有變化 → 填存貨，交第一份
+        if ($changed === 1) {
+            // 判定：冇設定重推次數（null）→ 直接交
+            if ($this->repeat_tick_count === null) {
+                return $snapshot_change;
+            }
+
+            $this->snapshot_change_copies = [];
+
+            // 逐份存貨：每次輸出燒一份
+            for ($copy_index = 0; $copy_index < $this->repeat_tick_count - 1; $copy_index++) {
+                $this->snapshot_change_copies[] = $snapshot_change;
+            }
+
+            return $snapshot_change;
+        } else {
+            // 判定：冇變化但有存貨 → 燒一份、照交舊結果
+            if (count($this->snapshot_change_copies) > 0) {
+                $snapshot_change = array_shift($this->snapshot_change_copies);
+
+                return $snapshot_change;
+            } else {
+                // 冇變化、冇存貨 → 正常交無變化
+                return $snapshot_change;
+            }
+        }
     }
 }

@@ -95,6 +95,12 @@ class _act_prompt_send {
 
             const j_message_wrapper = this.append_render_message(result_html.new_message, response_data);
 
+            // 對話卡即時移去清單最頂（送出＝最近活動）
+            const chat_instance_card = await registry().sc_ai_chats().chat();
+            const chat_card_move_to_top_instance = await chat_instance_card.act().chat_card_move_to_top();
+
+            chat_card_move_to_top_instance.chat_card_move_to_top(chat_instance_card.get_chat_sid());
+
             // t3＝新氣泡插入完成
 
             // 新訊息內容 markdown 化（交 message_editblock〔編輯區塊轉顯示形〕；空段／未到場＝no-op——poll 到場自會渲）
@@ -135,20 +141,11 @@ class _act_prompt_send {
 
         prompt_send_button_state_instance.refresh();
 
-        // 開串流（獨立動作；base_url 自動取；SSE 事件由 message_stream 直接叫 message_poll）
-        const poll_chat_sid = response_data.chat_sid;
-
+        // 開串流（獨立動作；base_url 自動取；SSE 事件由 message_stream 處理內容）
         const message_instance_stream = await registry().sc_ai_chats().message();
         const message_stream_instance = await message_instance_stream.act().message_stream();
 
-        const stream_started = await message_stream_instance.open(response_data.project_slug, response_data.chat_sid, response_data.prompt_id, 0);
-
-        // 判定：串流開唔到（未啟用／冇 base_url）→ 退化成直接起 poll
-        if (stream_started !== true) {
-            const message_instance_poll = await registry().sc_ai_chats().message();
-            const message_poll_instance = await message_instance_poll.act().message_poll();
-            message_poll_instance.message_poll(poll_chat_sid);
-        }
+        await message_stream_instance.open(response_data.project_slug, response_data.chat_sid, response_data.prompt_id, 0);
 
         // 派發 prompt_sent hook（after 相位——已收下；現時零 listener）
         registry().sc_ai_chats().execute_hook_after("prompt_sent", response_data);

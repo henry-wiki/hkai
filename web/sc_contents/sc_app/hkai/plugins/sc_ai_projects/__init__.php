@@ -45,7 +45,6 @@ $plugin->add_request_action("verify_project_data"   ,__DIR__ . "/request/tab_gen
 $plugin->add_request_action("git_commit"            ,__DIR__ . "/request/tab_git/git_commit.php");
 $plugin->add_request_action("git_init"              ,__DIR__ . "/request/tab_git/git_init.php");
 $plugin->add_request_action("git_stage_all"         ,__DIR__ . "/request/tab_git/git_stage_all.php");
-$plugin->add_request_action("git_status"            ,__DIR__ . "/request/tab_git/git_status.php");
 $plugin->add_request_action("save_tab_rule"         ,__DIR__ . "/request/tab_rule/save_tab_rule.php");
 $plugin->add_request_action("reset_tab_rule"        ,__DIR__ . "/request/tab_rule/reset_tab_rule.php");
 

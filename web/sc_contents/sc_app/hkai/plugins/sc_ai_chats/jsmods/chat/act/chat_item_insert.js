@@ -5,10 +5,24 @@
 class _chat_item_insert {
     constructor() {}
 
+    // 找卡（兩種身份形：普通 chat_sid／歸檔 archive@chat_sid）
+    _find_chat_card(chat_sid) {
+        const j_plain_card = jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']");
+
+        // 判定：普通形搵到 → 回
+        if (j_plain_card.length > 0) {
+            return j_plain_card;
+        }
+
+        return jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='archive@" + chat_sid + "']");
+    }
+
     // 按 chat_sid 載入並插入單一對話項
     async chat_item_insert(chat_sid) {
+        const thisObject = this;
+
         // 判定：已存在 → 唔重複補
-        if (jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']").length > 0) {
+        if ((this._find_chat_card(chat_sid).length > 0)) {
             return;
         }
 
@@ -22,7 +36,7 @@ class _chat_item_insert {
                 const j_new_item = jQuery(response_data.html.chat_item);
 
                 // 判定：已存在（等待期間已由別路補上）→ 唔再加入
-                if (jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']").length > 0) {
+                if ((thisObject._find_chat_card(chat_sid).length > 0)) {
                     return;
                 }
 

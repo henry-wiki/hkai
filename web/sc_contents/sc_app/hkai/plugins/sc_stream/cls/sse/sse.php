@@ -54,10 +54,21 @@ class sse_Class
     // 首幀 handshake（EventSource onopen——塞滿下層緩衝）
     public function send_handshake()
     {
-        echo "event: open\n";
-        echo "data: " . json_encode(["ok" => true, "padding" => str_repeat("-", self::HANDSHAKE_PAD_BYTES)], JSON_UNESCAPED_SLASHES) . "\n\n";
+        // 連接器位址（handshake 一併帶——前端可據此換埠重開 presence）
+        $runtime_configs = hkai()->runtime()->get_runtime_configs();
+        $server_settings = $runtime_configs["server_settings"] ?? [];
 
-        $this->flush_output();
+        $bridge_base_url = "http://" . ($server_settings["host"] ?? "") . ":" . ($server_settings["port"] ?? "");
+
+        $handshake_payload            = [];
+        $handshake_payload["ok"]      = true;
+        $handshake_payload["padding"] = str_repeat("-", self::HANDSHAKE_PAD_BYTES);
+        $handshake_payload["base_url"] = $bridge_base_url;
+
+        echo "event: open\n";
+        echo "data: " . json_encode($handshake_payload, JSON_UNESCAPED_SLASHES) . "\n\n";
+
+$this->flush_output();
     }
 
     // 開串流（headers＋清緩衝＋handshake——兩條線共用）

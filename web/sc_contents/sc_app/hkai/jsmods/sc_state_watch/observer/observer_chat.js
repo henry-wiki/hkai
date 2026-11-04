@@ -32,7 +32,7 @@ class _observer_chat {
             characterData: true,
         });
 
-        console.log("[hkai][state_watch-observer] " + new Date().toISOString() + " watch_target chat");
+        sc_console("state_watch", "observer_chat").log("watch_target chat");
 
         return true;
     }
@@ -49,7 +49,7 @@ class _observer_chat {
         this.target_element = null;
         this.dispatch = null;
 
-        console.log("[hkai][state_watch-observer] " + new Date().toISOString() + " unwatch_target chat");
+        sc_console("state_watch", "observer_chat").log("unwatch_target chat");
     }
 
     // 由節點讀出 entry 身份（unit／field；唔屬 entry＝null）

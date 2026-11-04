@@ -20,6 +20,9 @@ class _detect_project_slug_change {
 
         const chat_instance = await registry().sc_ai_chats().chat();
 
+        // 換專案＝未揀對話：清走舊 chat_sid（URL 只留專案段——右邊交空狀態）
+        sc_url.shallow_replace_url("/" + curr_project_slug + "/");
+
         // 清單重取（專案換＝左側清單換項目）
         const chat_list_fetch_instance = await chat_instance.act().chat_list_fetch();
         await chat_list_fetch_instance.chat_list_fetch();

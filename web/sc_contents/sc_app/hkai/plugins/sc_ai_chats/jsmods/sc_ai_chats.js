@@ -145,6 +145,9 @@ class _sc_ai_chats {
 
                 await message_stream_instance.stop();
 
+                // 清走上一頁嘅等待列 DOM（否則 start_for_page 會拿舊隊列去派新對話嘅工）
+                jQuery(".sc_composer__queue_list").empty();
+
                 const detect_project_slug_change_instance    = await chat_instance.act().detect_project_slug_change();
                 const detect_chat_list_context_change_instance = await chat_instance.act().detect_chat_list_context_change();
                 const detect_chat_sid_change_instance        = await chat_instance.act().detect_chat_sid_change();
@@ -154,8 +157,7 @@ class _sc_ai_chats {
                 await detect_chat_list_context_change_instance.detect_chat_list_context_change(goto_url, prev_url);
                 await detect_chat_sid_change_instance.detect_chat_sid_change(goto_url, prev_url);
 
-                // 重開串流（狀態線／草稿線／訊息線——身份全部由當前頁重算）
-                await registry().sc_stream().open_state_stream();
+                // 重開串流（草稿線／訊息線——身份由當前頁重算；狀態線由 sc_stream 自己監察 URL 身份重開）
 
                 const prompt_domain = await registry().sc_ai_chats().prompt();
 

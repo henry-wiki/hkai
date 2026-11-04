@@ -73,3 +73,40 @@ class chat_db_class(db_connection_class):
             answer_text_by_message[answer_message_id] = answer_text_by_message.get(answer_message_id, "") + answer_text
 
         return message_rows, answer_text_by_message
+
+    def read_tool_call_summaries(self, chat_id: str, message_id: str) -> dict[int, list[str]]:
+        """讀工具調用摘要（message_tool_call——按訊息／輪次／次序）；DB 冇表或冇資料＝空。"""
+        tool_text_by_message: dict[int, list[str]] = {}
+
+        try:
+            tool_rows = self.query_all(
+                "SELECT message_id, tool_name, input_text, status FROM message_tool_call"
+                " WHERE chat_id = ? AND message_id < ? ORDER BY message_id, response_index, seq",
+                (int(chat_id), int(message_id)),
+            )
+        except Exception:
+            return tool_text_by_message
+
+        for tool_row in tool_rows:
+            tool_message_id = int(str(tool_row[0]))
+            tool_name = str(tool_row[1] or "")
+            tool_input_full = " ".join(str(tool_row[2] or "").split())
+            tool_input = tool_input_full
+
+            # 判定：超長 → 截短＋省略號（一眼睇出仲有內容）
+            if len(tool_input_full) > 200:
+                tool_input = tool_input_full[:200] + "..."
+            tool_status = str(tool_row[3] or "")
+
+            tool_line = tool_name + ": " + tool_input
+
+            # 判定：有狀態 → 附係尾
+            if tool_status != "":
+                tool_line = tool_line + " [" + tool_status + "]"
+
+            if tool_message_id not in tool_text_by_message:
+                tool_text_by_message[tool_message_id] = []
+
+            tool_text_by_message[tool_message_id].append(tool_line)
+
+        return tool_text_by_message

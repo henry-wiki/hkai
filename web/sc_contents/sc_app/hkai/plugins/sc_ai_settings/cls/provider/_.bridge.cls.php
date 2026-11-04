@@ -102,7 +102,7 @@ class provider_Class
 
         // === header ===
         $modal_header   = [];
-        $modal_header[] = "<div class='modal__title'>Provider</div>";
+        $modal_header[] = "<div class='modal__title'>" . hkai()->i18n()->get("provider.label") . "</div>";
 
         // === body ===
         $modal_body   = [];

@@ -6,8 +6,6 @@
 // 下游：chat act（insert／remove）＋ 卡上節點直接更新
 // 結構：eager 單例 closure factory（域接駁動態 import 解構後呼叫 init）
 
-import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
-
 const FLUSH_DELAY_MS = 30;
 
 class _chat_state_observer {
@@ -74,7 +72,7 @@ class _chat_state_observer {
         const value_text = String(change_entry.value);
 
         const chat_instance = await registry().sc_ai_chats().chat();
-        const j_chat_card = jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']");
+        const j_chat_card = this._find_chat_card(chat_sid);
         const is_card_present = j_chat_card.length > 0;
         const is_deleted = (change_entry.action === "deleted" || (field_name === "status" && value_text === ""));
 
@@ -89,8 +87,24 @@ class _chat_state_observer {
             return;
         }
 
-        // 判定：卡唔存在 → 插入（新對話）
+        // 判定：卡唔存在 → 先核對清單語境（普通列唔插歸檔；歸檔列唔插普通）
         if (is_card_present === false) {
+            const chat_list_context = chat_instance.get_chat_list_context_from_url(location.href);
+            const state_watch_module = registry().sc_state_watch();
+            const state_watch_domain = state_watch_module.state_watch();
+            const store_instance = await state_watch_domain.store();
+            const chat_store_entry = store_instance.snapshot("chat")[chat_sid] || {};
+            const chat_status = String(chat_store_entry.status || "");
+            const is_archived_chat = (chat_status === "archived");
+            // 判定：歸檔對話但而家係普通列 → 唔插
+            if (is_archived_chat === true && chat_list_context !== "archive") {
+                return;
+            }
+
+            // 判定：普通對話但而家係歸檔列 → 唔插
+            if (is_archived_chat === false && chat_list_context === "archive") {
+                return;
+            }
             const chat_item_insert_instance = await chat_instance.act().chat_item_insert();
 
             sc_console("chat_state").log("insert " + chat_sid);
@@ -120,6 +134,18 @@ class _chat_state_observer {
         }
     }
 
+    // 找卡（兩種身份形：普通 chat_sid／歸檔 archive@chat_sid）
+    _find_chat_card(chat_sid) {
+        const j_plain_card = jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']");
+
+        // 判定：普通形搵到 → 回
+        if (j_plain_card.length > 0) {
+            return j_plain_card;
+        }
+
+        return jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='archive@" + chat_sid + "']");
+    }
+
     // 依 store 現值重套全部卡（清單重繪後用——避免 store 同卡面唔一致）
     async apply_current() {
         const state_watch_module = registry().sc_state_watch();
@@ -131,7 +157,7 @@ class _chat_state_observer {
         for (let sid_index = 0; sid_index < chat_sids.length; sid_index++) {
             const chat_sid = chat_sids[sid_index];
             const chat_entry = chat_snapshot[chat_sid] || {};
-            const j_chat_card = jQuery(".sc_chat_list .sc_chat_card[data-chat_sid='" + chat_sid + "']");
+            const j_chat_card = this._find_chat_card(chat_sid);
 
             // 判定：卡唔存在 → 跳過
             if (j_chat_card.length < 1) {

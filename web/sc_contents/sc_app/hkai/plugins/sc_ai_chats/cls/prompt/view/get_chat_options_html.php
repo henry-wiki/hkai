@@ -20,6 +20,9 @@ trait get_chat_options_html
         
         // chat mode（驗證後使用——未選／無效值一律回第一粒顯示模）
         $chat_mode = sc_ai_chats()->chat_option()->get_chat_mode($chat_mode);
+
+        // 判定：Home（空 slug 或 home）→ Home 模式固定 chat，模式鈕停用
+        $is_home_project = in_array($project_slug, ["", "home"]);
         
         
         // model 顯示（provider 或 model 任一為空 → 未選模型）
@@ -56,35 +59,38 @@ trait get_chat_options_html
         $chat_mode_config = $daemon_configs["chat_mode"];
 
         $output_lines = [];
-        // chat mode buttons（sc_btn_group--segmented tab-like 控件）
-        $output_lines[] = "<div class='sc_btn_group sc_btn_group--segmented sc_composer__mode_tabs'>";
-            // 逐個 UI 模條目（value＝{mode, description}）
-            foreach ($chat_mode_config as $chat_mode_name => $chat_mode_item) {
-                // 判定：唔係 UI 模條目（無 mode 欄）→ 跳
-                if (!isset($chat_mode_item["mode"])) {
-                    continue;
+        // 判定：Home → 唔顯示模式選擇行（後端已強制第一個模式）
+        if ($is_home_project === false) {
+            // chat mode buttons（sc_btn_group--segmented tab-like 控件）
+            $output_lines[] = "<div class='sc_btn_group sc_btn_group--segmented sc_composer__mode_tabs'>";
+                // 逐個 UI 模條目（value＝{mode, description}）
+                foreach ($chat_mode_config as $chat_mode_name => $chat_mode_item) {
+                    // 判定：唔係 UI 模條目（無 mode 欄）→ 跳
+                    if (!isset($chat_mode_item["mode"])) {
+                        continue;
+                    }
+
+                    // 掣面字（mode 值）＋ hover（description——先落同名變數）
+                    $mode        = $chat_mode_item["mode"];
+                    $description = $chat_mode_item["description"];
+
+                    // active 判定（當前 chat_mode 對中嗰粒）
+                    $chat_mode_active = ($chat_mode === $chat_mode_name) ? " sc_btn--active" : "";
+
+                    $btn_attr = [];
+                    $btn_attr[] = "data-btn='chat_mode'";
+                    $btn_attr[] = "data-value='{$chat_mode_name}'";
+                    $btn_attr[] = "title='{$description}'";
+                    $btn_attr[] = "class='sc_btn{$chat_mode_active}'";
+
+                    $btn_attr = implode(" ", $btn_attr);
+                    $output_lines[] = "<button {$btn_attr}>{$mode}</button>";
                 }
-
-                // 掣面字（mode 值）＋ hover（description——先落同名變數）
-                $mode        = $chat_mode_item["mode"];
-                $description = $chat_mode_item["description"];
-
-                // active 判定（當前 chat_mode 對中嗰粒）
-                $chat_mode_active = ($chat_mode === $chat_mode_name) ? " sc_btn--active" : "";
-
-                $btn_attr = [];
-                $btn_attr[] = "data-btn='chat_mode'";
-                $btn_attr[] = "data-value='{$chat_mode_name}'";
-                $btn_attr[] = "title='{$description}'";
-                $btn_attr[] = "class='sc_btn{$chat_mode_active}'";
-
-                $btn_attr = implode(" ", $btn_attr);
-                $output_lines[] = "<button {$btn_attr}>{$mode}</button>";
-            }
-        $output_lines[] = "</div>";
+            $output_lines[] = "</div>";
+        }
         // model selector display
         $output_lines[] = "<div class='" . $model_selector_class . "'>";
-        $output_lines[] = "<span class='sc_composer__model_empty'>Please select model</span>";
+        $output_lines[] = "<span class='sc_composer__model_empty'>" . hkai()->i18n()->get("chat.select_model") . "</span>";
         $output_lines[] = "<span class='sc_composer__model_provider'>" . $provider_id . "</span>";
         $output_lines[] = "<span class='sc_composer__model_name'>" . $model_id . "</span>";
         $output_lines[] = "<span class='sc_composer__model_effort'>" . $reasoning_effort . "</span>";

@@ -26,6 +26,9 @@ trait finalize_poll_job
         $_polling_job_item = ["message_id" => $message_id, "status" => $status];
         sc_ai_chats()->message()->repo_update()->upsert_db_message_response($chat_row, $_polling_job_item);
 
+        // ②-2 工具調用記錄（msg_response.{i}.tools.jsonl → message_tool_call；按 tool_call_id upsert）
+        sc_ai_chats()->message()->repo_update()->upsert_db_message_tool_calls($chat_row, $_polling_job_item);
+
         // 段行收邊保險（upsert 讀唔到嘅殘留 poll 段行——檔案缺失等；按終態一律收）
         sc_ai_chats()->message()->repo_update()->close_db_message_response_rows($message_id, $status);
 

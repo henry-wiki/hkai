@@ -3,8 +3,6 @@
 // 檔名＝DevTools Event Listeners 面板顯示嘅字（一檔一事——一眼知位置）
 // 範圍：只做 UI chips（選檔／貼上／拖放／移除）；上傳與送模型屬下一部分
 
-import { sc_console } from "../../../../../jsmods/sc_console/sc_console.js";
-
 // fallback 設定（實際值由 .sc_composer__attachments data-* 覆寫——後端 sc_config hkai.draft）
 const DEFAULT_MAX_IMAGES                = 13;
 const DEFAULT_MAX_SOURCE_SIDE_PX        = 12800;

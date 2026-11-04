@@ -22,7 +22,7 @@ class _act_chat_updater {
         const project_chat_changes = chat_changes[current_project_slug] || {};
         const project_chat_sids = Object.keys(project_chat_changes);
 
-        console.log("[hkai][chat-updater] " + new Date().toISOString() + " project=" + current_project_slug + " change_projects=" + Object.keys(chat_changes).join(",") + " sids=" + project_chat_sids.join(","));
+        sc_console("stream", "chat_updater").log("project=" + current_project_slug + " change_projects=" + Object.keys(chat_changes).join(",") + " sids=" + project_chat_sids.join(","));
 
         // 判定：當前專案冇變動 → 唔動作
         if (project_chat_sids.length < 1) {

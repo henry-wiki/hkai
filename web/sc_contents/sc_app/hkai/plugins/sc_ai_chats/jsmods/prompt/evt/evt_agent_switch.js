@@ -31,7 +31,7 @@ class _evt_agent_switch {
                 prompt_fetch_instance.prompt_fetch();
             },
             error: function (result) {
-                console.error("agent_switch failed:", result);
+                sc_console("prompt", "agent_switch").error("failed:", result);
             },
         });
     }

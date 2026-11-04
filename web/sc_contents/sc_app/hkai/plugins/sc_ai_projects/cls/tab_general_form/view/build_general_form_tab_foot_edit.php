@@ -31,7 +31,7 @@ trait build_general_form_tab_foot_edit
         $save_wrapper[] = "<div class='sc_btn_wrapper'>";
         // 判定：Home 專案 → 停用儲存（title 說明原因）
         if ($is_home_project === true) {
-            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit' disabled title='Home 專案不可修改'>儲存</button>";
+            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit' disabled title='" . hkai()->i18n()->get("project.home_locked") . "'>儲存</button>";
         } else {
             $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit'>儲存</button>";
         }

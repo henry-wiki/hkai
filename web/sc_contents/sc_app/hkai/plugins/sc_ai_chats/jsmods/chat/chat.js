@@ -139,6 +139,7 @@ class _chat_act_bridge {
     async chat_archive() { return (await import("./act/chat_archive.js")).chat_archive();      }
     async chat_restore() { return (await import("./act/chat_restore.js")).chat_restore();      }
     async chat_delete() { return (await import("./act/chat_delete.js")).chat_delete();         }
+    async chat_card_move_to_top() { return (await import("./act/chat_card_move_to_top.js")).chat_card_move_to_top(); }
     async chat_item_fetch() { return (await import("./act/chat_item_fetch.js")).chat_item_fetch(); }
     async chat_item_insert() { return (await import("./act/chat_item_insert.js")).chat_item_insert(); }
     async chat_item_remove() { return (await import("./act/chat_item_remove.js")).chat_item_remove(); }

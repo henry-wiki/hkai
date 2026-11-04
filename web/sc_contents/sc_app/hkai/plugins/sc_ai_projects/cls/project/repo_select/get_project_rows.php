@@ -38,11 +38,15 @@ trait get_project_rows
         // 第一支：Home（project_slug＝home）
         $home_project_rows = sc_db()->select("SELECT * FROM projects WHERE project_slug = ?", [sc_get_config("hkai.default_project_slug")]);
 
-        // 第二支：其餘專案（project_status＝active；home 排除；最近對話更新優先）
+        // 第二支：其餘專案（home 排除；排序源同卡片顯示一致——最新對話 chat_updated_at，冇對話退用專案更新時間）
         $active_project_rows = sc_db()->select(
             "SELECT * FROM projects "
             . "WHERE project_slug != ? "
-            . "ORDER BY COALESCE(NULLIF(chat_updated_at, ''), project_updated_at) DESC",
+            . "ORDER BY COALESCE("
+            . "(SELECT MAX(c.chat_updated_at) FROM chats c WHERE c.project_id = projects.project_id), "
+            . "NULLIF(projects.chat_updated_at, ''), "
+            . "projects.project_updated_at"
+            . ") DESC",
             [sc_get_config("hkai.default_project_slug")]
         );
 

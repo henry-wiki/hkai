@@ -114,12 +114,6 @@ async def stream_output_for_message(request: Request, project_slug: str, chat_si
     if origin != "" and origin_is_allowed(origin, allowed_origins) is False:
         return _error_response("origin not allowed", origin, 403)
 
-    current_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
-
-    # 判定：polling／archive 兩邊都搵唔到 → 404 串流（前端收到 error 事件即停）
-    if current_dir is None:
-        return _error_response("message dir not found", origin)
-
     generator = _counted_message_event_generator(request, project_slug, chat_sid, prompt_id, response_index)
 
     response_headers = {
@@ -179,6 +173,74 @@ def _read_poll_list_index(current_dir: Path) -> int:
     return max_index
 
 
+def _read_poll_list_done_keys(current_dir: Path) -> list[tuple[int, str]]:
+    """讀 msg_poll_list.jsonl → 已完結（終態）嘅 (response_index, type) 清單（同鍵後行覆蓋前行）。"""
+    poll_list_path = current_dir / "msg_poll_list.jsonl"
+
+    # 判定：未有 poll_list → 冇任何完結段
+    if poll_list_path.is_file() is False:
+        return []
+
+    done_status_by_key: dict[tuple[int, str], str] = {}
+
+    for poll_list_line in poll_list_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        # 判定：空行 → 跳過
+        if poll_list_line.strip() == "":
+            continue
+
+        try:
+            poll_entry = json.loads(poll_list_line)
+        except ValueError:
+            continue
+
+        # 判定：摘要段（summarize）→ 唔計輪次
+        if poll_entry.get("family", "response") != "response":
+            continue
+
+        entry_index = poll_entry.get("response_index")
+        entry_type = str(poll_entry.get("type", ""))
+
+        # 判定：缺 index／type → 跳過
+        if isinstance(entry_index, int) is False or entry_type == "":
+            continue
+
+        done_status_by_key[(int(entry_index), entry_type)] = str(poll_entry.get("status", ""))
+
+    done_keys = []
+
+    for done_key, done_status in done_status_by_key.items():
+        # 判定：未到終態 → 唔算完結
+        if done_status not in TERMINAL_STATUSES:
+            continue
+
+        done_keys.append(done_key)
+
+    return done_keys
+
+
+def _collect_turn_done_events(current_dir: Path, turn_done_keys: set[tuple[int, str]]) -> list[dict[str, Any]]:
+    """收集未發過嘅段完結事件（turn_done：{kind, text}——該回合該型嘅完整內容）。"""
+    turn_done_events: list[dict[str, Any]] = []
+
+    for done_index, done_kind in _read_poll_list_done_keys(current_dir):
+        # 判定：已發過 → 跳過
+        if (done_index, done_kind) in turn_done_keys:
+            continue
+
+        # 判定：只認內文兩型 → 跳過
+        if done_kind not in ("thinking", "result"):
+            continue
+
+        done_path = _response_file_path(current_dir, done_kind, done_index)
+        done_text, _done_offset, _done_truncated = _read_appended(done_path, 0)
+
+        turn_done_keys.add((done_index, done_kind))
+
+        turn_done_events.append({"kind": done_kind, "text": done_text})
+
+    return turn_done_events
+
+
 def _activity_log_entries(message_dir: Path, offset: int) -> tuple[list[dict[str, Any]], int]:
     """讀 msg_log.txt 由 offset 起的新行 → 活動日誌條目（uid 同 PHP 一致：md5(datetime|event|level|message)）。"""
     log_path = message_dir / "msg_log.txt"
@@ -226,18 +288,36 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
     """訊息串流（新協定）——ready／turn／append／state／done；identity 即時定位目錄。"""
     current_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
 
-    # 判定：開線一刻兩邊都冇 → 送 error 收線
-    if current_dir is None:
-        yield _format_event("error", {"message": "message dir not found"})
+    wait_started_at = time.time()
 
-        return
+    # 目錄未建立（排隊中）→ 保持連線等，目錄一出現即照常串流
+    while current_dir is None:
+        # 判定：前端已斷線 → 直接結束
+        if await request.is_disconnected():
+            return
+
+        # 判定：等超過單線上限仍未出現 → 送 error 收線
+        if time.time() - wait_started_at > STREAM_MAX_SECONDS:
+            yield _format_event("error", {"message": "message dir not found"})
+
+            return
+
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+
+        current_dir = _locate_message_dir(project_slug, chat_sid, prompt_id)
 
     stream_meta = _read_meta_json(current_dir)
     stream_message_id = int(stream_meta.get("message_id", 0))
 
     current_index = int(response_index)
     file_offsets = {"result": 0, "thinking": 0}
+
+    # 工具記錄游標（每輪一個 tools.jsonl——逐行推 tool 事件）
+    tool_offset = 0
     last_status = ""
+
+    # 已發過 turn_done 嘅段（(index, kind)）——每段只發一次
+    turn_done_keys: set[tuple[int, str]] = set()
 
     # 首個事件：貼上當刻全文，偏移置檔尾（重連＝續傳，唔重播）
     snapshot_texts: dict[str, str] = {}
@@ -262,6 +342,14 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
             "activity_log": ready_logs,
         },
     )
+
+    # 連線時：當前輪及更早嘅已完成段（ready／頁面 HTML 已帶內容）→ 標記已發，唔重播
+    for ready_done_key in _read_poll_list_done_keys(current_dir):
+        # 判定：唔係當前輪或更早 → 留返 tick 發
+        if ready_done_key[0] > current_index:
+            continue
+
+        turn_done_keys.add(ready_done_key)
 
     while True:
         # 判定：前端已斷線 → 直接結束
@@ -318,6 +406,30 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
                         if next_text != "":
                             yield _format_event("append", {"kind": response_kind, "text": next_text})
 
+                # 收尾前：工具記錄補推（收尾時 daemon 會補 done 行——唔補推就見唔到狀態）
+                tools_path = current_dir / f"msg_response.{current_index}.tools.jsonl"
+                tools_text, tool_new_offset, _tools_truncated = _read_appended(tools_path, tool_offset)
+
+                # 判定：有未推嘅工具行 → 逐行推
+                if tools_text != "":
+                    tool_offset = tool_new_offset
+
+                    for tools_line in tools_text.splitlines():
+                        # 判定：空行 → 跳過
+                        if tools_line.strip() == "":
+                            continue
+
+                        try:
+                            tool_record = json.loads(tools_line)
+                        except ValueError:
+                            continue
+
+                        yield _format_event("tool", tool_record)
+
+                # 收尾前：未發過嘅段完結事件（turn_done）——含最後一輪完整內容
+                for turn_done_payload in _collect_turn_done_events(current_dir, turn_done_keys):
+                    yield _format_event("turn_done", turn_done_payload)
+
                 yield _format_event("done", {"status": status})
 
                 return
@@ -328,9 +440,10 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
         if poll_list_index > current_index:
             current_index = poll_list_index
             file_offsets = {"result": 0, "thinking": 0}
+            tool_offset = 0
             yield _format_event("turn", {"index": current_index})
 
-        for response_kind in ("result", "thinking"):
+        for response_kind in ("thinking", "result"):
             file_path = _response_file_path(current_dir, response_kind, current_index)
             appended_text, new_offset, truncated = _read_appended(file_path, file_offsets[response_kind])
 
@@ -343,6 +456,30 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
             if appended_text != "":
                 file_offsets[response_kind] = new_offset
                 yield _format_event("append", {"kind": response_kind, "text": appended_text})
+
+        # 工具記錄：讀本輪 tools.jsonl 新行 → tool 事件（逐條推）
+        tools_path = current_dir / f"msg_response.{current_index}.tools.jsonl"
+        tools_text, tool_new_offset, _tools_truncated = _read_appended(tools_path, tool_offset)
+
+        # 判定：有新行 → 逐行推
+        if tools_text != "":
+            tool_offset = tool_new_offset
+
+            for tools_line in tools_text.splitlines():
+                # 判定：空行 → 跳過
+                if tools_line.strip() == "":
+                    continue
+
+                try:
+                    tool_record = json.loads(tools_line)
+                except ValueError:
+                    continue
+
+                yield _format_event("tool", tool_record)
+
+        # 段完結 → turn_done（該回合該型完整內容；每段只發一次）
+        for turn_done_payload in _collect_turn_done_events(current_dir, turn_done_keys):
+            yield _format_event("turn_done", turn_done_payload)
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 

@@ -239,6 +239,34 @@ class _git_status_item {
 
         return number_result;
     }
+    // workspace entry → 狀態列（entry 已係 diagnostics 完整形 → 直接套；舊 monitor 形 → 轉換）
+    async apply_git_entry(git_entry) {
+        const git_entry_data = git_entry || {};
+
+        // 判定：已帶完整診斷欄位（changes 物件）→ 原樣套
+        if (typeof git_entry_data.changes === "object" && git_entry_data.changes !== null) {
+            return this.apply_git_status(git_entry_data);
+        }
+
+        const git_status_result = {};
+
+        git_status_result.ok       = true;
+        git_status_result.is_repo  = git_entry_data.is_repo === true;
+        git_status_result.branch   = git_entry_data.branch || "";
+        git_status_result.detached = git_entry_data.detached === true;
+        git_status_result.head_sha = git_entry_data.head_sha || "";
+        git_status_result.upstream = git_entry_data.upstream || "";
+        git_status_result.ahead    = Number(git_entry_data.ahead || 0);
+        git_status_result.behind   = Number(git_entry_data.behind || 0);
+
+        const git_change_counts = {};
+
+        git_change_counts.total = Number(git_entry_data.dirty || 0);
+
+        git_status_result.changes = git_change_counts;
+
+        return this.apply_git_status(git_status_result);
+    }
 }
 
 export const git_status_item = (function (instance) {

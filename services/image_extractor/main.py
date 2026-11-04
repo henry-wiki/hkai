@@ -26,6 +26,18 @@ from .runtime import pidfile, sc_logger
 USAGE_TEXT = "usage: python -m image_extractor.main <run|stop|status> <box_dir>"
 
 
+def enter_runtime_junk_dir() -> None:
+    """入工作目錄：services/_runtime_junk（自動建立）。
+
+    目的：本程序用絕對路徑讀寫，唔需要特定 cwd；萬一有第三方套件用相對路徑寫檔
+    （例：Windows 字體快取展開 %SystemDrive% 失敗），一律落呢個夾——可整夾刪除，
+    唔會污染源碼目錄。
+    """
+    runtime_junk_dir = Path(__file__).resolve().parents[1] / "_runtime_junk"
+    runtime_junk_dir.mkdir(parents=True, exist_ok=True)
+    os.chdir(runtime_junk_dir)
+
+
 def main(argv: list[str]) -> int:
     """CLI 分派；回 exit code。"""
     # 判定：參數不足 → 印用法
@@ -35,6 +47,9 @@ def main(argv: list[str]) -> int:
 
     command = argv[1]
     box_dir = Path(argv[2]).resolve()
+
+    # 入工作目錄（副作用檔一律落 _runtime_junk——可整夾刪）
+    enter_runtime_junk_dir()
 
     # 判定：run → 執行抽取
     if command == "run":

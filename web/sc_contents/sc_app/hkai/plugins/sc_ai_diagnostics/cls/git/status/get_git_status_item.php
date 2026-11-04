@@ -8,7 +8,7 @@ namespace sc\app\hkai\plugins\sc_ai_diagnostics\git\status;
 trait get_git_status_item
 {
     // 提供 status item HTML 給 sc_ai_status_bar（Closure 時求值——provider 全權決定 item 內容；只決定擺去邊）
-    // 文字槽 sc-text：首屏放佔位「—」（同 model 一樣），由 status bar init 的 refresh_git_item() 填真值
+    // 文字槽 sc-text：首屏放佔位「—」（同 model 一樣），由 workspace_stream 推送填真值
     public function get_git_status_item()
     {
         $project_slug = sc_ai_projects()->project()->get_project_slug();

@@ -28,9 +28,15 @@ trait dequeue_prompt_message_to_poll
         // 步驟 2：前移一格（驗證通過才做）
         $queue_items = sc_ai_chats()->queue()->get_queue_items($project_slug, $chat_sid);
 
-        // 判定：冇等待中訊息 → 拋錯（工序中止）
+        // 判定：冇等待中訊息 → 冇嘢可推（正常狀態，唔算失敗）
         if (count($queue_items) < 1) {
-            throw new \RuntimeException("queue empty: " . $project_slug . "/" . $chat_sid);
+            $shift_result = [];
+            $shift_result["dispatched"]  = false;
+            $shift_result["message_row"] = null;
+            $shift_result["prompt_id"]   = "";
+            $shift_result["poll_item"]   = [];
+
+            return $shift_result;
         }
 
         $queue_item = $queue_items[0];

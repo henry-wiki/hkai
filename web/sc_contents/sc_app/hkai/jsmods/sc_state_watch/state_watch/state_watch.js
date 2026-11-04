@@ -6,9 +6,6 @@
 class _state_watch {
     constructor() {
         this.inited = false;
-
-        // 上一輪 polling 名單（單位消失要歸零——防數值卡住）
-        this.polling_units = { project: [], chat: [] };
     }
 
     // 啟動域（sc_state_watch.init 召集——觀察者啟動；重複呼叫只行一次）

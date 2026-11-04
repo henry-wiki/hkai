@@ -10,7 +10,6 @@ class tab_git_Class
     use action\git_commit;
     use action\git_init;
     use action\git_stage_all;
-    use action\git_status;
     use action\run_python_git_commit;
     use action\run_python_git_init;
     use action\run_python_git_stage_all;

@@ -16,28 +16,36 @@ class _state_stream {
         this.stream_url = "/request/hkai/state_stream/";
 
         // 事件類型（後端逐個 type 派發——只認呢五個）
-        this.stream_types = ["chat", "project", "polling", "git", "conn", "message"];
+        this.stream_types = ["chat", "project", "polling", "message"];
 
         // 開線令牌（open 期間再 open／close → 舊連線作廢）
         this.stream_token = 0;
 
         // 已啟動旗標（事件 handler 先檢查——close 後殘留事件唔處理）
         this.enabled = false;
+
+        // 換線狀態（新線待接手——未換前舊線照收事件，零空隙）
+        this.connection_seq = 0;
+        this.pending_token = 0;
+        this.pending_event_source = null;
+        this.previous_event_source = null;
     }
 
     // 開線（URL 由本模組砌——caller 只交三個身份值）
     async open(project_slug, chat_sid, view_id) {
         const thisObject = this;
 
-        thisObject.close();
-
         // 判定：瀏覽器唔支援 EventSource → 唔開
         if (typeof EventSource === "undefined") {
             return;
         }
 
-        thisObject.stream_token = thisObject.stream_token + 1;
-        const open_token = thisObject.stream_token;
+        thisObject.connection_seq = thisObject.connection_seq + 1;
+        const open_token = thisObject.connection_seq;
+
+        // 換線：舊線留住收事件，等新線第一個事件接手（零空隙）
+        thisObject.previous_event_source = thisObject.event_source;
+        thisObject.pending_token = open_token;
 
         thisObject.enabled = true;
 
@@ -50,12 +58,30 @@ class _state_stream {
 
         // open（handshake——冇資料要處理）
         event_source.addEventListener("open", function () {
-            thisObject._trace("open", { ready_state: event_source.readyState });
+            registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "open", { ready_state: event_source.readyState });
+        });
+
+        // 伺服器 handshake（event: open 帶 base_url）→ 換埠時同步 presence
+        event_source.addEventListener("open", async function (event) {
+            // 判定：原生 open（無 data）→ 唔關事
+            if (!event.data) {
+                return;
+            }
+
+            const handshake_payload = JSON.parse(event.data);
+            const bridge_base_url = handshake_payload.base_url || "";
+
+            // 判定：冇位址 → 唔動作
+            if (bridge_base_url === "") {
+                return;
+            }
+
+            await registry().sc_presence().ensure_open(bridge_base_url);
         });
 
         // error（連線層錯誤——EventSource 會自行重連；記錄用嚟對時序）
         event_source.addEventListener("error", function () {
-            thisObject._trace("error", { ready_state: event_source.readyState });
+            registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "error", { ready_state: event_source.readyState });
         });
 
         // 逐個 type 綁監聽（chat／project／polling／git／conn）
@@ -71,24 +97,51 @@ class _state_stream {
         event_source.addEventListener("close", function () {
         });
 
-        thisObject.event_source = event_source;
+        thisObject.pending_event_source = event_source;
+
+        // 安全網：新線 open 後 2 秒仍未見事件 → 照換（靠新線首 tick 全量補）
+        window.setTimeout(function () {
+            thisObject.activate_pending_source(open_token);
+        }, 2000);
+    }
+
+    // 新線接手：舊線關閉，之後只認新線
+    activate_pending_source(open_token) {
+        // 判定：唔係待換線 → 唔郁
+        if (this.pending_token !== open_token) {
+            return;
+        }
+
+        this.stream_token = this.pending_token;
+        this.pending_token = 0;
+        this.event_source = this.pending_event_source;
+        this.pending_event_source = null;
+
+        // 判定：有舊線 → 關（新線已接手）
+        if (this.previous_event_source !== null) {
+            this.previous_event_source.close();
+            this.previous_event_source = null;
+        }
     }
 
     // 套用單一 type 事件（seed 或 delta——只認本條線）
     async apply_stream_event(stream_type, event, open_token) {
-        // 記錄：事件入咗 JS（未判線／未解析——分辨「未派發」用）
-        this._trace("evt_in", { type: stream_type, same_token: this.stream_token === open_token, enabled: this.enabled });
+        // 判定：新線第一個事件 → 即刻換線（舊線關閉——之後只認新線）
+        if (this.pending_token === open_token) {
+            this.activate_pending_source(open_token);
+        }
+
 
         // 判定：已關線 → 唔處理
         if (this.enabled === false) {
-            this._trace("drop_disabled", { type: stream_type });
+            registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "drop_disabled", { type: stream_type });
 
             return;
         }
 
         // 判定：open 期間已被取代 → 唔處理
         if (this.stream_token !== open_token) {
-            this._trace("drop_token", { type: stream_type });
+            registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "drop_token", { type: stream_type });
 
             return;
         }
@@ -99,7 +152,7 @@ class _state_stream {
         try {
             event_payload = JSON.parse(event.data);
         } catch (parse_error) {
-            this._trace("drop_parse", { type: stream_type, message: String(parse_error) });
+            registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "drop_parse", { type: stream_type, message: String(parse_error) });
 
             return;
         }
@@ -108,12 +161,6 @@ class _state_stream {
         if (stream_type === "polling") {
             const polling_snapshot = build_stream_polling_snapshot(event_payload);
 
-            this._trace("polling_before", {
-                rev: event_payload.rev,
-                payload_keys: Object.keys(event_payload).join(","),
-                has_changes: (event_payload.changed !== undefined),
-                dom_polling_cards: document.querySelectorAll(".sc_chat_card.polling").length,
-            });
 
             try {
                 const state_watch_module = registry().sc_state_watch();
@@ -121,12 +168,8 @@ class _state_stream {
                 const apply_polling_instance = await state_watch_domain.act().apply_polling();
                 await apply_polling_instance.apply_polling(polling_snapshot);
 
-                this._trace("polling_after", {
-                    rev: event_payload.rev,
-                    dom_polling_cards: document.querySelectorAll(".sc_chat_card.polling").length,
-                });
             } catch (apply_error) {
-                this._trace("polling_error", { rev: event_payload.rev, message: String(apply_error) });
+                registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "polling_error", { rev: event_payload.rev, message: String(apply_error) });
             }
 
             return;
@@ -146,51 +189,10 @@ class _state_stream {
 
             await project_updater_instance.apply_project_stream_delta(event_payload);
         }
-        // git delta
-        else if (stream_type === "git") {
-            const stream_instance = await registry().sc_state_stream().stream();
-            const git_updater_instance = await stream_instance.act().act_git_updater();
-
-            await git_updater_instance.apply_git_stream_delta(event_payload);
-        }
-        // conn delta
-        else if (stream_type === "conn") {
-            const stream_instance = await registry().sc_state_stream().stream();
-            const conn_updater_instance = await stream_instance.act().act_conn_updater();
-
-            await conn_updater_instance.apply_conn_stream_delta(event_payload);
-        }
         // 其餘類型 → 唔處理
         else {
             return;
         }
-    }
-
-    // 記錄一條（落 localStorage ring buffer——查漏報用；唔影響流程）
-    _trace(trace_kind, trace_detail) {
-        const trace_record = {
-            t: Date.now(),
-            iso: new Date().toISOString(),
-            kind: trace_kind,
-            detail: trace_detail,
-        };
-
-        try {
-            const raw_trace = localStorage.getItem("__hkai_poll_trace");
-            const trace_list = (raw_trace === null) ? [] : JSON.parse(raw_trace);
-
-            trace_list.push(trace_record);
-            localStorage.setItem("__hkai_poll_trace", JSON.stringify(trace_list.slice(-600)));
-        } catch (storage_error) {
-            return;
-        }
-
-        this._trace_console(trace_record);
-    }
-
-    // 同步落 console（registry().sc_console——靜態入口，免動態 import）
-    _trace_console(trace_record) {
-        registry().sc_console(...CONSOLE_SCOPES).log("[trace]", trace_record.kind, trace_record.detail);
     }
 
     // 關線（停／重開前先清）
@@ -202,6 +204,21 @@ class _state_stream {
         if (this.event_source !== null) {
             this.event_source.close();
             this.event_source = null;
+        }
+
+        // 判定：換線中途 → 兩條都清（唔留孤兒連線）
+        this.pending_token = 0;
+
+        // 判定：有待接手線 → 關
+        if (this.pending_event_source !== null) {
+            this.pending_event_source.close();
+            this.pending_event_source = null;
+        }
+
+        // 判定：有舊線 → 關
+        if (this.previous_event_source !== null) {
+            this.previous_event_source.close();
+            this.previous_event_source = null;
         }
     }
 }

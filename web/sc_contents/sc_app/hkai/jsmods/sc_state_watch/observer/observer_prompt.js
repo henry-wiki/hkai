@@ -11,7 +11,7 @@ class _observer_prompt {
 
     // 開始監視（未實作——回 false）
     watch(target_element, dispatch) {
-        console.warn("sc_state_watch observer: observer_prompt 未實作");
+        sc_console("state_watch", "observer_prompt").warn("未實作");
 
         return false;
     }

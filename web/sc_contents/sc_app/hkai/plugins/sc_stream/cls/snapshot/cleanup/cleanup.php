@@ -9,6 +9,9 @@ namespace sc\app\hkai\plugins\sc_stream\snapshot\cleanup;
 
 trait cleanup
 {
+    // 孤兒門檻（秒——非終態但任何檔案都冇更新，當 worker 死咗）
+    private const ABANDONED_JOB_SECONDS = 180;
+
     public function sweep_expired_view_files()
     {
         $stream_dir      = sc_get_config("hkai.stream_dir");
@@ -93,10 +96,43 @@ trait cleanup
 
         sc_ai_providers()->repo()->sweep_old_backup_files($dir_list);
 
+        // 每日 log（hkai.YYYYMMDD.log——只保留 30 日）
+        $this->remove_expired_log_files();
+
         // 記錄本次清掃時間（marker mtime＝上次清掃）
         @file_put_contents($sweep_marker, date("Y-m-d H:i:s"), LOCK_EX);
 
         return 0;
+    }
+
+    // 清走超過 30 日嘅每日 log（只刪 hkai.YYYYMMDD.log——其他 *.log 唔碰）
+    private function remove_expired_log_files()
+    {
+        $log_dir     = sc_get_config("hkai.log_dir");
+        $keep_days   = 30;
+        $expire_time = time() - ($keep_days * 86400);
+        $log_paths   = glob($log_dir . "/hkai.*.log");
+
+        // 判定：glob 失敗 → 零動作
+        if (is_array($log_paths) === false) {
+            return;
+        }
+
+        foreach ($log_paths as $log_path_item) {
+            $log_stat = stat($log_path_item);
+
+            // 判定：stat 失敗 → 跳過
+            if ($log_stat === false) {
+                continue;
+            }
+
+            // 判定：未過期（30 日內仍有寫入）→ 保留
+            if ((int)$log_stat["mtime"] >= $expire_time) {
+                continue;
+            }
+
+            unlink($log_path_item);
+        }
     }
 
     // 收尾終態輪詢工作（3 秒節流＋flock 互斥；失敗 5 次即跳過——唔會卡死）
@@ -147,7 +183,13 @@ trait cleanup
 
             foreach ($meta_files as $meta_file_item) {
                 $finalized_count = $finalized_count + $this->finalize_terminal_job_file($meta_file_item);
+
+                // 附件整理完成但冇人叫 poll → 喺度放行（唔靠前端輪詢）
+                $this->release_prepared_attachment_job($meta_file_item);
             }
+
+            // 清走搬檔後留低嘅空目錄（只刪全空層）
+            $this->remove_empty_poll_dirs();
         } finally {
             flock($lock_handle, LOCK_UN);
             fclose($lock_handle);
@@ -159,7 +201,84 @@ trait cleanup
         return $finalized_count;
     }
 
+    // 附件已整理好嘅 job → 補寫放行狀態（上游：sweep_terminal_poll_jobs 每輪）
+    // 背景：放行本來由前端 handle_message_poll 觸發；冇頁面望住就會永遠卡 preparing
+    private function release_prepared_attachment_job($meta_file)
+    {
+        $box_dir = dirname($meta_file);
+
+        $meta_data = json_decode((string)file_get_contents($meta_file), true);
+
+        // 判定：meta 壞檔 → 唔做
+        if (is_array($meta_data) === false) {
+            return false;
+        }
+
+        $message_id = (int)($meta_data["message_id"] ?? 0);
+
+        // 判定：冇 message_id → 唔做
+        if ($message_id < 1) {
+            return false;
+        }
+
+        $poll_item = sc_ai_chats()->poll()->file()->get_poll_item($message_id);
+
+        // 判定：箱讀唔到 → 唔做
+        if ($poll_item === null) {
+            return false;
+        }
+
+        return sc_ai_chats()->queue()->dispatch_agent_item($poll_item, $box_dir);
+    }
     // 單條收尾（終態才做；失敗計次，5 次後跳過——防無限重試）
+    // 孤兒判斷：非終態＋（preparing／connecting／replying）＋任何檔案 N 秒冇更新 → 當死咗
+    // 上游：finalize_terminal_job_file（sweep 逐個 job）
+    // 下游：filemtime
+    private function is_abandoned_job($job_dir, $job_status)
+    {
+        // 判定：排隊中（未開工）→ 唔算孤兒（可以排好耐）
+        if ($job_status === "queued") {
+            return false;
+        }
+
+        $activity_files = [];
+        $activity_files[] = $job_dir . "/msg_status.txt";
+        $activity_files[] = $job_dir . "/msg_log.txt";
+        $activity_files[] = $job_dir . "/meta.json";
+        $activity_files[] = $job_dir . "/msg_stdout.txt";
+
+        $response_files = glob($job_dir . "/msg_response.*");
+
+        // 判定：有 response 檔 → 一併計
+        if (is_array($response_files) === true) {
+            $activity_files = array_merge($activity_files, $response_files);
+        }
+
+        $latest_mtime = 0;
+
+        // 逐個檔：取最新 mtime
+        foreach ($activity_files as $activity_file_item) {
+            // 判定：檔唔存在 → 跳過
+            if (is_file($activity_file_item) === false) {
+                continue;
+            }
+
+            $file_mtime = (int)filemtime($activity_file_item);
+
+            // 判定：更新 → 記低
+            if ($file_mtime > $latest_mtime) {
+                $latest_mtime = $file_mtime;
+            }
+        }
+
+        // 判定：完全冇檔 → 當孤兒
+        if ($latest_mtime < 1) {
+            return true;
+        }
+
+        return (time() - $latest_mtime) > self::ABANDONED_JOB_SECONDS;
+    }
+
     private function finalize_terminal_job_file($meta_file_path)
     {
         $job_dir    = dirname($meta_file_path);
@@ -199,9 +318,14 @@ trait cleanup
         // 狀態一律以 msg_status.txt 最後一行為準
         $status = (string)sc_ai_chats()->poll()->file()->get_poll_status($chat_id, $message_id);
 
-        // 判定：未到終態 → 唔郁
+        // 判定：未到終態 → 檢查係唔係孤兒（worker 死咗／冇任何檔案活動）
         if (sc_ai_chats()->fsm()->is_terminal_status($status) === false) {
-            return 0;
+            // 判定：未夠鐘（仲有活動）→ 唔郁
+            if ($this->is_abandoned_job($job_dir, $status) === false) {
+                return 0;
+            }
+
+            $status = "failed";
         }
 
         // 判定：目錄已被另一頁搬走 → 跳過
@@ -214,7 +338,11 @@ trait cleanup
         } catch (\Throwable $finalize_error) {
             file_put_contents($fail_path, (string)($fail_count + 1), LOCK_EX);
 
-            hkai()->runtime()->logger()->error("finalize failed chat_id=" . $chat_id . " message_id=" . $message_id . " error=" . $finalize_error->getMessage());
+            $finalize_error_message = "finalize failed chat_id=" . $chat_id;
+            $finalize_error_message = $finalize_error_message . " message_id=" . $message_id;
+            $finalize_error_message = $finalize_error_message . " error=" . $finalize_error->getMessage();
+
+            hkai()->runtime()->logger()->error($finalize_error_message);
 
             return 0;
         }
@@ -229,6 +357,55 @@ trait cleanup
         }
 
         return 1;
+    }
+
+    // 清走搬檔後留低嘅空目錄（只刪全空層——rmdir 本身拒絕非空；有檔案一律唔碰）
+    private function remove_empty_poll_dirs()
+    {
+        $polling_dir = sc_get_config("hkai.messages_polling_dir");
+        $chat_dirs   = glob($polling_dir . "/*/*");
+
+        // 判定：glob 失敗 → 用空陣列
+        if (is_array($chat_dirs) === false) {
+            $chat_dirs = [];
+        }
+
+        // 第一輪：清對話層（polling/{project_slug}/{chat_sid}）
+        foreach ($chat_dirs as $chat_dir_item) {
+            // 判定：唔係目錄 → 跳過
+            if (is_dir($chat_dir_item) === false) {
+                continue;
+            }
+
+            // 判定：仍有內容 → 跳過（2＝. 與 ..）
+            if (count(scandir($chat_dir_item)) > 2) {
+                continue;
+            }
+
+            rmdir($chat_dir_item);
+        }
+
+        $project_dirs = glob($polling_dir . "/*");
+
+        // 判定：glob 失敗 → 用空陣列
+        if (is_array($project_dirs) === false) {
+            $project_dirs = [];
+        }
+
+        // 第二輪：清專案層（對話層清完可能變空）
+        foreach ($project_dirs as $project_dir_item) {
+            // 判定：唔係目錄 → 跳過
+            if (is_dir($project_dir_item) === false) {
+                continue;
+            }
+
+            // 判定：仍有內容 → 跳過
+            if (count(scandir($project_dir_item)) > 2) {
+                continue;
+            }
+
+            rmdir($project_dir_item);
+        }
     }
 
     // 推下一條排隊（失敗只記 log——唔影響收尾結果）

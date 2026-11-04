@@ -44,6 +44,9 @@ class sse_prompt_Class
 
         $view_id = sc_stream()->get_view_id();
 
+        // 連接身份（本頁本頻道一格；冇合法 view_id → 唔登記）
+        $sse_owner_file = sc_stream()->sse_owner()->open($view_id, "prompt_stream");
+
         $stream_start   = time();
         $last_ping_time = time();
 
@@ -57,6 +60,9 @@ class sse_prompt_Class
             if (time() - $stream_start >= self::MAX_SECONDS) {
                 break;
             }
+
+            // （接管判斷已移除：EventSource 自動重連會造成互殺乒乓——只靠 MAX_SECONDS 換線）
+
 
             $stream_events = $this->get_snapshot_changes_for_prompt($view_id);
 
@@ -84,6 +90,9 @@ class sse_prompt_Class
 
             usleep(self::TICK_USEC);
         }
+
+        // 收工：刪自己身份檔（格內冇其它連線 → 連格一齊刪）
+        sc_stream()->sse_owner()->close($sse_owner_file);
 
         sc_stream()->sse()->send_close();
     }

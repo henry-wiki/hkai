@@ -176,7 +176,7 @@ class _sc_markdown_mermaid {
         } catch (render_error) {
             // 語法錯誤 → 標示原文塊（顯示層警告——唔可以靜靜咁死）＋console
             j_code_element.parent("pre").attr("data-render_failed", "1");
-            console.error("mermaid render failed:", render_error.message);
+            sc_console("markdown", "mermaid").error("render failed:", render_error.message);
         }
     }
 
@@ -200,7 +200,7 @@ class _sc_markdown_mermaid {
 
         // 判定：正規化失敗 → 退回直插 DOM（至少畫面有圖，代價是 DOM 節點多）
         if (well_formed_svg === "") {
-            console.error("mermaid svg normalize failed: fallback to svg_dom");
+            sc_console("markdown", "mermaid").error("svg normalize failed: fallback to svg_dom");
             return svg_string;
         }
 
@@ -242,7 +242,7 @@ class _sc_markdown_mermaid {
 
             return new XMLSerializer().serializeToString(svg_element);
         } catch (normalize_error) {
-            console.error("mermaid svg normalize failed:", normalize_error.message);
+            sc_console("markdown", "mermaid").error("svg normalize failed:", normalize_error.message);
             return "";
         }
     }
@@ -299,7 +299,7 @@ class _sc_markdown_mermaid {
                     resolve("<img src='" + canvas.toDataURL("image/png") + "' />");
                 } catch (canvas_error) {
                     // 轉換失敗（如 canvas 過大）→ 回空字串
-                    console.error("mermaid canvas failed:", canvas_error.message);
+                    sc_console("markdown", "mermaid").error("canvas failed:", canvas_error.message);
                     resolve("");
                 } finally {
                     URL.revokeObjectURL(svg_url);
@@ -451,7 +451,7 @@ class _sc_markdown_mermaid {
         } catch (render_error) {
             // 預渲染失敗 → 一樣標示（顯示層警告）＋console
             jQuery(code_element).parent("pre").attr("data-render_failed", "1");
-            console.error("mermaid pre-render failed:", render_error.message);
+            sc_console("markdown", "mermaid").error("pre-render failed:", render_error.message);
         }
     }
 

@@ -55,6 +55,16 @@ class sc_stream_Class
     }
 
     /**
+     * 連接身份子域（每頁一格：登記／接管判斷／清掃）
+     *
+     * @return \sc\app\hkai\plugins\sc_stream\sse\sse_owner\sse_owner_Class
+     */
+    public function sse_owner()
+    {
+        return sse\sse_owner\sse_owner_Class::getInstance();
+    }
+
+    /**
      * 快照子域（view 檔／view id／diff／清理；state／prompt 兩線各自持有目標）
      *
      * @return \sc\app\hkai\plugins\sc_stream\snapshot\snapshot_Class
@@ -65,7 +75,7 @@ class sc_stream_Class
     }
 
     /**
-     * 監視對象容器（chat／project／polling／git／conn／prompt／message）
+     * 監視對象容器（chat／project／polling／git／prompt／message）
      *
      * @return \sc\app\hkai\plugins\sc_stream\monitor\monitor_Class
      */

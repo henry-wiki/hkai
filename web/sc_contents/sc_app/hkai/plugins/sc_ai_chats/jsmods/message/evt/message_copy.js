@@ -58,7 +58,7 @@ class _message_copy {
                 await navigator.clipboard.writeText(text);
                 return true;
             } catch (copy_error) {
-                console.error("clipboard write failed:", copy_error.message);
+                sc_console("message", "copy").error("clipboard write failed:", copy_error.message);
                 return false;
             }
         }
@@ -77,7 +77,7 @@ class _message_copy {
             textarea_element.select();
             copy_ok = document.execCommand("copy");
         } catch (copy_error) {
-            console.error("clipboard write failed:", copy_error.message);
+            sc_console("message", "copy").error("clipboard write failed:", copy_error.message);
         } finally {
             document.body.removeChild(textarea_element);
         }

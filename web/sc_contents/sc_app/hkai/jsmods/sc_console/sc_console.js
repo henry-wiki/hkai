@@ -5,20 +5,23 @@
 //   sc_console.error(...)               → 無 scope
 //   sc_console("scope_a", "scope_b").log(...)   → 帶 scope
 //   sc_console("scope_a", "scope_b").warn(...)
+// 出廠預設：enabled=false（唔出 log）；要睇就在 console 執行 window.sc_console_settings.enabled = true
 // 全域控制（喺 console 即時改，毋須 reload）：
 //   window.sc_console_settings.enabled      true／false（總開關）
 //   window.sc_console_settings.show_error   true／false（error 另計）
 //   window.sc_console_settings.scopes       []＝全部；["polling"]＝只顯示含 polling 嘅 scope
 //   window.sc_console_settings.timestamp    true／false（加 ISO 時間）
+//   window.sc_console_settings.show_caller  true／false（尾隨可點擊嘅呼叫者 URL）
 // 上游：任何 jsmods／plugin（直接 import）
 // 下游：原生 console.log／warn／error（唯一出口）
 
 // 全域設定（window 上——可即時改）
 const SC_CONSOLE_DEFAULTS = {
-    enabled: true,
+    enabled: false,
     show_error: true,
     scopes: [],
     timestamp: true,
+    show_caller: true,
 };
 
 const SC_CONSOLE_SETTINGS = (function () {
@@ -29,6 +32,7 @@ const SC_CONSOLE_SETTINGS = (function () {
             show_error: SC_CONSOLE_DEFAULTS.show_error,
             scopes: SC_CONSOLE_DEFAULTS.scopes.slice(),
             timestamp: SC_CONSOLE_DEFAULTS.timestamp,
+            show_caller: SC_CONSOLE_DEFAULTS.show_caller,
         };
     }
 
@@ -84,13 +88,13 @@ class _sc_console {
         return false;
     }
 
-    // 砌前綴（scope 字串＋ISO 時間）
-    _build_prefix() {
+    // 砌前綴（逐個 scope 一個參數＋ISO 時間——直接對應 console.log 嘅參數位）
+    _build_prefix_items() {
         const prefix_items = [];
 
-        // 判定：有 scope → 加 [scope]
-        if (this.scope_items.length > 0) {
-            prefix_items.push("[" + this.scope_items.join("][") + "]");
+        // 逐個 scope：各自一個參數
+        for (let scope_index = 0; scope_index < this.scope_items.length; scope_index++) {
+            prefix_items.push("[" + this.scope_items[scope_index] + "]");
         }
 
         // 判定：要時間戳 → 加 ISO
@@ -98,7 +102,33 @@ class _sc_console {
             prefix_items.push(new Date().toISOString());
         }
 
-        return prefix_items.join(" ");
+        return prefix_items;
+    }
+
+    // 抽呼叫者 URL（第一個唔屬於 sc_console.js 嘅 frame——Chrome 會 link 化，點擊跳 Sources）
+    _build_caller_url() {
+        const stack_text  = new Error().stack || "";
+        const stack_lines = stack_text.split("\n");
+
+        for (let line_index = 1; line_index < stack_lines.length; line_index++) {
+            const stack_line = stack_lines[line_index];
+
+            // 判定：框架自己嘅 frame → 跳過
+            if (stack_line.indexOf("/sc_console/sc_console.js") >= 0) {
+                continue;
+            }
+
+            const url_match = stack_line.match(/(https?:\/\/[^\s)]+):(\d+):(\d+)/);
+
+            // 判定：抽唔到 URL → 下一行
+            if (url_match === null) {
+                continue;
+            }
+
+            return url_match[1] + ":" + url_match[2];
+        }
+
+        return "";
     }
 
     // 真正輸出（唯一出口）
@@ -108,12 +138,17 @@ class _sc_console {
             return;
         }
 
-        const prefix_text = this._build_prefix();
-        const args_items = Array.prototype.slice.call(args_object);
+        const prefix_items = this._build_prefix_items();
+        const args_items = prefix_items.concat(Array.prototype.slice.call(args_object));
 
-        // 判定：有前綴 → 放最前
-        if (prefix_text !== "") {
-            args_items.unshift(prefix_text);
+        // 判定：要顯示呼叫者 → 加 URL 做最後一個參數（可點擊跳 Sources）
+        if (SC_CONSOLE_SETTINGS.show_caller === true) {
+            const caller_url = this._build_caller_url();
+
+            // 判定：抽到 URL → 加入
+            if (caller_url !== "") {
+                args_items.push(caller_url);
+            }
         }
 
         console[level_name].apply(console, args_items);

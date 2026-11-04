@@ -294,6 +294,121 @@
     background-image: radial-gradient(circle, #7c8cff16 1px, transparent 1.5px);
     background-size: 12px 12px;
 }
+/* tool 段（顯示模式跟 result：head／scroll／bar；內容＝命令清單——等寬字） */
+.agent_message .seg--tool {
+    max-width: 100%;
+    padding: 8px 0px;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+}
+.agent_message .seg--tool.hidden {
+    display: none;
+}
+/* tool 段 head：用時（永遠可見——同 thinking 一樣） */
+.agent_message .seg--tool .seg__head {
+    display: flex;
+    justify-content: flex-end;
+}
+.agent_message .seg--tool .seg__head .response_elapsed {
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    padding: 3px 6px;
+}
+
+/* tool 段內：一條命令一格 */
+.agent_message .tool_item {
+    padding: 6px 0;
+}
+.agent_message .tool_item + .tool_item {
+    border-top: 1px dashed rgba(148, 163, 184, 0.2);
+}
+.agent_message .tool_item__head {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+
+    margin-bottom: 4px;
+
+    font-size: 11px;
+    color: #94a3b8;
+}
+.agent_message .tool_item__seq {
+    opacity: 0.6;
+}
+.agent_message .tool_item__name {
+    color: #e2e8f0;
+}
+.agent_message .tool_item__status {
+    margin-left: auto;
+    text-transform: uppercase;
+}
+/* 命令行：原文＋每格 copy（hover 才現） */
+.agent_message .tool_item__line {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+.agent_message .tool_item__line .tool_item__input {
+    flex: 1;
+    min-width: 0;
+}
+.agent_message .tool_item__copy {
+    flex: none;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 20px;
+    height: 20px;
+    padding: 0;
+
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0;
+}
+.agent_message .tool_item:hover .tool_item__copy {
+    opacity: 1;
+}
+.agent_message .tool_item__copy:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+
+.agent_message .tool_item__input,
+.agent_message .tool_item__output {
+    margin: 0;
+
+    white-space: pre-wrap;
+    word-break: break-word;
+
+    font-family: inherit;
+    font-size: 12px;
+}
+.agent_message .tool_item__output {
+    color: #94a3b8;
+}
+
+.agent_message .seg--tool .seg__text {
+    padding: 6px 12px;
+    padding-left: 12px;
+    border-left: 2px solid rgba(148, 163, 184, 0.35);
+
+    background-color: #161d33;
+    color: #cbd5e1;
+
+    font-family: ui-monospace, Consolas, "Courier New", monospace;
+    font-size: 12px;
+}
+
 /* 失敗訊息（無法送出）：紅左線＋紅底＋標題紅字——色喺顯示層（source 唔帶色） */
 .message_wrapper[data-status='failed'] .agent_message .seg--result .seg__text {
     background: rgba(248, 113, 113, 0.07);
@@ -338,6 +453,53 @@
 .agent_message .seg--result .seg__bar .seg__action:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #e2e8f0;
+}
+
+/* tool 段動作列（同 result 一致：無邊框、24×24、hover 才現底色） */
+.agent_message .seg--tool .seg__bar {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding-left: 12px;
+    margin-top: 6px;
+}
+/* copy 掣：完成後才出（時間照常顯示） */
+.agent_message .seg--tool .seg__bar .seg__action {
+    display: none;
+}
+.message_wrapper[data-status='completed'] .agent_message .seg--tool .seg__bar .seg__action {
+    display: flex;
+}
+.agent_message .seg--tool .seg__bar .seg__bar_actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.agent_message .seg--tool .seg__bar .seg__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #9fa8bd;
+    cursor: pointer;
+    font-size: 12px;
+}
+.agent_message .seg--tool .seg__bar .seg__action:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+}
+.agent_message .seg--tool .seg__bar .response_elapsed {
+    align-self: center;
+    font-size: 10.5px;
+    color: #6f7a94;
+    white-space: nowrap;
+    padding: 3px 6px;
 }
 
 /* ==== 訊息模型標示（plain——provider/model；動作列 copy 之後） ==== */

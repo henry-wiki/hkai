@@ -62,9 +62,6 @@ class _stream_act_bridge {
     async act_project_updater() { return (await import("./act/act_project_updater.js")).act_project_updater(); }
     async act_prompt_updater()  { return (await import("./act/act_prompt_updater.js")).act_prompt_updater(); }
     async act_chat_updater()    { return (await import("./act/act_chat_updater.js")).act_chat_updater(); }
-    async act_message_updater() { return (await import("./act/act_message_updater.js")).act_message_updater(); }
-    async act_git_updater()     { return (await import("./act/act_git_updater.js")).act_git_updater(); }
-    async act_conn_updater()    { return (await import("./act/act_conn_updater.js")).act_conn_updater(); }
 }
 
 // req（出街工作）

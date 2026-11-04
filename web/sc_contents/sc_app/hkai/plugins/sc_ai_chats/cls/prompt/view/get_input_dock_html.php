@@ -33,15 +33,15 @@ trait get_input_dock_html
         $btn_send_attr[] = "data-action='send'";
         $btn_send_attr[] = "type='button'";
         $btn_send_attr[] = "class='sc_btn sc_btn--primary sc_btn--sm'";
-        $btn_send_attr[] = "title='Send'";
-        $btn_send_attr[] = "aria-label='Send'";
+        $btn_send_attr[] = "title='" . hkai()->i18n()->get("prompt.send") . "'";
+        $btn_send_attr[] = "aria-label='" . hkai()->i18n()->get("prompt.send") . "'";
         
         $btn_stop_attr = [];
         $btn_stop_attr[] = "data-action='stop'";
         $btn_stop_attr[] = "type='button'";
         $btn_stop_attr[] = "class='sc_btn sc_btn--danger sc_btn--sm'";
-        $btn_stop_attr[] = "title='Stop'";
-        $btn_stop_attr[] = "aria-label='Stop'";
+        $btn_stop_attr[] = "title='" . hkai()->i18n()->get("prompt.stop") . "'";
+        $btn_stop_attr[] = "aria-label='" . hkai()->i18n()->get("prompt.stop") . "'";
         
         // 判定：工作中 → Stop 出、Send 藏；閒置 → 相反（hidden 只喺要藏嗰粒加）
         if ($is_working === true) {
@@ -76,7 +76,7 @@ trait get_input_dock_html
         $output_lines[] = "<input class='sc_composer__file_input' type='file' multiple hidden>";
         // 槽2：文字輸入主體
         $output_lines[] = "<div class='sc_composer__field'>";
-            $output_lines[] = "<textarea id='sc_input' rows='1' placeholder='{$input_placeholder}' aria-label='Input message'>{$draft_text_html}</textarea>";
+            $output_lines[] = "<textarea id='sc_input' rows='1' placeholder='{$input_placeholder}' aria-label='" . hkai()->i18n()->get("prompt.input_message") . "'>{$draft_text_html}</textarea>";
         $output_lines[] = "</div>";
         // 槽3：底部工具列
         $output_lines[] = "<div class='sc_composer__toolbar'>";

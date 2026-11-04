@@ -47,6 +47,11 @@ trait get_chat_message_slot
 
         $message_prompt_id = isset($message_row["prompt_id"]) ? $message_row["prompt_id"] : "";
 
+        // 模型顯示文（provider/model——工具列 message_model 用；前端砌新段時讀呢個 attribute）
+        $message_provider_id = (string)($message_row["message_provider_id"] ?? "");
+        $message_model_id    = (string)($message_row["message_model_id"] ?? "");
+        $message_model_text  = trim($message_provider_id . "/" . $message_model_id, "/");
+
         $message_wrapper_attrs = [];
         $message_wrapper_attrs[] = "data-message_id   ='". (isset($message_row["message_id"]) ? $message_row["message_id"] : null) ."'";
         $message_wrapper_attrs[] = "data-prompt_id    ='" . $message_prompt_id . "'";
@@ -54,6 +59,7 @@ trait get_chat_message_slot
         $message_wrapper_attrs[] = "data-start_at     ='" . (isset($message_row["message_created_at"]) ? $message_row["message_created_at"] : null) . "'";
         $message_wrapper_attrs[] = "data-status       ='" . (isset($message_row["message_status"]) ? $message_row["message_status"] : null) . "'";
         $message_wrapper_attrs[] = "data-working      ='" . $working_value . "'";
+        $message_wrapper_attrs[] = "data-model_text   ='" . $message_model_text . "'";
         $message_wrapper_attrs[] = "data-render_status='frame'";
 
         $message_wrapper_attrs = implode(" ",$message_wrapper_attrs);

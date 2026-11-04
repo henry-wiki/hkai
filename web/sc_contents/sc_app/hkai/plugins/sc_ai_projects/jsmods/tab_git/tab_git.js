@@ -76,7 +76,6 @@ class _tab_git_req_bridge {
 
     }
     async git_init()      { return (await import("./req/git_init.js")).git_init(); }
-    async git_status()    { return (await import("./req/git_status.js")).git_status(); }
     async git_stage_all() { return (await import("./req/git_stage_all.js")).git_stage_all(); }
     async git_commit()    { return (await import("./req/git_commit.js")).git_commit(); }
 }

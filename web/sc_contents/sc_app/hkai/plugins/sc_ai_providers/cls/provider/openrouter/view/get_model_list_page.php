@@ -53,21 +53,21 @@ trait get_model_list_page
         $output_lines[] = "<div class='model_selector_provider_head'>";
         $output_lines[] = "<div class='modal__search_wrap'>";
         $output_lines[] = "<i class='fa-solid fa-magnifying-glass modal__search_icon'></i>";
-        $output_lines[] = "<input class='modal__search_input model_selector_table_search' type='text' placeholder='search / model filtering'>";
+        $output_lines[] = "<input class='modal__search_input model_selector_table_search' type='text' placeholder='" . hkai()->i18n()->get("benchmark.search_filter") . "'>";
         $output_lines[] = "</div>";
         $output_lines[] = "<span class='model_selector_provider_meta'>";
         $output_lines[] = "<span class='model_selector_provider_time'>" . $provider_time_text . "</span>";
-        $output_lines[] = "<button class='model_selector_provider_refresh' title='download model list' data-provider_id='" . $provider_id . "'>Refresh</button>";
+        $output_lines[] = "<button class='model_selector_provider_refresh' title='" . hkai()->i18n()->get("provider.download") . "' data-provider_id='" . $provider_id . "'>" . hkai()->i18n()->get("common.refresh") . "</button>";
         $output_lines[] = "</span>";
         $output_lines[] = "</div>";
         $output_lines[] = "</td>";
         $output_lines[] = "</tr>";
         $output_lines[] = "<tr>";
-        $output_lines[] = "<td>Name</td>";
-        $output_lines[] = "<td class='model_selector_td_context' style='width:100px;'>Context</td>";
+        $output_lines[] = "<td>" . hkai()->i18n()->get("provider.name") . "</td>";
+        $output_lines[] = "<td class='model_selector_td_context' style='width:100px;'>" . hkai()->i18n()->get("provider.context") . "</td>";
         $output_lines[] = "<td class='model_selector_td_price' style='width:100px;'>In / Out $</td>";
-        $output_lines[] = "<td class='model_selector_td_index' style='width:100px;'>Coding</td>";
-        $output_lines[] = "<td class='model_selector_td_index' style='width:100px;'>Agentic</td>";
+        $output_lines[] = "<td class='model_selector_td_index' style='width:100px;'>" . hkai()->i18n()->get("provider.coding") . "</td>";
+        $output_lines[] = "<td class='model_selector_td_index' style='width:100px;'>" . hkai()->i18n()->get("provider.agentic") . "</td>";
         $output_lines[] = "</tr>";
         $output_lines[] = "</tbody>";
 

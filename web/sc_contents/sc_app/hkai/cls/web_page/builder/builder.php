@@ -151,7 +151,7 @@ class builder_Class
 
         $outputLines   = [];
         $outputLines[] = "<nav class='sc_rail' aria-label='主要功能'>";
-            $outputLines[] = "<a class='sc_rail__brand' href='/' title='hkai · 回到工作區'>";
+            $outputLines[] = "<a class='sc_rail__brand' href='/' title='" . hkai()->i18n()->get("common.back_to_workspace") . "'>";
                 $outputLines[] = "<img class='sc_rail__brand_mark' src='{$brand_logo_src}' alt='hkai'/>";
             $outputLines[] = "</a>";
             $outputLines[] = "<button class='sc_rail__btn' type='button' data-action='toggle_all_sidebars' title='收合全部欄' aria-expanded='true'>";

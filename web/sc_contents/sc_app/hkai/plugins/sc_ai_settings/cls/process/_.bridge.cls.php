@@ -46,13 +46,13 @@ class process_Class
 
         // === header ===
         $modal_header = [];
-        $modal_header[] = "<div class='modal__title'>Process Viewer</div>";
+        $modal_header[] = "<div class='modal__title'>" . hkai()->i18n()->get("process.viewer") . "</div>";
         $modal_header[] = "<div class='modal__subtitle'>Live processes (heartbeat files).</div>";
 
         // === footer ===
         $modal_footer = [];
         $modal_footer[] = "<div class='modal__content-footer'>";
-            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>Close</button>";
+            $modal_footer[] = "<button type='button' class='button button--secondary' data-btn='close_modal'>" . hkai()->i18n()->get("process.close") . "</button>";
         $modal_footer[] = "</div>";
 
         // === body 骨架（固定——動態值一律由 slots 填入 data-slot 容器） ===
@@ -61,7 +61,7 @@ class process_Class
             $modal_body_lines[] = "<div class='process_viewer_summary' data-slot='summary'></div>";
             $modal_body_lines[] = "<div class='process_viewer_block'>";
                 $modal_body_lines[] = "<div class='process_viewer_block_title'>";
-                    $modal_body_lines[] = "<div class='process_viewer_block_title_left'>ACTIVE PROCESSES</div>";
+                    $modal_body_lines[] = "<div class='process_viewer_block_title_left'>" . hkai()->i18n()->get("process.active") . "</div>";
                 $modal_body_lines[] = "</div>";
                 $modal_body_lines[] = "<div class='process_viewer_rows' data-slot='rows'></div>";
             $modal_body_lines[] = "</div>";
@@ -115,7 +115,7 @@ class process_Class
                 $kill_attr[] = "title='" . hkai()->i18n()->get("settings.process.kill_title") . "'";
 
                 $kill_attr = implode(" ", $kill_attr);
-                $rows_lines[] = "<button {$kill_attr}>KILL</button>";
+                $rows_lines[] = "<button {$kill_attr}>" . hkai()->i18n()->get("process.kill") . "</button>";
             $rows_lines[] = "</div>";
         }
 

@@ -31,7 +31,7 @@ class _evt_prompt_gen_random {
                 sample_question = result.questions[0].question;
             }
         } catch (fetch_error) {
-            console.error("prompt_gen_random failed:", fetch_error);
+            sc_console("prompt", "gen_random").error("failed:", fetch_error);
             return;
         }
 

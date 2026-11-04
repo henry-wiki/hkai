@@ -6,6 +6,14 @@ function sc_write_json($filepath, $array)
 {
     $json_text = sc_pretty_json($array);
 
+    // 目錄自愈（呼叫方唔需要自行 mkdir——目錄被移除都照寫得返）
+    $directory_path = dirname($filepath);
+
+    // 判定：目錄不存在 → 建立
+    if (is_dir($directory_path) === false) {
+        sc_mkdir($directory_path);
+    }
+
     // 暫存檔（同目錄——rename 必須同磁碟區；進程 id ＋ 隨機數避免碰撞）
     $temp_filepath = $filepath . "." . getmypid() . "." . bin2hex(random_bytes(4)) . ".tmp";
 
