@@ -31,7 +31,7 @@ trait build_page_head
         $page_title = setup()->i18n()->get("page.title");
 
         $page_head[] = "<title>" . $page_title . "</title>";
-        $page_head[] = "<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css'>";
+        $page_head[] = "<link rel='stylesheet' href='/web/sc_contents/sc_resources/vendor/fontawesome/6.7.2/css/all.min.css'>";
         $page_head[] = "<link rel='stylesheet' href='" . $setup_css_url . "'>";
         $page_head[] = "<link rel='stylesheet' href='" . $sc_loading_css_url . "'>";
         $jquery_js_disk = __DIR__ . "/../../assets/jquery.min.js";

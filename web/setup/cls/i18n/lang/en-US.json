@@ -1,7 +1,7 @@
 {
     "lang.name": "English",
     "welcome.desc": "Welcome to HKAI system setup — the following steps check your system environment; follow the fix hints for any red item, then press \"Install\".",
-    "check.database_file.exists": "A database already exists; installation will not overwrite it. Back it up or move it away, then press Recheck.",
+    "check.database_file.exists": "A database already exists; Next will rename it to .bak-<timestamp> and create a fresh database.",
     "check.database_file.notice": "After installation, complete the required settings in Settings before use.",
     "completed.thanks": "Thank you for using HKAI — setup is complete. You may start now.",
     "completed.close": "Close",
@@ -234,5 +234,6 @@
     "setting.group.general": "General",
     "setting.group.model_api": "Model API",
     "setting.group.benchmark": "Benchmark sources",
-    "import.hint.replace_failed": "Close anything using the database (local HKAI service / DB tools), then press Install again. The original file is unchanged."
+    "import.hint.replace_failed": "Close anything using the database (local HKAI service / DB tools), then press Install again. The original file is unchanged.",
+    "install.detail.database_backup_failed": "Cannot rename the existing database (backup step failed)."
 }

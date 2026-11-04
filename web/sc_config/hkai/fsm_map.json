@@ -3,7 +3,7 @@
   "doc": "hkai 訊息狀態機（FSM）＋事件目錄唯一契約——PHP 與 Python 共用；改本檔＝改運行時行為。單一詞彙：值一律叫 status（＝msg_status 嗰批——舊稱 state 同義）。 狀態機：status＝status 定義（order／terminal）＋ boundary（各 status 區間描述）；event_to_status＝事件→status 對照（event 唯一決定——由 transitions 歸納）；transitions＝轉移表；event_to_display_state＝event→顯示 state（活動列顏色分組；未列＝\"\"）。 事件目錄：events＝全部 event 元資料（新增/改名 event 必須同步更新本檔）；domains＝事件分域；event_map＝status→events 審計分組；stream_log＝stream_log 結構。contract=true＝runtime 讀 event 名（改名即破壞——如 request.php ERROR retryable、poll/log.php 顯示分組）。文檔：.docs/msg-log-event-catalog.md 由本檔生成（check_event_registry.py --gen-doc）。response_status＝回應段狀態（response 級——poll／completed／aborted）。",
   "consumers": [
     "php:plugins/sc_ai_chats/cls/sc_ai_chats_fsm.php",
-    "py:../../../../services/aider_daemon/msg/msg_state_machine.py"
+    "py:../../../../services/goose_daemon/msg/message_status.py"
   ],
   "status": {
     "note": "狀態機（單一詞彙——值一律叫 status）",

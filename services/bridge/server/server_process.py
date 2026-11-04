@@ -138,7 +138,7 @@ def scan(payload: dict[str, Any]) -> dict[str, Any]:
         for row in processes:
             is_program_root = any((PROGRAM_ARG_PREFIX + str(program_name)) in row["command_line"] for program_name in program_names)
 
-            # 判定：cmdline 命中 program → 根（bridge／aider_daemon）
+            # 判定：cmdline 命中 program → 根（bridge／goose_daemon）
             if is_program_root:
                 row["matched_by"] = "program"
                 root_rows.append(row)

@@ -127,11 +127,40 @@ fn port_open(port: u16) -> bool {
 }
 
 /// 按 config.children 逐個 spawn（{port} 會換成實際埠）
+/// 寫 Apache 嘅機器相關值（每次啟動覆寫；conf 用 Include 讀）
+fn write_generated_apache_paths(root: &std::path::Path, site_dir: &std::path::Path, php_dir: &std::path::Path, custom_dir_setting: &str, port: u16) {
+    let conf_path = root.join(custom_dir_setting).join("conf").join("00-paths.conf");
+    // Apache 會吞 backslash（路徑變 G:serverlab...）——一律寫 forward slash
+    let site_root_text = site_dir.display().to_string().replace('\\', "/");
+    let php_dir_text = php_dir.display().to_string().replace('\\', "/");
+    let conf_text = format!(
+        "Define SITE_ROOT \"{}\"
+Define PHP_DIR \"{}\"
+Define EXE_PORT {}
+",
+        site_root_text,
+        php_dir_text,
+        port
+    );
+
+    match std::fs::write(&conf_path, conf_text) {
+        Ok(_) => log::info!("external settings written"),
+        Err(error) => log::error!("external settings failed: {}", error),
+    }
+}
+
 fn spawn_all(shell: &ShellConfig, port: u16) {
     let root = crate::root_dir();
-    let php_dir = root.join("bin").join("php");
+    let site_dir = match root.parent() {
+        Some(value) => value.to_path_buf(),
+        None => root.clone(),
+    };
+    let php_dir = root.join(&shell.php_dir);
     let web_dir = shell.web_path();
     let current_path = std::env::var("PATH").unwrap_or_default();
+
+    // Apache 專用：先把絕對路徑＋埠寫入 generated-paths.conf（避免 argv 引號轉義問題）
+    write_generated_apache_paths(&root, &site_dir, &php_dir, &shell.custom_dir, port);
 
     for spec in &shell.children {
         let args: Vec<String> = spec
@@ -141,6 +170,9 @@ fn spawn_all(shell: &ShellConfig, port: u16) {
                 value
                     .replace("{port}", &port.to_string())
                     .replace("{web}", &web_dir.display().to_string())
+                    .replace("{root}", &root.display().to_string())
+                    .replace("{site}", &site_dir.display().to_string())
+                    .replace("{apache_dir}", &shell.apache_dir)
             })
             .collect();
 

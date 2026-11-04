@@ -12,7 +12,7 @@ server_stream.py — SSE 串流端點（輸出監控）。
 
 設計：
 1. 只讀檔案契約（msg_status.txt／msg_response.{n}.result.txt／msg_response.{n}.thinking.txt）
-2. 唔 import 任何 agent 模組——aider_daemon 同 goose_daemon 寫同一批檔，一套就够
+2. 唔 import 任何 agent 模組——goose_daemon 寫同一批檔，一套就够
 3. 訊息完成後 PHP 會將目錄搬去 archive——每輪用 identity 即時定位（polling → archive），冇快取路徑
 """
 

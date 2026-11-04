@@ -31,12 +31,12 @@ class builder_Class
             "modal_css"      => $controller->get_web_path("/jsmods/sc_modal/sc_modal.css"),
             "loading_css"    => $controller->get_web_path("/jsmods/sc_loading/sc_loading.css"),
 
-            // Markdown 渲染鏈（CDN——同 jQuery/Bootstrap 既有做法；module 為 defer 語義，執行時全域已就緒）
-            "marked_js"      => "https://cdn.jsdelivr.net/npm/marked@18/lib/marked.umd.js",
-            "purify_js"      => "https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js",
-            "highlight_css"  => "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/styles/github-dark.min.css",
-            "highlight_js"   => "https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets@11/highlight.min.js",
-            "mermaid_js"     => "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js",
+            // Markdown 渲染鏈（本地 vendor——同 jQuery/Bootstrap 同一出處；module 為 defer 語義，執行時全域已就緒）
+            "marked_js"      => "/web/sc_contents/sc_resources/vendor/marked/18/marked.umd.js",
+            "purify_js"      => "/web/sc_contents/sc_resources/vendor/dompurify/3/purify.min.js",
+            "highlight_css"  => "/web/sc_contents/sc_resources/vendor/highlightjs/11/styles/github-dark.min.css",
+            "highlight_js"   => "/web/sc_contents/sc_resources/vendor/highlightjs/11/highlight.min.js",
+            "mermaid_js"     => "/web/sc_contents/sc_resources/vendor/mermaid/11/mermaid.min.js",
         ]);
 
         // js module（ESM entry——載入 registry，其靜態 import 全部模組）
@@ -56,6 +56,13 @@ class builder_Class
         $outputLines[] = "<meta charset='UTF-8'/>";
         $outputLines[] = "<meta name='viewport' content='width=1430'/>";
         $outputLines[] = "<meta name='csrf-token' content='" . CSRF_get_token() . "'/>";
+
+        // i18n 字典 island（同一份 JSON——前端同步讀取，零請求、零 race）
+        $lang_data_json = json_encode(
+            hkai()->i18n()->get_lang_data(),
+            JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+        );
+        $outputLines[]  = "<script type='application/json' id='i18n-dict'>" . $lang_data_json . "</script>";
 
         // 本頁 viewer 參照（SSE 更新時回寫此檔；每頁一個 uuidv7）
         $outputLines[] = "<meta name='view-id' content='" . sc_stream()->snapshot()->get_view_id() . "'/>";

@@ -38,10 +38,10 @@ import psutil
 from .context import HEARTBEAT_DIR, SERVICES_DIR
 
 # 清場目標 daemon 模組名（cmdline 命中即當本系統程序）
-_DAEMON_PROGRAM_NAMES = ["aider_daemon.main", "goose_daemon.main", "openhands_api_daemon.main", "bridge.main"]
+_DAEMON_PROGRAM_NAMES = ["goose_daemon.main", "bridge.main"]
 
 # 開 --bg 前要清場嘅目標（只有長駐 daemon；工具類——如 image_extractor——唔清場）
-_SWEEP_DAEMON_KEYWORDS = ["bridge", "goose_daemon", "aider_daemon", "openhands_api_daemon"]
+_SWEEP_DAEMON_KEYWORDS = ["bridge", "goose_daemon"]
 
 # terminate 後等幾秒（逾時即 kill）
 _KILL_WAIT_SEC = 3.0

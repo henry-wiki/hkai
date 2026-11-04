@@ -50,20 +50,6 @@ const INLINE_CODE_BLOCK_MIN_LENGTH = 200;
 
 class _sc_markdown {
     // 單一元素：讀純文字 → markdown → 消毒 → 寫回 HTML（並高亮 code ＋ 渲染 mermaid）
-    // 初始化（開機一次）：marked 開 GFM 換行（單換行＝<br>——純文字清單唔會被壓成一坨）
-    init() {
-        // 判定：已設過 → 唔重設
-        if (this.breaks_enabled === true) {
-            return this;
-        }
-
-        window.marked.setOptions({ breaks: true, gfm: true });
-
-        this.breaks_enabled = true;
-
-        return this;
-    }
-
     render_element(j_element) {
         // 原始文字優先取元素上保留的 markdown（串流已渲染過 HTML → 從 .text() 反推會丟失結構）
         const raw_text = j_element[0].sc_raw_text || j_element.text();
@@ -76,7 +62,7 @@ class _sc_markdown {
         // 保留原文（歷史訊息首次渲染時存下——之後複製／再渲染都只讀它，不再從已渲染 DOM 反推）
         j_element[0].sc_raw_text = raw_text;
 
-        const raw_html  = window.marked.parse(raw_text, { breaks: true, gfm: true });
+        const raw_html  = window.marked.parse(raw_text);
         const safe_html = window.DOMPurify.sanitize(raw_html);
 
         j_element.addClass("sc_markdown_body");
@@ -133,54 +119,15 @@ class _sc_markdown {
 
     // 串流渲染：只渲染已收尾的完整行（fence 外）；未完成尾巴保持純文字（避免半截語法誤判／閃爍）
     // 回傳：{ boundary_index（完整行邊界）, html }——邊界供呼叫端判斷「是否前進」以決定要不要重建 DOM
-    render_streaming(raw_text) {
-        const boundary_index = this.get_complete_boundary_index(raw_text);
-        const complete_text  = raw_text.substring(0, boundary_index);
-        const tail_text      = raw_text.substring(boundary_index);
-
-        let stream_html = "";
-        // 判定：有完整內容 → 渲染為消毒後 HTML
-        if (complete_text !== "") {
-            stream_html += window.DOMPurify.sanitize(window.marked.parse(complete_text, { breaks: true, gfm: true }));
-        }
-        // 判定：有未完成尾巴 → 以純文字附在後方
-        if (tail_text !== "") {
-            stream_html += "<span class='sc_markdown_tail'>" + this.escape_html(tail_text) + "</span>";
-        }
-
-        return { boundary_index: boundary_index, html: stream_html };
-    }
-
-    // 取安全邊界索引：最後一個「fence 外換行」的結束位置（其後視為未完成）
-    get_complete_boundary_index(raw_text) {
-        const lines = raw_text.split("\n");
-
-        let line_start_index = 0;
-        let boundary_index   = 0;
-        let in_fence         = false;
-
-        // 逐行掃描（最後一行未收尾 → 不列入安全邊界）
-        for (let line_index = 0; line_index < lines.length - 1; line_index++) {
-            const line_text      = lines[line_index];
-            const line_end_index = line_start_index + line_text.length;
-            const is_fence_line  = (line_text.trim().indexOf("```") === 0);
-
-            // 判定：本行是 fence 標記 → 切換 fence 狀態
-            if (is_fence_line) {
-                in_fence = !in_fence;
-            }
-            // 判定：非 fence 內 → 此行換行可作為安全邊界
-            if (!in_fence) {
-                boundary_index = line_end_index + 1;
-            }
-
-            line_start_index = line_end_index + 1;
-        }
-
-        return boundary_index;
-    }
-
     // HTML 轉義（尾巴以純文字顯示——不可當 HTML 解析）——實作單一來源：escape_markdown_html
+    // 全文標準 parse（串流 writer 用——同 reload 同一條路徑；唔留純文字尾巴）
+    render_full(raw_text) {
+        const raw_html  = window.marked.parse(raw_text);
+        const safe_html = window.DOMPurify.sanitize(raw_html);
+
+        return { boundary_index: raw_text.length, html: safe_html };
+    }
+
     escape_html(text) {
         return escape_markdown_html(text);
     }

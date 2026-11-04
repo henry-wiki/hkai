@@ -2,7 +2,7 @@
 """
 check_event_registry.py
 
-msg_log event／fsm_map 驗證工具（dev tool——不屬 aider_daemon 套件，禁止被 daemon import）。
+msg_log event／fsm_map 驗證工具（dev tool——不屬 daemon 套件，禁止被 daemon import）。
 
 功能：
     1. check（預設）：掃描 python / PHP 寫入端的事件 literal → 比對
@@ -31,7 +31,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = REPO_ROOT / "web" / "sc_contents" / "sc_app" / "hkai"
 PYTHON_ROOT = Path(__file__).resolve().parent
 FSM_MAP_PATH = REPO_ROOT / "web" / "sc_config" / "hkai" / "fsm_map.json"
-PYTHON_DIR = PYTHON_ROOT / "aider_daemon"
+PYTHON_DIR = PYTHON_ROOT / "goose_daemon"
 PHP_DIR = PROJECT_ROOT / "plugins"
 CATALOG_PATH = REPO_ROOT / ".docs" / "msg-log-event-catalog.md"
 

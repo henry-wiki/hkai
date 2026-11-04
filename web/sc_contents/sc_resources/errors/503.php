@@ -16,7 +16,7 @@ $outputLines[] = "<meta charset='UTF-8'>";
 $outputLines[] = "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
 $outputLines[] = "<title>503 - Error | hkai</title>";
 $outputLines[] = "<link rel='icon' href='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\"><rect width=\"16\" height=\"16\" rx=\"3\" fill=\"%23dc3545\"/><path d=\"M4 6h8M4 9h5\" stroke=\"white\" stroke-width=\"1.5\" stroke-linecap=\"round\"/></svg>'>";
-$outputLines[] = "<link href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css' rel='stylesheet'>";
+$outputLines[] = "<link href='/web/sc_contents/sc_resources/vendor/bootstrap/5.3.3/bootstrap.min.css' rel='stylesheet'>";
 $outputLines[] = "</head>";
 $outputLines[] = "<body class='bg-light'>";
 $outputLines[] = "<div class='container py-5'>";

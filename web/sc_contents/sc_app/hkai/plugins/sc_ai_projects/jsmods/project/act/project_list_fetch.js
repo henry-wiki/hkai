@@ -44,6 +44,15 @@ class _project_list_fetch {
 
                 topnav.set_project_path(response_data.project_path);
 
+                // 清單重繪後按 store 現值補 polling 標記（新 HTML 冇此 class）
+                const chat_instance             = await registry().sc_ai_chats().chat();
+                const polling_observer_instance = await chat_instance.obs().polling_state_observer();
+                const state_watch_domain        = registry().sc_state_watch().state_watch();
+                const store_instance            = await state_watch_domain.store();
+                const polling_snapshot          = store_instance.snapshot("polling");
+
+                await polling_observer_instance.refresh_project_polling(polling_snapshot.project || {});
+
                 // 清單重繪完成 → 派發 load_project_list hook（after 相位——跨 plugin 用家各自嘅反應）
                 projects.execute_hook_after("load_project_list",response_data);
             },

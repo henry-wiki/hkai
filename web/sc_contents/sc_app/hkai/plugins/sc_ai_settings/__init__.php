@@ -11,11 +11,11 @@ $plugin = $controller->register_plugin(__DIR__, [
         __DIR__ . "/asset/sc_ai_settings.css",
 
         // CodeMirror 5.65.21（純文字編輯器——CDN 同 jQuery／marked 等既有慣例；Instructions 編輯頁用）
-        "https://cdn.jsdelivr.net/npm/codemirror@5.65.21/lib/codemirror.min.css",
-        "https://cdn.jsdelivr.net/npm/codemirror@5.65.21/theme/material-darker.min.css",
-        "https://cdn.jsdelivr.net/npm/codemirror@5.65.21/lib/codemirror.min.js",
-        "https://cdn.jsdelivr.net/npm/codemirror@5.65.21/mode/markdown/markdown.min.js",
-        "https://cdn.jsdelivr.net/npm/codemirror@5.65.21/addon/edit/continuelist.min.js",
+        "/web/sc_contents/sc_resources/vendor/codemirror/5.65.21/lib/codemirror.min.css",
+        "/web/sc_contents/sc_resources/vendor/codemirror/5.65.21/theme/material-darker.min.css",
+        "/web/sc_contents/sc_resources/vendor/codemirror/5.65.21/lib/codemirror.min.js",
+        "/web/sc_contents/sc_resources/vendor/codemirror/5.65.21/mode/markdown/markdown.min.js",
+        "/web/sc_contents/sc_resources/vendor/codemirror/5.65.21/addon/edit/continuelist.min.js",
     ],
 ]);
 $plugin->setEnabled(true);

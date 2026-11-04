@@ -38,6 +38,12 @@ pub struct ShellConfig {
     pub children: Vec<ChildSpec>,
     pub on_close_script: String,
     pub web_dir: String,
+    /// PHP 執行檔資料夾（相對 exe；例如 bin/php-8.4.26）
+    pub php_dir: String,
+    /// Apache 資料夾（相對 exe；例如 bin/apache-2.4.54）
+    pub apache_dir: String,
+    /// 外部設定接口目錄（相對 exe；例如 bin/custom）
+    pub custom_dir: String,
 }
 
 impl Default for ShellConfig {
@@ -58,13 +64,16 @@ impl Default for ShellConfig {
                     env: HashMap::from([("PHP_CLI_SERVER_WORKERS".to_string(), "4".to_string())]),
                 },
                 ChildSpec {
-                    exe: "bin/apache/bin/httpd.exe".to_string(),
-                    args: vec!["-f".to_string(), "bin/apache/conf/httpd.conf".to_string()],
+                    exe: "bin/apache-2.4.54/bin/httpd.exe".to_string(),
+                    args: vec!["-f".to_string(), "bin/apache-2.4.54/conf/httpd.conf".to_string()],
                     env: HashMap::new(),
                 },
             ],
             on_close_script: "".to_string(),
             web_dir: "../web".to_string(),
+            php_dir: "bin/php-8.4.26".to_string(),
+            apache_dir: "bin/apache-2.4.54".to_string(),
+            custom_dir: "bin/custom".to_string(),
         }
     }
 }

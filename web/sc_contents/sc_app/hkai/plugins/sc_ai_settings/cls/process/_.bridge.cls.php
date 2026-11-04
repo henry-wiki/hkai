@@ -73,7 +73,7 @@ class process_Class
         $summary_lines = [];
         $summary_lines[] = "<span class='process_viewer_state process_viewer_state--" . $state_class . "'>" . $state_label . " " . $alive_count . "</span>";
 
-        // 逐層計數（固定順序：bridge → aider_daemon → worker → aider）
+        // 逐層計數（固定順序：bridge → goose_daemon → worker → goose）
         foreach ($process_counts as $process_name => $process_count_item) {
             $summary_lines[] = "<span class='process_viewer_count'><em>" . sc_html_encode($process_name) . "</em><b>" . (int)$process_count_item . "</b></span>";
         }

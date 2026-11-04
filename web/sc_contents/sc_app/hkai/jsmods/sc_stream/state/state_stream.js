@@ -56,9 +56,18 @@ class _state_stream {
 
         const event_source = new EventSource(stream_url);
 
-        // open（handshake——冇資料要處理）
-        event_source.addEventListener("open", function () {
+        // open（handshake——冇資料要處理；順便由 store 全量重算 polling 卡標記（重連補償））
+        event_source.addEventListener("open", async function () {
             registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "open", { ready_state: event_source.readyState });
+
+            try {
+                const chat_instance = await registry().sc_ai_chats().chat();
+                const polling_state_observer_instance = await chat_instance.obs().polling_state_observer();
+
+                await polling_state_observer_instance.refresh_polling_cards_from_store();
+            } catch (reconcile_error) {
+                registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "polling_reconcile_error", { message: String(reconcile_error) });
+            }
         });
 
         // 伺服器 handshake（event: open 帶 base_url）→ 換埠時同步 presence

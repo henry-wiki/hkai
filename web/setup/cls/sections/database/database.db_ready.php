@@ -52,6 +52,71 @@ class database_db_ready_Class
         }
     }
 
+    // 備份既有資料庫：先 checkpoint（WAL 落主檔）→ 再連 -wal／-shm 一齊改名
+    // 上游：install() 全新安裝遇到既有非空庫
+    // 下游：checkpoint_database()、rename()
+    private function backup_database_files($database_file, $database_backup_file)
+    {
+        $this->checkpoint_database($database_file);
+
+        $suffix_list = ["", "-wal", "-shm"];
+
+        // 逐個相關檔改名（WAL／SHM 唔跟走＝新庫接手舊交易日誌）
+        foreach ($suffix_list as $suffix) {
+            $source_file = $database_file . $suffix;
+
+            // 判定：呢個檔唔存在 → 跳過
+            if (is_file($source_file) === false) {
+                continue;
+            }
+
+            // 判定：改名失敗 → 短暫重試（其他程序讀取中嘅鎖通常一兩秒內放開）
+            if ($this->rename_with_retry($source_file, $database_backup_file . $suffix) === false) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // 改名（Windows 檔案鎖：其他程序讀取中會短暫鎖住——重試 5 次，每次 200ms）
+    // 上游：backup_database_files()
+    // 下游：rename()
+    private function rename_with_retry($source_file, $target_file)
+    {
+        $attempt_index = 0;
+
+        // 逐次嘗試（最多 5 次）
+        while ($attempt_index < 5) {
+            $rename_result = @rename($source_file, $target_file);
+
+            // 判定：改名成功 → 完成
+            if ($rename_result === true) {
+                return true;
+            }
+
+            $attempt_index = $attempt_index + 1;
+
+            usleep(200000);
+        }
+
+        return false;
+    }
+
+    // WAL checkpoint：把交易日誌併入主檔並截斷（rename 前必要——否則 -wal 仍持有內容）
+    // 上游：backup_database_files()
+    // 下游：PDO PRAGMA wal_checkpoint(TRUNCATE)
+    private function checkpoint_database($database_file)
+    {
+        try {
+            $pdo_connection = new \PDO("sqlite:" . $database_file);
+            $pdo_connection->query("PRAGMA wal_checkpoint(TRUNCATE)");
+            $pdo_connection = null;
+        } catch (\Throwable $exception) {
+            // checkpoint 失敗唔即時擋——下面 rename 會如實反映結果
+        }
+    }
+
     // 檢查（存在＝警告〔字眼喺 input_msg·is-warn〕；唔存在＝正常）
     // 安裝步驟資料（標題／行值——值由本單元自決：記錄值／未填＝留空字眼）
     public function get_install_step_data()
@@ -106,11 +171,11 @@ class database_db_ready_Class
         // 核心存在檢查＝唯一機制（setup_test——原果）
         $test_result = $this->setup_test("");
 
-        // 判定：資料庫檔存在且有表 → fail（擋住安裝——唔改動用戶資料）
+        // 判定：資料庫檔存在且有表 → warn（提示會自動改名備份；用戶揀全新安裝＝可以繼續）
         if ($test_result["ok"] === true) {
-            $check_result["status"] = "fail";
+            $check_result["status"] = "warn";
             $check_result["input"]["msg"]       = setup()->i18n()->get("check.database_file.exists");
-            $check_result["input"]["msg_class"] = "is-fail";
+            $check_result["input"]["msg_class"] = "is-warn";
 
             return $check_result;
         }
@@ -157,11 +222,16 @@ class database_db_ready_Class
         $database_file = sc_get_config("storage.database_file");
         $database_dir  = dirname($database_file);
 
-        // 判定：全新安裝但已有非空資料庫 → 拒絕（唔覆蓋、唔刪除）
+        // 判定：全新安裝但已有非空資料庫 → 改名備份（唔覆蓋、唔刪除）再建新庫
         if (is_file($database_file) === true && $this->has_existing_tables($database_file) === true) {
-            $existing_detail = setup()->i18n()->get("install.detail.database_exists");
+            $database_backup_file = $database_file . ".bak-" . date("Y-m-d_His");
 
-            return ["ok" => false, "result" => "failed", "detail" => $existing_detail];
+            // 判定：改名失敗 → 安裝失敗（唔可以覆蓋原庫）
+            if ($this->backup_database_files($database_file, $database_backup_file) === false) {
+                $rename_fail_detail = setup()->i18n()->get("install.detail.database_backup_failed");
+
+                return ["ok" => false, "result" => "failed", "detail" => $rename_fail_detail];
+            }
         }
 
         // 判定：資料庫檔唔存在 → 先備好目錄＋空檔（單項自足——唔靠前一項）

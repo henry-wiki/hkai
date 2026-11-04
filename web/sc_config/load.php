@@ -128,7 +128,6 @@ sc_set_configs([
 
     "services"        => SC_REPO_ROOT . "/services",
     "externals"       => [
-        "aider" => SC_REPO_ROOT . "/externals/aider/pylibs",
         "goose" => SC_REPO_ROOT . "/externals/goose/goose.exe",
     ],
 

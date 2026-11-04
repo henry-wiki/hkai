@@ -16,14 +16,14 @@ class process_Class
     const STATUS_STALE_SEC = 60;
 
     // 程序層級顯示順序（誰生誰的鏈序——計數與清單共用）
-    const PROCESS_RANK = ["bridge" => 1, "aider_daemon" => 2, "goose_daemon" => 2, "openhands_api_daemon" => 2, "worker" => 3, "aider" => 4, "goose" => 4, "openhands_api" => 4];
+    const PROCESS_RANK = ["bridge" => 1, "goose_daemon" => 2, "worker" => 3, "goose" => 4];
 
     // 現行agent鏈顯示名（daemon_engine 值 → [daemon 名, agent名]——計數摘要用）
-    const ENGINE_CHAINS = ["aider_daemon" => ["aider_daemon", "aider"], "goose_daemon" => ["goose_daemon", "goose"], "openhands_api_daemon" => ["openhands_api_daemon", "openhands_api"]];
+    const ENGINE_CHAINS = ["goose_daemon" => ["goose_daemon", "goose"]];
     
     private static $instance = null;
 
-    // program 清單（bridge 精篩用——bridge／aider_daemon／goose_daemon／openhands_api_daemon 由 -m 起，worker／agent（aider／goose／openhands_api）由血緣認）
+    // program 清單（bridge 精篩用——goose_daemon 由 -m 起，worker／agent（goose）由血緣認）
     private $program_names = [];
 
     // python 程序記錄快照（一次 wmic 掃描結果——同一請求內快取重用；呼叫端自行過濾）
@@ -44,18 +44,9 @@ class process_Class
     {
         $this->program_names = [
             "bridge.main",
-            "aider_daemon.main",
             "goose_daemon.main",
-
-            "openhands_api_daemon.main",
-            "aider_daemon.worker",
             "goose_daemon.worker",
-
-            "openhands_api_daemon.worker",
-            "aider_entry.run_coder",
             "goose_entry.run_coder",
-
-            "openhands_api_entry.run_coder",
         ];
     }
 
@@ -214,7 +205,7 @@ class process_Class
             $started_fmt  = (string)($heartbeat_record["started_at_fmt"] ?? "");
             
             // 摘要列用：daemon 的啟動時間（鏈上第一顆常駐程序——兩agent任一）
-            if (in_array($process_name, ["aider_daemon", "goose_daemon"], true)) {
+            if ($process_name === "goose_daemon") {
                 $daemon_started = $started_fmt;
             }
             
@@ -241,7 +232,7 @@ class process_Class
         
         // 各層計數（現行agent鏈——bridge → daemon → worker → engine；依鏈序）
         $daemon_engine  = hkai()->agent()->get_daemon_engine();
-        $engine_chain   = self::ENGINE_CHAINS[$daemon_engine] ?? self::ENGINE_CHAINS["aider_daemon"];
+        $engine_chain   = self::ENGINE_CHAINS[$daemon_engine] ?? self::ENGINE_CHAINS["goose_daemon"];
         $process_counts = ["bridge" => 0, $engine_chain[0] => 0, "worker" => 0, $engine_chain[1] => 0];
         foreach ($live_processes as $live_process) {
             // 判定：名唔在現行agent鏈（異agent殘留）→ 不計
@@ -469,8 +460,8 @@ class process_Class
 
         $status_dir = sc_get_config("hkai.process_status_dir");
 
-        // 逐個短名（bridge／aider_daemon／goose_daemon／openhands_api_daemon／worker／aider／goose／openhands_api）查心跳檔
-        foreach (["bridge", "aider_daemon", "goose_daemon", "openhands_api_daemon", "worker", "aider", "goose", "openhands_api"] as $process_name) {
+        // 逐個短名（bridge／goose_daemon／worker／goose）查心跳檔
+        foreach (["bridge", "goose_daemon", "worker", "goose"] as $process_name) {
             // 判定：心跳檔存在 → 本系統程序
             if (is_file($status_dir . "/" . $process_name . "." . $process_pid . ".json")) {
                 return true;

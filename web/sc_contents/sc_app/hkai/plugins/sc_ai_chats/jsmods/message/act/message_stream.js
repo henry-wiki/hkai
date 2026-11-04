@@ -582,11 +582,15 @@ class _message_stream {
 
         j_seg_text.text(full_text);
 
-        // 判定：result 段 → 最終 Markdown 渲染（同後端 render 一致）；thinking 段保持純文字
+        // 判定：result 段 → 終態完整渲染（同頁面載入同一條管線：editblock → sc_markdown）
         if (response_kind === "result") {
-            const markdown = await registry().sc_markdown();
+            j_seg_text[0].sc_raw_text = full_text;
 
-            markdown.render_element(j_seg_text);
+            const j_message_panel = this._get_panel();
+            const message_instance = await registry().sc_ai_chats().message();
+            const message_render_instance = await message_instance.act().message_render();
+
+            await message_render_instance.render_single_markdown(j_message_panel);
         }
 
         // 脫離 writer（done 唔會再重繪呢段）
@@ -807,6 +811,8 @@ class _message_stream {
 
         this._close_tool_items(payload.status);
 
+        await this._render_mermaid_if_any();
+
         await this.stop();
     }
 
@@ -845,6 +851,30 @@ class _message_stream {
 
         j_elapsed.text(this.format_elapsed_sec(elapsed_sec));
         j_elapsed.attr("data-elapsed_ts", "0");
+    }
+
+    // 收尾：本卡有 mermaid → 交 message_render 排隊渲染（同頁面載入同一條管線）
+    // 上游：_apply_done
+    // 下游：message_render.message_contains／render_single_mermaid
+    async _render_mermaid_if_any() {
+        const j_message_panel = this._get_panel();
+
+        // 判定：卡片未喺畫面 → 唔做
+        if (j_message_panel.length === 0) {
+            return;
+        }
+
+        const message_instance = await registry().sc_ai_chats().message();
+        const message_render_instance = await message_instance.act().message_render();
+
+        const contains = message_render_instance.message_contains(j_message_panel);
+
+        // 判定：冇 mermaid → 唔做
+        if (contains.mermaid !== true) {
+            return;
+        }
+
+        message_render_instance.render_single_mermaid(j_message_panel);
     }
 
     // 收尾：未收到 done 嘅工具格，用訊息終態補狀態（同 DB 渲染一致）
@@ -924,7 +954,7 @@ class _message_stream {
         if (response_kind === "result") {
             const markdown = await registry().sc_markdown();
 
-            writer_options.render_html = function (raw_text) { return markdown.render_streaming(raw_text); };
+            writer_options.render_html = function (raw_text) { return markdown.render_full(raw_text); };
 
             j_seg_text.addClass("sc_markdown_body");
         }

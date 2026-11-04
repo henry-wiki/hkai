@@ -20,7 +20,7 @@ class _project_item_insert {
         const project_item_observer_instance = await project_instance.obs().project_item_observer();
 
         await project_item_fetch_req_instance.project_item_fetch(project_slug, {
-            success: function (response_data) {
+            success: async function (response_data) {
                 // 新項（離線解析——先落容器再搬）
                 const j_new_item = jQuery(response_data.html.project_item);
 
@@ -34,6 +34,15 @@ class _project_item_insert {
 
                 // 補掛觀察器（新項即納入觀察——data-update_time 一變 → 派 obs:project_item_updated → 抓新內容換入）
                 project_item_observer_instance.observe(j_new_item[0]);
+
+                // 新卡插入後按 store 現值補 polling 標記（插入 HTML 冇此 class）
+                const chat_instance             = await registry().sc_ai_chats().chat();
+                const polling_observer_instance = await chat_instance.obs().polling_state_observer();
+                const state_watch_domain        = registry().sc_state_watch().state_watch();
+                const store_instance            = await state_watch_domain.store();
+                const polling_snapshot          = store_instance.snapshot("polling");
+
+                await polling_observer_instance.refresh_project_polling(polling_snapshot.project || {});
             },
             error: function (response_data) {
                 // 失敗 → 唔補（維持現狀——等下一輪再試）

@@ -239,7 +239,7 @@ class acp_client:
             await self._teardown_session(connection, session_id, agent_process, watchdog_task, stderr_task, on_stdio_line)
 
     async def _spawn_agent_process(self, agent_command: list[str], agent_env: dict[str, str], project_path: str) -> asyncio.subprocess.Process:
-        """拉 agent 子程序（ACP over stdio——goose／aider_daemon.acp 同一機制；stderr 獨立）；Windows 無視窗。"""
+        """拉 agent 子程序（ACP over stdio——stderr 獨立）；Windows 無視窗。"""
         subprocess_kwargs: SubprocessKwargs = {}
 
         # 判定：Windows → 無視窗（console 程式會被開黑窗）

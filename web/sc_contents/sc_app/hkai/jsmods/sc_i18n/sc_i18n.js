@@ -9,8 +9,27 @@ class _sc_i18n {
         this.lang_data = {};
     }
 
-    // bootstrap 自動呼叫：取字典一次（async——尚未取回前 get() 回 key 本身）
+    // bootstrap 自動呼叫：先讀頁面嵌入嘅字典 island（同步——零請求）；冇才 fetch fallback
     init() {
+        const dict_element = document.getElementById("i18n-dict");
+
+        // 判定：有 island → 即場解析（字典即刻可用，唔會有 key 漏出）
+        if (dict_element !== null) {
+            try {
+                const dict_data = JSON.parse(dict_element.textContent);
+
+                // 判定：解析出物件 → 採用，唔再發請求
+                if (dict_data !== null && typeof dict_data === "object") {
+                    this.lang_data = dict_data;
+
+                    return;
+                }
+            } catch (parse_error) {
+                sc_console("i18n").error("island parse failed:", parse_error.message);
+            }
+        }
+
+        // island 缺失／壞 → 退回請求
         this.fetch_lang_data();
     }
 

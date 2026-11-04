@@ -17,6 +17,7 @@ import contextlib
 import multiprocessing
 import time
 from multiprocessing.queues import Queue
+from pathlib import Path
 
 from .. import context
 from ..runtime import identity, sc_logger
@@ -37,6 +38,10 @@ def dispatch() -> None:
 
         worker_entry: roster.WorkerEntry | None = roster.find_idle_worker()
 
+        # 判定：揀到嘅工人心跳已停（閒置自殺進行中——程序仍在但唔會再收工單）→ 當冇閒置
+        if worker_entry is not None and _is_worker_heartbeat_fresh(worker_entry) is False:
+            worker_entry = None
+
         # 判定：冇閒置 worker → 即場開一條（建立即有單；queue 會緩衝）
         if worker_entry is None:
             worker_entry = spawn_worker(pending_job)
@@ -49,6 +54,24 @@ def dispatch() -> None:
 
         # 標記已派（同一件唔會再派）
         job_scanner.update_job(pending_job["job_key"], assigned=True)
+
+
+# 工人心跳最多容許幾秒未更新（心跳每秒寫一次；超過＝工人正在退出）
+WORKER_HEARTBEAT_STALE_SEC = 3
+
+
+def _is_worker_heartbeat_fresh(worker_entry: roster.WorkerEntry) -> bool:
+    """工人心跳仍新鮮？（閒置自殺中嘅工人程序未死但已停心跳——派單會石沉大海）"""
+    worker_pid = worker_entry["proc"].pid
+    status_file = Path(context.PROCESS_DIR) / (identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".json")
+
+    # 判定：狀態檔唔存在 → 當唔新鮮
+    if status_file.is_file() is False:
+        return False
+
+    age_sec = time.time() - status_file.stat().st_mtime
+
+    return age_sec <= WORKER_HEARTBEAT_STALE_SEC
 
 
 def spawn_worker(pending_job: job_scanner.JobEntry) -> roster.WorkerEntry | None:

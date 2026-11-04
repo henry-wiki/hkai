@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-bridge 套件——HTTP server + aider_daemon 管理。
+bridge 套件——HTTP server + daemon 管理。
 
     main.py                       入口：純啟動清單（~15 行）
 

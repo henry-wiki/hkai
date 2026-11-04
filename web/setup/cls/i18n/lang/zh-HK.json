@@ -1,7 +1,7 @@
 {
     "lang.name": "繁體中文",
     "welcome.desc": "歡迎使用 HKAI 系統初始化——接下來會檢查系統環境；有紅項依「修正」提示處理，最後按「安裝」執行。",
-    "check.database_file.exists": "資料庫已存在，安裝不會覆蓋。請先自行備份或移走這個檔案，然後按「重新檢查」。",
+    "check.database_file.exists": "資料庫已存在；按「下一步」會自動改名備份（.bak-時間戳）並建立全新資料庫。",
     "check.database_file.notice": "系統安裝完成後、使用前，需自行至設定中完成所需設定。",
     "completed.thanks": "感謝使用 HKAI——安裝已完成，現在可以開始使用。",
     "completed.close": "關閉",
@@ -234,5 +234,6 @@
     "setting.group.general": "一般",
     "setting.group.model_api": "模型 API",
     "setting.group.benchmark": "評分來源",
-    "import.hint.replace_failed": "請關閉正在使用資料庫的程式（本機 HKAI 服務／DB 工具）後再按「Install」重試；原檔未被改動。"
+    "import.hint.replace_failed": "請關閉正在使用資料庫的程式（本機 HKAI 服務／DB 工具）後再按「Install」重試；原檔未被改動。",
+    "install.detail.database_backup_failed": "舊資料庫改名備份失敗（未能繼續安裝）。"
 }
