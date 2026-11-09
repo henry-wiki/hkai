@@ -9,6 +9,7 @@ import datetime
 import json
 import re
 from pathlib import Path
+from typing import cast
 
 _RULES_PATH = Path(__file__).resolve().parent / "error_rules.json"
 
@@ -27,25 +28,27 @@ _ERROR_MARKERS = [
 ]
 
 
-def _load_rules():
+def _load_rules() -> list[dict[str, object]]:
     """讀規則檔（每次重讀——加規則唔使重啟）。"""
-    payload = json.loads(_RULES_PATH.read_text(encoding="utf-8"))
-    return payload.get("rules", [])
+    rules_text = _RULES_PATH.read_text(encoding="utf-8")
+    payload = cast("dict[str, object]", json.loads(rules_text))
+    rules = cast("list[dict[str, object]]", payload.get("rules", []))
+    return rules
 
 
-def looks_like_error(raw_text):
+def looks_like_error(raw_text: str) -> bool:
     """判斷回覆文字係唔係 provider 錯誤。"""
     lowered = raw_text.lower()
     return any(marker in lowered for marker in _ERROR_MARKERS)
 
 
-def detect_error_code(raw_text):
+def detect_error_code(raw_text: str) -> str:
     """回命中規則嘅 code（冇命中 → 空字串）。"""
     _code, _display, _matched = classify_error(raw_text)
     return _code
 
 
-def classify_error(raw_text, http_status=0):
+def classify_error(raw_text: str, http_status: int = 0) -> tuple[str, str, bool]:
     """逐條規則比對；回 (code, display_text, matched)。"""
     lowered = raw_text.lower()
 
@@ -57,8 +60,9 @@ def classify_error(raw_text, http_status=0):
             http_status = int(status_match.group(1))
 
     for rule_item in _load_rules():
-        rule_status = int(rule_item.get("http_status", 0))
-        rule_keywords = [str(item).lower() for item in rule_item.get("keywords", [])]
+        rule_status = int(str(rule_item.get("http_status", 0)))
+        keywords_raw = cast("list[object]", rule_item.get("keywords", []))
+        rule_keywords = [str(keyword_item).lower() for keyword_item in keywords_raw]
 
         if rule_status != 0 and http_status != rule_status:
             continue
@@ -83,7 +87,7 @@ def classify_error(raw_text, http_status=0):
     return "", raw_text, False
 
 
-def append_agent_error_log(log_path, message_id, provider_id, model_id, raw_text, code):
+def append_agent_error_log(log_path: str, message_id: str, provider_id: str, model_id: str, raw_text: str, code: str) -> None:
     """完整原文寫入 agent-errors.log（每行 JSON）。"""
     record = {
         "ts": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -97,4 +101,4 @@ def append_agent_error_log(log_path, message_id, provider_id, model_id, raw_text
     record_line = json.dumps(record, ensure_ascii=False) + "\n"
 
     with open(log_path, "a", encoding="utf-8") as log_handle:
-        log_handle.write(record_line)
+        _ = log_handle.write(record_line)

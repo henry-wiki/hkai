@@ -49,7 +49,11 @@ class _sc_ai_status_bar {
         // 出值（唯一路徑——URL 變化與首載共用；init 只接線，唔出值）
         this.register_hook("obs:url_changed", {
             after: async function (goto_url, prev_url) {
-                await refresh_status_bar_regions(status_bar_domain, true, true);
+                // URL 一變（換對話／換專案）→ 由清單 DOM 即時對齊兩區（零請求）
+                status_bar_domain.refresh_project_from_list();
+                status_bar_domain.refresh_chat_from_list();
+
+                await start_status_bar_clock(status_bar_domain);
             }
         });
 
@@ -71,7 +75,7 @@ class _sc_ai_status_bar {
         // project／chat 兩區開頁已由 PHP render 帶出——唔再 fetch（之後變化交 observer／URL 變化）
         registry().sc_ai_chats().register_hook("obs:page_loaded", {
             after: async function () {
-                await refresh_status_bar_regions(status_bar_domain, false, false);
+                await start_status_bar_clock(status_bar_domain);
             }
         });
     }
@@ -127,24 +131,10 @@ export const sc_ai_status_bar = (function (instance) {
     };
 })(new _sc_ai_status_bar());
 
-// 出值（status bar 分區重取：fetch＋時鐘起錶）
-// include_project：要唔要重取 project 區（首載＝false——開頁已由 PHP render 帶出）
-// include_chat：要唔要重取 chat 區（首載＝false——交 chat_observer 單一負責）
-async function refresh_status_bar_regions(status_bar_domain, include_project, include_chat) {
-    // 判定：要 project 區 → 抓
-    if (include_project === true) {
-        const project_fetch_instance = await status_bar_domain.act().project_fetch();
-
-        project_fetch_instance.project_fetch();
-    }
-
-    // 判定：要 chat 區 → 抓
-    if (include_chat === true) {
-        const chat_fetch_instance = await status_bar_domain.act().chat_fetch();
-
-        chat_fetch_instance.chat_fetch();
-    }
-
+// 出值（只起時鐘；project／chat 兩區一律由清單 DOM 對齊——零請求）
+// 為何唔再抓後端：標題／名稱本身已經喺清單卡面（workspace 快照會校正），狀態欄直接讀卡面就夠
+async function start_status_bar_clock(status_bar_domain) {
     const tick_clock_instance = await status_bar_domain.act().tick_clock();
+
     tick_clock_instance.start_clock();
 }

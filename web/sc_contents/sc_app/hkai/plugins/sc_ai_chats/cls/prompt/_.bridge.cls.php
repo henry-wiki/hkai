@@ -16,6 +16,7 @@ class prompt_Class
     use guard\validate_prompt_prerequisites;
     use view\render_input_stack;
     use view\render_queue_list;
+    use view\get_queue_item_template_html;
     use request\prompt_fetch;
     use view\render_chat_prompt;
     use view\render_chat_prompt_error;

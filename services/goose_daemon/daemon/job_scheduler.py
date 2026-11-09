@@ -62,8 +62,13 @@ WORKER_HEARTBEAT_STALE_SEC = 3
 
 
 def _is_worker_heartbeat_fresh(worker_entry: roster.WorkerEntry) -> bool:
-    """工人心跳仍新鮮？（閒置自殺中嘅工人程序未死但已停心跳——派單會石沉大海）"""
+    """工人可唔可以派單？（同 daemon 層同一做法：收工標記 ＋ 心跳新鮮）"""
     worker_pid = worker_entry["proc"].pid
+
+    # 判定：有「收緊工」標記 → 不可派（工人已決定收工，派落去會石沉大海）
+    if _get_worker_closing_marker_file(worker_pid).exists():
+        return False
+
     status_file = Path(context.PROCESS_DIR) / (identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".json")
 
     # 判定：狀態檔唔存在 → 當唔新鮮
@@ -73,6 +78,13 @@ def _is_worker_heartbeat_fresh(worker_entry: roster.WorkerEntry) -> bool:
     age_sec = time.time() - status_file.stat().st_mtime
 
     return age_sec <= WORKER_HEARTBEAT_STALE_SEC
+
+
+def _get_worker_closing_marker_file(worker_pid: int | None) -> Path:
+    """工人「收緊工」標記路徑（worker.{pid}.closing——工人收工前寫落；pid 空＝一條唔存在嘅路徑）。"""
+    pid_text = "" if worker_pid is None else str(worker_pid)
+
+    return Path(context.PROCESS_DIR) / (identity.WORKER_PROGRAM_NAME + "." + pid_text + ".closing")
 
 
 def spawn_worker(pending_job: job_scanner.JobEntry) -> roster.WorkerEntry | None:
@@ -152,11 +164,12 @@ def dispatch_job(worker_entry: roster.WorkerEntry, pending_job: job_scanner.JobE
         + " message=" + pending_job["message_id"])
 
 def _remove_worker_status_files(worker_pid: int) -> None:
-    """刪死者狀態檔（worker.<pid>.json／.json.tmp／.exit——檔案唔存在＝正常）。"""
+    """刪死者狀態檔（worker.<pid>.json／.json.tmp／.exit／.closing——檔案唔存在＝正常）。"""
     status_file_names = [
         identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".json",
         identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".json.tmp",
         identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".exit",
+        identity.WORKER_PROGRAM_NAME + "." + str(worker_pid) + ".closing",
     ]
 
     # 逐個狀態檔刪（唔存在／被鎖 → 略過）

@@ -11,6 +11,9 @@ class _message_stream {
         this.prompt_id = "";
         this.message_id = 0;
 
+        // 本輪輪次（SSE 事件帶 response_index——段骨架據此標記，插入位置精準）
+        this.current_response_index = 0;
+
         // 各段全文緩衝（append 累加——餵 writer 用）
         this.seg_texts = {};
 
@@ -23,9 +26,6 @@ class _message_stream {
         // 本輪工具段（turn 時清空——每輪一個）
         this.tool_segment = null;
 
-        // 已開線嘅 prompt（防重開）
-        this.opened_prompt_ids = {};
-
         // 換輪中（turn 事件處理期間——append 先入緩衝，完成後才寫）
         this.turn_switching = false;
 
@@ -34,53 +34,48 @@ class _message_stream {
 
         // 已套用嘅活動日誌（uid → true；防重複累加）
         this.applied_activity_uids = {};
+
+        // 最後收到幀嘅時間（生存監察——3 秒無幀＝假死）
+        this.last_event_ms = 0;
+
+        // 事件處理鏈（嚴格 FIFO——async handler 唔可以交錯，否則換訊息／派工期間次序會亂）
+        this.event_chain = Promise.resolve();
+
+        // 生存監察 timer（全頁一個）
+        this.liveness_timer = null;
     }
 
-    // 頁面載入：逐條「回應中」卡片開線（data-working="1"；index 由 PHP 帶）
+    // 頁面載入：對話有工作中卡片 → 開一條對話級線（identity＝project_slug／chat_sid）
     async start_for_page() {
         const j_working_panels = jQuery(".message_wrapper[data-working='1']");
 
-        sc_console("message", "stream").log("頁面載入——待開線卡片", j_working_panels.length);
+        sc_console("message", "stream").log("頁面載入——工作中卡片", j_working_panels.length);
 
-        for (let panel_index = 0; panel_index < j_working_panels.length; panel_index++) {
-            const j_message_panel = j_working_panels.eq(panel_index);
+        // 判定：有工作中卡片 → 開線（排隊中冇輸出，唔需要線）
+        if (j_working_panels.length > 0) {
+            const page_identity = this._get_page_identity();
 
-            const panel_message_id = Number(j_message_panel.attr("data-message_id") || 0);
-            const panel_response_index = Number(j_message_panel.attr("data-response_index") || 0);
-
-            // 判定：冇 message_id → 唔開
-            if (panel_message_id < 1) {
-                continue;
-            }
-
-            await this.open_for_panel(panel_message_id, panel_response_index);
+            await this.open(page_identity.project_slug, page_identity.chat_sid);
         }
 
-        await this._dispatch_queue_if_any();
     }
 
-    // 載入時有排隊項目 → 派工（舊 message_poll_detect 行為——唔另立邏輯）
-    async _dispatch_queue_if_any() {
-        const j_queue_items = jQuery(".sc_composer__queue_list .queue_item");
+    // 頁面 identity（由網址前兩段取——project_slug／chat_sid）
+    _get_page_identity() {
+        const path_segments = window.location.pathname.split("/").filter(function (path_segment) { return path_segment !== ""; });
 
-        // 判定：冇排隊 → 唔做
-        if (j_queue_items.length === 0) {
-            return;
-        }
+        const page_identity = {};
+        page_identity.project_slug = path_segments.length > 0 ? path_segments[0] : "";
+        page_identity.chat_sid = path_segments.length > 1 ? path_segments[1] : "";
 
-        const chat_instance = await registry().sc_ai_chats().chat();
-
-        const queue_instance = await registry().sc_ai_chats().queue();
-        const queue_dispatch_instance = await queue_instance.act().queue_dispatch();
-
-        await queue_dispatch_instance.queue_dispatch(chat_instance.get_chat_sid());
+        return page_identity;
     }
 
-    // 開串流（回 bool＝有冇開；identity＝project_slug／chat_sid／prompt_id）
-    async open(project_slug, chat_sid, prompt_id, response_index) {
+    // 開串流（回 bool＝有冇開；identity＝project_slug／chat_sid——一條對話一條線）
+    async open(project_slug, chat_sid) {
         const stream_config = registry().sc_stream().get_config();
 
-        sc_console("message", "stream").log("open 請求", project_slug, chat_sid, prompt_id, response_index);
+        sc_console("message", "stream").log("open 請求", project_slug, chat_sid);
 
         // 判定：未啟用串流 → 唔開
         if (stream_config.enabled !== true) {
@@ -95,78 +90,131 @@ class _message_stream {
         }
 
         // 判定：identity 不齊 → 唔開
-        if (project_slug === "" || chat_sid === "" || prompt_id === "") {
+        if (project_slug === "" || chat_sid === "") {
             return false;
         }
 
         const stream_url = stream_base_url
             + "/bridge_sse_for_message?project_slug=" + encodeURIComponent(project_slug)
-            + "&chat_sid=" + encodeURIComponent(chat_sid)
-            + "&prompt_id=" + encodeURIComponent(prompt_id)
-            + "&response_index=" + encodeURIComponent(response_index);
+            + "&chat_sid=" + encodeURIComponent(chat_sid);
 
         this.project_slug = project_slug;
         this.chat_sid = chat_sid;
-        this.prompt_id = prompt_id;
         this.seg_texts = {};
-        this.opened_prompt_ids[String(prompt_id)] = true;
         this.applied_activity_uids = {};
 
         const stream_singleton = await registry().sc_stream().message();
 
         sc_console("message", "stream").log("URL", stream_url);
 
-        return stream_singleton.start(
+        const thisObject = this;
+
+        const is_opened = stream_singleton.start(
             stream_url,
             ["ready", "append", "turn", "turn_done", "tool", "state", "log", "done"],
-            this._handle_event.bind(this),
+            function (event_name, event_payload) {
+                thisObject._enqueue_event(event_name, event_payload);
+            },
         );
+
+        // 判定：開線成功 → 起生存監察（3 秒冇幀＝假死 → 重建）
+        if (is_opened === true) {
+            this.last_event_ms = Date.now();
+
+            this._start_liveness_timer();
+        }
+
+        return is_opened;
     }
 
-    // 由卡片資訊開線（identity 由 URL＋卡片 data-prompt_id 取——零域依賴）
-    async open_for_panel(message_id, response_index) {
-        const path_segments = window.location.pathname.split("/").filter(function (path_segment) { return path_segment !== ""; });
+    // 事件入鏈（嚴格 FIFO；一個 handler 未完唔准下一幀插入）
+    // 上游：sc_stream on_event
+    // 下游：_handle_event
+    _enqueue_event(event_name, event_payload) {
+        const thisObject = this;
 
-        let project_slug = "";
-        let chat_sid = "";
-
-        // 判定：有第一段 → 用佢做 project_slug
-        if (path_segments.length > 0) {
-            project_slug = path_segments[0];
-        }
-
-        // 判定：有第二段 → 用佢做 chat_sid
-        if (path_segments.length > 1) {
-            chat_sid = path_segments[1];
-        }
-
-        const j_message_panel = jQuery(".message_wrapper[data-message_id='" + message_id + "']").first();
-        const panel_prompt_id = String(j_message_panel.attr("data-prompt_id") || "");
-
-        // 判定：冇 prompt_id → 唔開
-        if (panel_prompt_id === "") {
-            return false;
-        }
-
-        return this.open(project_slug, chat_sid, panel_prompt_id, response_index);
+        this.event_chain = this.event_chain
+            .then(function () {
+                return thisObject._handle_event(event_name, event_payload);
+            })
+            .catch(function (event_error) {
+                sc_console("message", "stream").error("事件處理失敗", event_name, event_error);
+            });
     }
 
-    // 關串流（清本條 identity／緩衝——切換對話或專案時舊事件一律作廢）
+    // 生存監察（每 3 秒內要有任何幀，ping 已算——冇 = 假死 → 重建）
+    // 上游：open（開線成功）
+    // 下游：_rebuild_stream
+    _start_liveness_timer() {
+        // 判定：已有 timer → 唔重複
+        if (this.liveness_timer !== null) {
+            return;
+        }
+
+        const thisObject = this;
+
+        this.liveness_timer = setInterval(function () {
+            thisObject._check_stream_alive();
+        }, 1000);
+    }
+
+    // 檢查生存（只睇連線狀態——冇 ping 之後「無幀」唔等於死線）
+    // 上游：生存監察 timer（每 1 秒）
+    // 下游：_rebuild_stream（線已關／已死才重建）
+    async _check_stream_alive() {
+        // 判定：冇 identity（未開線）→ 唔做
+        if (this.project_slug === "" || this.chat_sid === "") {
+            return;
+        }
+
+        const stream_singleton = await registry().sc_stream().message();
+
+        // 判定：線仍開住 → 唔動
+        if (stream_singleton.is_open()) {
+            return;
+        }
+
+        sc_console("message", "stream").log("線路已關／已死 → 重建");
+
+        await this._rebuild_stream();
+    }
+
+    // 重建串流（舊線由後台 token 機制踢走——前端唔需要等關閉）
+    async _rebuild_stream() {
+        this.last_event_ms = Date.now();
+
+        // 先確實關走舊線（否則 start() 見同 URL 只換 callback，永遠唔會重連）
+        const stream_singleton = await registry().sc_stream().message();
+
+        stream_singleton.stop();
+
+        await this.open(this.project_slug, this.chat_sid);
+    }
+
+    // 關串流（清 identity／緩衝＋停生存監察——切換對話或專案時舊事件一律作廢）
     async stop() {
         const stream_singleton = await registry().sc_stream().message();
 
         stream_singleton.stop();
 
+        // 判定：有生存監察 timer → 停
+        if (this.liveness_timer !== null) {
+            clearInterval(this.liveness_timer);
+
+            this.liveness_timer = null;
+        }
+
         this.project_slug = "";
         this.chat_sid = "";
         this.prompt_id = "";
         this.message_id = 0;
+        this.last_event_ms = 0;
         this.seg_texts = {};
-        this.opened_prompt_ids = {};
         this.pending_appends = [];
         this.applied_activity_uids = {};
         this.turn_switching = false;
         this.turn_new_kinds = {};
+        this.tool_segment = null;
     }
 
     // 用時計：起每秒 ticker＋落本卡片基準（未有基準時用當下時間）
@@ -285,6 +333,17 @@ class _message_stream {
     async _handle_event(event_name, event_payload) {
         const payload = event_payload || {};
 
+        // 生存訊號（收到任何內容幀＝線仍生存）
+        this.last_event_ms = Date.now();
+
+        // 事件自帶身份（對話級線——多條訊息共用一條線，靠 message_id 定位卡片）
+        const event_message_id = Number(payload.message_id || 0);
+
+        // 判定：有 message_id → 綁定本輪目標卡片
+        if (event_message_id > 0) {
+            this.message_id = event_message_id;
+        }
+
         sc_console("message", "stream").log("事件", event_name, payload);
 
         // 判定：ready → 貼上當刻全文
@@ -342,13 +401,15 @@ class _message_stream {
         }
     }
 
-    // 取卡片
-    _get_panel() {
-        return jQuery(".message_wrapper[data-message_id='" + this.message_id + "']").first();
+    // 取卡片（message_id 優先——對話級線多條訊息共用；冇帶＝用當前綁定）
+    _get_panel(message_id) {
+        const panel_message_id = Number(message_id || 0) > 0 ? Number(message_id) : this.message_id;
+
+        return jQuery(".message_wrapper[data-message_id='" + panel_message_id + "']").first();
     }
 
     // 取段（kind＝thinking／result）：換輪後第一次寫入＝開新段；其餘寫返最後一段；冇段＝造骨架
-    _get_segment(response_kind) {
+    _get_segment(response_kind, response_index) {
         const j_message_panel = this._get_panel();
 
         // 判定：卡片未喺畫面 → 冇段
@@ -366,7 +427,19 @@ class _message_stream {
 
         this.turn_new_kinds[response_kind] = false;
 
-        let j_segment = j_agent_message.find(".seg--" + response_kind).last();
+        const segment_index = Number.isFinite(Number(response_index)) ? Number(response_index) : this.current_response_index;
+
+        let j_segment = jQuery();
+
+        // 判定：有輪次 index → 先搵同一輪嘅段（位置精準，唔會寫錯輪）
+        if (Number.isFinite(segment_index)) {
+            j_segment = j_agent_message.find(".seg--" + response_kind + "[data_response_index='" + segment_index + "']").last();
+        }
+
+        // 判定：搵唔到（舊段未帶 index）→ 沿用最後一段
+        if (j_segment.length === 0) {
+            j_segment = j_agent_message.find(".seg--" + response_kind).last();
+        }
 
         // 判定：換輪首次寫入 且 最後一段已用過 → 唔可以再寫入（開新段）
         if (is_turn_first_write === true && this._is_segment_used(j_segment) === true) {
@@ -414,6 +487,9 @@ class _message_stream {
 
             j_segment = j_agent_message.find(".seg--" + response_kind).last();
 
+            // 段帶輪次（同一輪同型只有一段——前端據此精準寫入）
+            j_segment.attr("data_response_index", Number.isFinite(segment_index) ? String(segment_index) : "");
+
             // 判定：result 段且有模型資訊 → 補 message_model（工具列右邊，同後端一致）
             if (response_kind === "result" && message_model_text !== "") {
                 const j_bar_actions = j_segment.find(".seg__bar_actions").first();
@@ -424,6 +500,42 @@ class _message_stream {
         }
 
         return j_segment;
+    }
+
+    // 段身份／狀態落 DOM（payload 由 bridge poll entry 帶落）
+    // 上游：_write_segment_text／_apply_turn_done
+    // 下游：DOM（data_response_index／data-start_at／data-response_status／data-content_length）
+    _apply_segment_meta(j_segment, payload) {
+        // 判定：冇段 → 唔做
+        if (j_segment.length === 0) {
+            return;
+        }
+
+        const segment_payload = payload || {};
+        const segment_start_at = String(segment_payload.start_at || "");
+        const segment_status = String(segment_payload.response_status || "");
+        const segment_content_length = Number(segment_payload.content_length || 0);
+        const segment_response_index = Number(segment_payload.response_index);
+
+        // 判定：有輪次 index → 落 attr（多輪資料同時吐出時靠佢對位）
+        if (Number.isFinite(segment_response_index)) {
+            j_segment.attr("data_response_index", String(segment_response_index));
+        }
+
+        // 判定：有開始時間 → 落 attr
+        if (segment_start_at !== "") {
+            j_segment.attr("data-start_at", segment_start_at);
+        }
+
+        // 判定：有狀態 → 落 attr
+        if (segment_status !== "") {
+            j_segment.attr("data-response_status", segment_status);
+        }
+
+        // 判定：有內容長度 → 落 attr
+        if (segment_content_length > 0) {
+            j_segment.attr("data-content_length", String(segment_content_length));
+        }
     }
 
     // 段用過未（有內容 或 已綁真 response_id 即算用過——重連攞返嘅空段可以重用）
@@ -448,6 +560,7 @@ class _message_stream {
     // ready：貼全文（餵 writer——自動接續印）
     async _apply_ready(payload) {
         this.message_id = Number(payload.message_id || this.message_id);
+        this.current_response_index = Number(payload.index || this.current_response_index);
 
         this._start_elapsed_clock();
 
@@ -517,7 +630,43 @@ class _message_stream {
             j_new_line.attr("class", "activity_line activity_level_" + (log_entry.level || "info"));
             j_new_line.text(log_entry.message || "");
             j_activity_lines.append(j_new_line);
+
+            // 錯誤級 → 同時喺回答區補一個錯誤段（同 DB 版 seg--error 一致；重載後見同一段）
+            if (String(log_entry.level || "").toLowerCase() === "error") {
+                this._append_error_segment(j_message_panel, String(log_entry.message || ""));
+            }
         }
+    }
+
+    // 錯誤段（即時顯示——同一段文字只補一次）
+    _append_error_segment(j_message_panel, error_text) {
+        // 判定：冇文字 → 唔做
+        if (error_text === "") {
+            return;
+        }
+
+        const j_agent_message = j_message_panel.find(".agent_message");
+
+        // 判定：冇回答槽 → 唔做
+        if (j_agent_message.length === 0) {
+            return;
+        }
+
+        // 判定：同一段文字已存在 → 唔重複
+        const existing_text_list = j_agent_message.find(".seg--error .seg__text");
+
+        for (let existing_index = 0; existing_index < existing_text_list.length; existing_index++) {
+            // 判定：文字一樣 → 收工
+            if (String(jQuery(existing_text_list[existing_index]).text() || "") === error_text) {
+                return;
+            }
+        }
+
+        const j_error_segment = jQuery("<div class='seg seg--error'></div>");
+        j_error_segment.append("<div class='seg__icon'>⚠️</div>");
+        j_error_segment.append(jQuery("<div class='seg__text' data-text='error'></div>").text(error_text));
+
+        j_agent_message.append(j_error_segment);
     }
 
     // append：增量入緩衝 → 餵 writer（全文；writer 自動追）
@@ -549,7 +698,7 @@ class _message_stream {
 
         this.seg_texts[response_kind] += append_text;
 
-        await this._write_segment_text(response_kind, this.seg_texts[response_kind]);
+        await this._write_segment_text(response_kind, this.seg_texts[response_kind], payload);
     }
 
     // turn_done：該回合該型已完結 → 用完整內容重寫該段（Markdown 最終化）然後停寫
@@ -566,12 +715,19 @@ class _message_stream {
 
         this.seg_texts[response_kind] = full_text;
 
-        const j_segment = this._get_segment(response_kind);
+        // 判定：冇內容 → 唔造空殼（該輪冇 thinking／result 屬正常，唔好留空格）
+        if (full_text === "") {
+            return;
+        }
+
+        const j_segment = this._get_segment(response_kind, payload.response_index);
 
         // 判定：冇段 → 唔做
         if (j_segment.length === 0) {
             return;
         }
+
+        this._apply_segment_meta(j_segment, payload);
 
         const j_seg_text = j_segment.find("[data-text='" + response_kind + "']").first();
 
@@ -626,6 +782,9 @@ class _message_stream {
         if (j_tool_segment.length === 0) {
             return;
         }
+
+        // 段身份（輪次／狀態／長度）落 DOM——多輪工具同時吐時對位
+        this._apply_segment_meta(j_tool_segment, tool_record);
 
         const j_tool_text = j_tool_segment.find("[data-text='tool']").first();
 
@@ -719,6 +878,9 @@ class _message_stream {
         this.tool_segment = j_agent_message.find(".seg--tool").last();
         this.tool_segment.attr("data-started_ms", String(Date.now()));
 
+        // 段帶輪次（多輪工具同時吐時靠佢對位）
+        this.tool_segment.attr("data_response_index", String(this.current_response_index));
+
         return this.tool_segment;
     }
 
@@ -760,6 +922,8 @@ class _message_stream {
     async _apply_turn(payload) {
         sc_console("message", "stream").log("新一輪", payload.index);
 
+        this.current_response_index = Number(payload.index || this.current_response_index);
+
         this.turn_switching = true;
         this.seg_texts = {};
 
@@ -790,8 +954,7 @@ class _message_stream {
     }
 
     // state：同步卡片屬性
-    _apply_state(payload) {
-        const j_message_panel = this._get_panel();
+    _apply_state(payload) {        const j_message_panel = this._get_panel();
 
         // 判定：冇卡片 → 唔做
         if (j_message_panel.length === 0) {
@@ -808,7 +971,7 @@ class _message_stream {
         }
     }
 
-    // done：收尾（狀態同步＋全部段印完；唔再問後端攞 HTML）
+    // done：該條訊息收尾（狀態同步＋全部段印完）——線照開住，等下條訊息
     async _apply_done(payload) {
         this._apply_state({ status: payload.status });
 
@@ -818,7 +981,19 @@ class _message_stream {
 
         await this._render_mermaid_if_any();
 
-        await this.stop();
+        // 該條訊息完結 → 清本條緩衝（線唔關；下一條訊息重新起）
+        this.seg_texts = {};
+        this.pending_appends = [];
+        this.applied_activity_uids = {};
+        this.turn_switching = false;
+        this.turn_new_kinds = {};
+        this.tool_segment = null;
+
+        // 收尾：派工由後台 sweep 負責（cleanup.php dispatch_next_queued_job）——前端只讀現況
+        const queue_instance = await registry().sc_ai_chats().queue();
+        const queue_act_instance = await queue_instance.act().queue_list();
+
+        await queue_act_instance.queue_list();
     }
 
     // 工具段用時凍結（全部格都有狀態＝本段完成 → 定住秒數，唔再跳）
@@ -909,7 +1084,7 @@ class _message_stream {
     }
 
     // 段文字：餵 writer（全文；自動接續印）；result 段帶 markdown 串流渲染
-    async _write_segment_text(response_kind, full_text) {
+    async _write_segment_text(response_kind, full_text, payload) {
         this.seg_texts[response_kind] = full_text;
 
         // 判定：冇內容 → 唔做（保留後端骨架）
@@ -917,12 +1092,16 @@ class _message_stream {
             return;
         }
 
-        const j_segment = this._get_segment(response_kind);
+        const segment_payload = payload || {};
+        const j_segment = this._get_segment(response_kind, segment_payload.response_index);
 
         // 判定：冇段 → 唔做
         if (j_segment.length === 0) {
             return;
         }
+
+        // 段身份／狀態落 DOM（bridge 帶落——前端只照寫）
+        this._apply_segment_meta(j_segment, segment_payload);
 
         const j_seg_text = j_segment.find("[data-text='" + response_kind + "']").first();
 

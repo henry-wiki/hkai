@@ -1,10 +1,8 @@
 // jsmods/sc_stream/state/state_stream.js —— 健康狀態 SSE 連線（單例）
-// 職責：open(project_slug, chat_sid, view_id)——開 /state_stream/；每個 type 一個 event（open／chat／project／polling／git／conn／close）
+// 職責：open(project_slug, chat_sid, view_id)——開 /state_stream/；本線只維持連線＋驅動後台收尾（唔再派 type 事件）
 // 上游：jsmods/sc_stream/sc_stream.js（open_state_stream——開頁／換對話唯一入口）
-// 下游：registry().sc_state_watch（polling）＋ stream/act/*_updater（project／chat／git／conn）
-// 註：chat／project 基線（seed）唔再接收——伺服器 view 檔同步後只送有變項目
-
-import { build_stream_polling_snapshot } from "../../../plugins/sc_stream/jsmods/stream/act/build_stream_change_items.js";
+// 下游：無（chat／project／message／polling 已全部搬去 bridge workspace_stream）
+// 註：本線只負責維持連線（後台每 tick 收尾靠佢驅動）；數據一律由 workspace_stream 推
 
 // console 過濾 scope（模組級定義一次——呼叫點唔重複寫死）
 const CONSOLE_SCOPES = ["polling", "state_stream"];
@@ -15,8 +13,8 @@ class _state_stream {
         this.event_source = null;
         this.stream_url = "/request/hkai/state_stream/";
 
-        // 事件類型（後端逐個 type 派發——只認呢五個）
-        this.stream_types = ["chat", "project", "polling", "message"];
+        // 事件類型（state 線已無 type 事件——target 全部搬去 bridge workspace_stream）
+        this.stream_types = [];
 
         // 開線令牌（open 期間再 open／close → 舊連線作廢）
         this.stream_token = 0;
@@ -166,42 +164,8 @@ class _state_stream {
             return;
         }
 
-        // polling（seed 帶 current；delta 亦以 current 為準）
-        if (stream_type === "polling") {
-            const polling_snapshot = build_stream_polling_snapshot(event_payload);
-
-
-            try {
-                const state_watch_module = registry().sc_state_watch();
-                const state_watch_domain = state_watch_module.state_watch();
-                const apply_polling_instance = await state_watch_domain.act().apply_polling();
-                await apply_polling_instance.apply_polling(polling_snapshot);
-
-            } catch (apply_error) {
-                registry().sc_console(...CONSOLE_SCOPES).log("[trace]", "polling_error", { rev: event_payload.rev, message: String(apply_error) });
-            }
-
-            return;
-        }
-
-        // chat delta
-        if (stream_type === "chat") {
-            const stream_instance = await registry().sc_state_stream().stream();
-            const chat_updater_instance = await stream_instance.act().act_chat_updater();
-
-            await chat_updater_instance.apply_chat_stream_delta(event_payload);
-        }
-        // project delta
-        else if (stream_type === "project") {
-            const stream_instance = await registry().sc_state_stream().stream();
-            const project_updater_instance = await stream_instance.act().act_project_updater();
-
-            await project_updater_instance.apply_project_stream_delta(event_payload);
-        }
-        // 其餘類型 → 唔處理
-        else {
-            return;
-        }
+        // state 線唔再派任何 type 事件（target 已全搬去 bridge workspace_stream）
+        return;
     }
 
     // 關線（停／重開前先清）

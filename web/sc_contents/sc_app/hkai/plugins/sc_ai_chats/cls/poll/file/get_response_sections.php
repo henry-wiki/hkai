@@ -53,6 +53,40 @@ trait get_response_sections
             $response_section_list[] = $poll_list_entry_item;
         }
 
+        // 失敗訊息 → 補一個 error 段（無 poll 檔；內容＝最後一條錯誤級活動日誌）
+        // 為何要補：錯誤本身都係一輪嘅結果，要落地 message_response 才會有歷史紀錄
+        $message_is_failed = in_array($message_poll_status, ["failed", "cancelled", "aborted"], true);
+
+        // 判定：訊息係失敗終態 → 讀活動日誌搵錯誤
+        if ($message_is_failed === true) {
+            $activity_entry_list = sc_ai_chats()->poll()->log()->parse_activity_events($chat_id, $message_id);
+            $error_text = "";
+
+            // 逐條日誌（最後一條錯誤級為準）
+            foreach ($activity_entry_list as $activity_entry_item) {
+                $activity_level = strtolower((string)($activity_entry_item["level"] ?? ""));
+
+                // 判定：錯誤級 → 記住內容
+                if ($activity_level === "error") {
+                    $error_text = (string)($activity_entry_item["message"] ?? "");
+                }
+            }
+
+            // 判定：有錯誤文字 → 出 error 段（每訊息一條，index 固定 0）
+            if ($error_text !== "") {
+                $error_section_item = [];
+                $error_section_item["poll_file"]        = "";
+                $error_section_item["response_type"]    = "error";
+                $error_section_item["response_index"]   = 0;
+                $error_section_item["response_content"] = $error_text;
+                $error_section_item["poll_status"]      = "aborted";
+                $error_section_item["start_at"]         = "";
+                $error_section_item["update_at"]        = "";
+
+                $response_section_list[] = $error_section_item;
+            }
+        }
+
         return $response_section_list;
     }
 }

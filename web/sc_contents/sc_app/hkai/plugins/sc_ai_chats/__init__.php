@@ -28,6 +28,7 @@ sc_ai_chats()->poll()->initial_poll([
 ]);
 
 // 註冊 request action（存進 plugin 自己——由 controller 語境載入時收編 enabled plugins 進統一表）
+$plugin->add_request_action("chat_item_fetch", __DIR__ . "/request/chat/chat_item_fetch.php");
 $plugin->add_request_action("chat_list_fetch", __DIR__ . "/request/chat/chat_list_fetch.php");
 $plugin->add_request_action("message_list_fetch", __DIR__ . "/request/message/message_list_fetch.php");
 $plugin->add_request_action("prompt_fetch", __DIR__ . "/request/prompt/prompt_fetch.php");
@@ -46,7 +47,6 @@ $plugin->add_request_action("message_delete", __DIR__ . "/request/message/messag
 $plugin->add_request_action("chat_delete", __DIR__ . "/request/chat/chat_delete.php");
 $plugin->add_request_action("chat_archive", __DIR__ . "/request/chat/chat_archive.php");
 $plugin->add_request_action("chat_restore", __DIR__ . "/request/chat/chat_restore.php");
-$plugin->add_request_action("chat_item_fetch", __DIR__ . "/request/chat/chat_item_fetch.php");
 $plugin->add_request_action("permission_decide", __DIR__ . "/request/permission/permission_decide.php");
 
 

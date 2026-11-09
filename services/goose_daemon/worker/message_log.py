@@ -349,7 +349,7 @@ class message_log_class:
             current_time = timer_class.get_datetime()
 
             turn_list = self._read_turn_list()
-            turn_entry = None
+            turn_entry: "dict[str, object] | None" = None
 
             # 逐回合：找回本輪
             for turn_list_entry_item in turn_list:
@@ -372,15 +372,15 @@ class message_log_class:
                 turn_list.append(turn_entry)
 
             turn_entry["last_seen_at"] = current_time
-            turn_entry["event_count"] = int(turn_entry["event_count"]) + 1
+            turn_entry["event_count"] = int(str(turn_entry["event_count"])) + 1
 
             # 判定：思考段 → 累加 thinking 字數
             if update_kind == "thought":
-                turn_entry["thinking_chars"] = int(turn_entry["thinking_chars"]) + text_length
+                turn_entry["thinking_chars"] = int(str(turn_entry["thinking_chars"])) + text_length
 
             # 判定：回答段 → 累加 result 字數
             if update_kind == "text":
-                turn_entry["result_chars"] = int(turn_entry["result_chars"]) + text_length
+                turn_entry["result_chars"] = int(str(turn_entry["result_chars"])) + text_length
 
             self._write_turn_list(turn_list)
 
@@ -511,7 +511,7 @@ class message_log_class:
                     continue
 
                 # 判定：輪次唔同 → 唔郁
-                if int(poll_list_entry.get("response_index", -1)) != response_index:
+                if int(str(poll_list_entry.get("response_index", -1))) != response_index:
                     continue
 
             # 判定：已收（非 poll）→ 唔郁
@@ -567,7 +567,7 @@ class message_log_class:
             if tool_phase == "start":
                 tool_seq_text = str(entry_item.get("seq", 0) or 0)
                 tool_seq = int(tool_seq_text)
-                started_tool_seq.setdefault(tool_call_id, tool_seq)
+                _ = started_tool_seq.setdefault(tool_call_id, tool_seq)
 
             # 判定：done → 標記已收尾
             if tool_phase == "done":

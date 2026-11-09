@@ -59,6 +59,10 @@ class _project {
         await this.evt().init();
         await this.act().init();
         await this.req().init();
+
+        // workspace 線 project_snapshot → 整份套用＋回 ACK（at-least-once）
+        const project_snapshot_observer_instance = await this.obs().project_snapshot_observer();
+        await project_snapshot_observer_instance.init();
     }
 }
 
@@ -100,7 +104,6 @@ class _project_act_bridge {
     async project_list_fetch() { return (await import("./act/project_list_fetch.js")).project_list_fetch(); }
     async project_item_fetch() { return (await import("./act/project_item_fetch.js")).project_item_fetch(); }
     async project_item_insert() { return (await import("./act/project_item_insert.js")).project_item_insert(); }
-    async project_item_remove() { return (await import("./act/project_item_remove.js")).project_item_remove(); }
     async project_list_rank_refresh() { return (await import("./act/project_list_rank_refresh.js")).project_list_rank_refresh(); }
     async detect_project_slug_change() { return (await import("./act/detect_project_slug_change.js")).detect_project_slug_change(); }
     async detect_project_list_context_change() { return (await import("./act/detect_project_list_context_change.js")).detect_project_list_context_change(); }
@@ -111,8 +114,8 @@ class _project_act_bridge {
 class _project_obs_bridge {
     constructor() {}
     async page_loaded_observer() { return (await import("./obs/page_loaded_observer.js")).page_loaded_observer(); }
-    async project_item_observer() { return (await import("./obs/project_item_observer.js")).project_item_observer(); }
     async url_changed_observer() { return (await import("./obs/url_changed_observer.js")).url_changed_observer(); }
+    async project_snapshot_observer() { return (await import("./obs/project_snapshot_observer.js")).project_snapshot_observer(); }
 }
 
 // req（出街工作）

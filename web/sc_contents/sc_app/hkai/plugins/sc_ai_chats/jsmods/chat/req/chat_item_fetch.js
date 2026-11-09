@@ -1,92 +1,46 @@
-// jsmods/chat/req/chat_item_fetch.js —— 單項對話內容載入（連線側——一 req 一檔；檔名／函數名＝endpoint 名）
-// 職責：與伺服器連接部分——chat_item_fetch（組 payload（project_slug＋chat_sid（呼叫端 declare——目標）＋selected_chat_sid（目前選取——active 判定））→ 後端 chat_item_fetch → 派發）；進行中請求嘅 controller ＋ 取消（快速連切——新請求前先 abort 舊）
-// 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
+// jsmods/chat/req/chat_item_fetch.js —— 單張對話卡 HTML 載入（連線側——一 req 一檔；檔名／函數名＝endpoint 名）
+// 職責：與伺服器連接部分——chat_item_fetch（組 payload（project_slug＋chat_sid＋selected_chat_sid）→ 後端 chat_item_fetch → 派發）
+// 上游：chat act chat_item_fetch（收斂迴圈補卡）
+// 下游：sc_request post_json
 
 class _chat_item_fetch {
-    constructor() {
-        // 進行中請求（chat_sid → controller——每個對話各自一條；同 sid 新請求先 abort 舊）
-        this.request_abort_controllers = new Map();
-    }
+    constructor() {}
 
-    // 單項對話內容載入（與伺服器連接部分——只做連線：組 payload → 後端 chat_item_fetch → 收到嘅資料派去本機側程序；進行中請求自管可取消——新請求前先 abort 舊）
+    // 取單張卡 HTML（只做連線：組 payload → 後端 → 派去 callbacks）
     async chat_item_fetch(chat_sid, callbacks) {
-        const thisObject = this;
+        const shared = registry().shared();
 
-        // 取消同一個對話上一個未完成嘅請求（其他對話嘅請求唔受影響）
-        thisObject.abort_pending_request(chat_sid);
-
-        const request_abort_controller = new AbortController();
-
-        thisObject.request_abort_controllers.set(chat_sid, request_abort_controller);
-
-        // registry 取值（靜態——直回單例）
-        const shared   = registry().shared();
-        const projects = registry().sc_ai_projects();
-
-        // project_slug：SSOT＝projects 域（唯一取法）；chat_sid：呼叫端已 declare（參數）
-        const project_instance = await projects.project();
-        const project_slug = project_instance.get_project_slug();
-
-        // 目前選取嘅對話（active 判定用——chat_sid 唔代表選取）
-        const chats = registry().sc_ai_chats();
-        const chat_instance = await chats.chat();
+        const project_instance = await registry().sc_ai_projects().project();
+        const chat_instance    = await registry().sc_ai_chats().chat();
 
         const payload = {};
-        payload.project_slug      = project_slug;
+        payload.project_slug      = project_instance.get_project_slug();
         payload.chat_sid          = chat_sid;
-        payload.selected_chat_sid = chat_instance.get_chat_sid();
+        payload.selected_chat_sid = chat_instance.get_url_chat_sid();
 
-        // before 程序（經 before_load callback——存在但唔強求執行）
-        if (
-            callbacks
-            &&  callbacks.before_load
-        ) {
-            callbacks.before_load();
-        }
+        const result = await shared.sc_request().post_json("/request/hkai/chat_item_fetch/", payload);
 
-        const result = await shared.sc_request().post_json("/request/hkai/chat_item_fetch/", payload, undefined, request_abort_controller);
-
-        // 判定：同一對話已被新請求取代（abort 咗嘅舊請求）→ 靜默（唔派任何回呼）
-        if (thisObject.request_abort_controllers.get(chat_sid) !== request_abort_controller) {
-            return;
-        }
-
-        thisObject.request_abort_controllers.delete(chat_sid);
-
-        // 三態派發：null ⇒ E_NETWORK，ok === false ⇒ callbacks.error(result)，ok === true ⇒ callbacks.success(result)（回呼一律 await——完成語義＝回呼行完）
+        // 判定：冇回應（網絡失敗）→ 交 error
         if (result == null) {
-            await callbacks.error({ ok: false, code: "E_NETWORK", message: "request failed" });   // await——回呼行完先算完成
+            await callbacks.error({ ok: false, code: "E_NETWORK", message: "request failed" });
 
             return;
         }
 
+        // 判定：後端話失敗 → 交 error
         if (result.ok === false) {
-            await callbacks.error(result);   // await——回呼行完先算完成
+            await callbacks.error(result);
 
             return;
         }
 
-        if (result.ok === true) {
-            await callbacks.success(result);   // await——成功回呼行完先算完成
-
-            return;
-        }
-    }
-
-    // 取消某對話進行中嘅請求（同 sid 新請求前先殺舊；冇進行中＝冇事）
-    abort_pending_request(chat_sid) {
-        const request_abort_controller = this.request_abort_controllers.get(chat_sid);
-
-        // 判定：有進行中 → abort 兼清
-        if (request_abort_controller !== undefined) {
-            request_abort_controller.abort();
-            this.request_abort_controllers.delete(chat_sid);
-        }
+        await callbacks.success(result);
     }
 }
 
 export const chat_item_fetch = (function (instance) {
     return function () {
+
         return instance;
     };
 })(new _chat_item_fetch());

@@ -12,6 +12,7 @@ class preflight_Class
     // 檢查清單（一檔一條——加新檢查＝加檔＋加一行）
     private const CHECK_NAME_LIST = [
         "ensure_home_project_path",
+        "sweep_empty_draft_dirs",
     ];
 
     private static $instance = null;

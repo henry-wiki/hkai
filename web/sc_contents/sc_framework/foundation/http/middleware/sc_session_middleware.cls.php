@@ -40,5 +40,8 @@ class sc_session_middleware_Class
         
         sc_session()->set_driver($sessionConfig["driver"]);
         sc_session()->start();
+
+        // 每請求寫入活動時間（session 檔 mtime 才會更新；否則 PHP lazy_write=On 下只讀請求唔寫檔 → 活躍使用都會被 GC 當過期刪除）
+        $_SESSION["_last_seen"] = time();
     }
 }

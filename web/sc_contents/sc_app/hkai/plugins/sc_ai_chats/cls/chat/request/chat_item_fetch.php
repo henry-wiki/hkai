@@ -3,7 +3,7 @@
 namespace sc\app\hkai\plugins\sc_ai_chats\chat\request;
 
 // == sc_ai_chats chat chat_item_fetch：chat 域動作（trait——掛入 chat_Class；檔＝動作） ==
-// == 2026-09-28 單項對話內容端點（前端觀察器鏈——只換 children 用） ==
+// == 2026-11-10 復原：workspace 快照「增加」變更要逐張補卡（收斂迴圈前端動作） ==
 
 trait chat_item_fetch
 {
@@ -17,7 +17,7 @@ trait chat_item_fetch
         $chat_sid          = isset($input_data["chat_sid"]) ? $input_data["chat_sid"] : "";
         $selected_chat_sid = isset($input_data["selected_chat_sid"]) ? $input_data["selected_chat_sid"] : "";
 
-        // chat_sid 缺 → 內容回報失敗（HTTP 仍 200）
+        // 判定：chat_sid 缺 → 內容回報失敗（HTTP 仍 200）
         if ($chat_sid === "") {
             return sc_response()->json(["ok" => false, "error" => "chat_sid is required"]);
         }

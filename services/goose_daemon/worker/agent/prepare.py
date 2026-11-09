@@ -76,7 +76,7 @@ def prepare_goose_env(goose_env: dict[str, str]) -> None:
 
         # 判定：包裝檔存在 → 換 ComSpec（保留原本）
         if cmd_wrapper.is_file() is True:
-            goose_env.setdefault("SC_REAL_COMSPEC", goose_env.get("ComSpec", os.environ.get("ComSpec", "")))
+            _ = goose_env.setdefault("SC_REAL_COMSPEC", goose_env.get("ComSpec", os.environ.get("ComSpec", "")))
             goose_env["ComSpec"] = str(cmd_wrapper)
 
         goose_env["PYTHONUTF8"] = "1"

@@ -1474,3 +1474,52 @@
 .md_alert--caution { border-left-color: #d1242f; background: rgba(209, 36, 47, 0.08); }
 .md_alert p { margin: 0; }
 .md_alert p + p { margin-top: 6px; }
+
+/* 失敗樂觀氣泡（後端冇記錄；純前端顯示，重載即消失） */
+.message_wrapper[data-status='failed'] .optimistic_error {
+    color: #d1242f;
+    font-weight: 600;
+    margin: 4px 0;
+}
+
+.message_wrapper[data-status='failed'] .optimistic_error_detail {
+    color: #d1242f;
+    margin: 2px 0 4px;
+    white-space: pre-wrap;
+}
+
+/* 失敗樂觀氣泡——三段表達（標題／原因／欄位錯誤／提示） */
+.message_wrapper[data-status='failed'] .optimistic_error {
+    border-left: 3px solid #d1242f;
+    background: rgba(209, 36, 47, 0.08);
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 6px 0;
+}
+
+.message_wrapper[data-status='failed'] .optimistic_error__title {
+    color: #d1242f;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.message_wrapper[data-status='failed'] .optimistic_error__message {
+    color: #d1242f;
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.message_wrapper[data-status='failed'] .optimistic_error__fields {
+    color: #d1242f;
+    font-size: 12px;
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.message_wrapper[data-status='failed'] .optimistic_error__hint {
+    color: #8f9bb3;
+    font-size: 12px;
+    margin-top: 6px;
+}

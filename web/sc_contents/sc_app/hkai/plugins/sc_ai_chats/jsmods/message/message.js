@@ -49,6 +49,14 @@ class _message {
         await this.evt().init();
         await this.act().init();
         await this.req().init();
+
+        // workspace 線 polling 事件 → UI 對賬（chat 卡標記／working 旗標／主按鈕兩態）
+        const message_polling_observer_instance = await this.obs().message_polling_observer();
+        await message_polling_observer_instance.init();
+
+        // workspace 線 message 快照 → 校正訊息卡狀態＋回 ACK（at-least-once）
+        const message_snapshot_observer_instance = await this.obs().message_snapshot_observer();
+        await message_snapshot_observer_instance.init();
     }
 }
 
@@ -136,4 +144,6 @@ class _message_obs_bridge {
     async message_rail_active_observer() { return (await import("./obs/message_rail_active_observer.js")).message_rail_active_observer(); }
     async message_prompt_observer() { return (await import("./obs/message_prompt_observer.js")).message_prompt_observer(); }
     async message_position_keeper() { return (await import("./obs/message_position_keeper.js")).message_position_keeper(); }
+    async message_polling_observer() { return (await import("./obs/message_polling_observer.js")).message_polling_observer(); }
+    async message_snapshot_observer() { return (await import("./obs/message_snapshot_observer.js")).message_snapshot_observer(); }
 }

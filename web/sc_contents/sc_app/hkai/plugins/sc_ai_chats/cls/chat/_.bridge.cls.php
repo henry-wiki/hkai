@@ -27,7 +27,6 @@ class chat_Class
     use resolver\is_valid_chat_sid;
     use resolver\resolve_chat_row;
     use view\render_chat_item;
-    use view\get_chat_item_html;
     use view\render_chat_list;
     use view\render_chat_sidebar;
     use request\chat_item_fetch;

@@ -161,14 +161,41 @@ def update_entry() -> None:
     _ = write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
 
 
+def write_closing_marker() -> None:
+    """寫「收緊工」標記（{WORKER_PROGRAM_NAME}.{pid}.closing）——派工方見到即當本工人已不可派。"""
+    closing_file = get_closing_marker_file()
+
+    with contextlib.suppress(OSError):
+        _ = closing_file.write_text(str(int(time.time())), encoding="utf-8")
+
+
+def remove_closing_marker() -> None:
+    """刪「收緊工」標記（正常退出路徑——同心跳檔一齊清）。"""
+    closing_file = get_closing_marker_file()
+
+    # 判定：檔唔存在 → 無事可做
+    if closing_file.exists() is False:
+        return
+
+    with contextlib.suppress(OSError):
+        _ = closing_file.unlink()
+
+
+def get_closing_marker_file() -> Path:
+    """自己「收緊工」標記路徑（{WORKER_PROGRAM_NAME}.{pid}.closing）。"""
+    return Path(context.PROCESS_DIR) / (identity.WORKER_PROGRAM_NAME + "." + str(process.self_pid()) + ".closing")
+
+
 def remove_heartbeat_file() -> None:
-    """刪自己狀態檔（程序結束——唔留殘檔）。"""
+    """刪自己狀態檔（程序結束——唔留殘檔）＋清「收緊工」標記。"""
     global _heartbeat_entry
 
     # 先停心跳執行緒（唔停 → 刪完佢再寫，殘檔復活）
     _stop_heartbeat_thread()
 
     _heartbeat_entry = None
+
+    remove_closing_marker()
 
     heartbeat_file = _get_heartbeat_file()
 

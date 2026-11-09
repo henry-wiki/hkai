@@ -21,6 +21,7 @@ class view_Class
     use build_response_section;
     use get_agent_response;
     use get_chat_message_slot;
+    use get_message_template_html;
     use render_chat_message_list;
     use render_message_body;
     use get_user_prompt;

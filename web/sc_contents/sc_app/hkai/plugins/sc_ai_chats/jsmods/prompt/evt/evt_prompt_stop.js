@@ -26,8 +26,13 @@ class _evt_prompt_stop {
 
         request_data.message_id = j_reply_message.attr("data-message_id");
 
-        // 判定：冇回覆中 → 唔處理
+        // 判定：冇回覆中 → 空窗期（送出進行中）就記低待停止旗標，否則唔處理
         if (!request_data.message_id) {
+            // 判定：送出仍喺 loading（POST 未返）→ 記旗標，等 prompt_send 回應一到即取消
+            if (jQuery("[data-action='send']").attr("data-state") === "loading") {
+                jQuery(document).data("sc_stop_pending", true);
+            }
+
             return;
         }
 

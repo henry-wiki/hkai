@@ -46,7 +46,21 @@ trait resolve_prompt_from_draft
 
         // 去向（草稿已記錄——後續建對話列／派工都用呢兩項）
         $context["project_id"]   = (int)($draft_meta["project_id"] ?? 0);
-        $context["project_path"] = (string)($draft_meta["project_path"] ?? "");
+        // 路徑以「當前專案列」為真相（草稿可能係舊路徑——專案搬過／路徑改過就唔可以再用舊值）
+        $current_project_row  = sc_ai_projects()->project()->get_project_row($context["project_slug"]);
+        $current_project_path = "";
+
+        // 判定：查得到專案列 → 用當前路徑
+        if ($current_project_row !== null) {
+            $current_project_path = (string)($current_project_row["project_path"] ?? "");
+        }
+
+        // 判定：當前專案列冇路徑（異常）→ 退回草稿值
+        if ($current_project_path === "") {
+            $current_project_path = (string)($draft_meta["project_path"] ?? "");
+        }
+
+        $context["project_path"] = $current_project_path;
 
         // 標題（草稿寫入時已算好——呢度只取）
         $context["chat_title"] = (string)($draft_meta["chat_title"] ?? "");

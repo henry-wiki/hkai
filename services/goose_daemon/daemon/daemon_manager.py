@@ -61,7 +61,7 @@ def _idle_age_sec() -> float:
 
 
 def _exit_when_idle() -> None:
-    """閒置 ≥ IDLE_EXIT_SEC → 連子孫退出。"""
+    """閒置 ≥ IDLE_EXIT_SEC → 先落「收緊工」標記，再連子孫退出。"""
     idle_sec = _idle_age_sec()
 
     # 判定：未夠門檻 → 繼續
@@ -69,6 +69,10 @@ def _exit_when_idle() -> None:
         return
 
     sc_logger.log(f"idle {idle_sec:.0f}s, exit with children")
+
+    # 收工前先落標記：外界（bridge wake）見到即當本 daemon 已不可用 → 即刻拉起新 daemon 接單
+    heartbeat.write_closing_marker()
+
     lifecycle.exit("idle timeout", 0)
 
 
@@ -102,6 +106,8 @@ class daemon_manager_class:
     _instance: "daemon_manager_class | None" = None
     _daemon_conf_data: dict[str, object]
     _daemon_conf_stat: tuple[int, int] | None
+    # 開機時代碼版本
+    _code_stamp_at_start: float = 0.0
 
     def __new__(cls):
         """單例：整個程序只建立一次（若未來動作需要累積狀態，集中在同一實例）。"""

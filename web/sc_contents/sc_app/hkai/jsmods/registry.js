@@ -17,7 +17,6 @@ import { sc_ai_status_bar } from "../plugins/sc_ai_status_bar/jsmods/sc_ai_statu
 import { sc_state_stream } from "../plugins/sc_stream/jsmods/sc_state_stream.js";
 import { sc_stream }     from "./sc_stream/sc_stream.js";
 import { sc_presence }   from "./sc_stream/presence/presence.js";
-import { sc_state_watch }   from "./sc_state_watch/sc_state_watch.js";
 import { sc_console }       from "./sc_console/sc_console.js";
 
 class _registry {
@@ -72,11 +71,6 @@ class _registry {
     // sc_presence（靜態——頁面在線 SSE；開機即需）
     sc_presence() {
         return sc_presence();
-    }
-
-    // sc_state_watch（靜態——狀態看守：值一變即套效果；開機即需）
-    sc_state_watch() {
-        return sc_state_watch();
     }
 
     // sc_console（靜態——全站 console 統一入口；可帶 scope：registry().sc_console("a", "b").log(...)）

@@ -76,8 +76,10 @@ PRESENCE_MAX_CONNECTIONS = 32
 # 心跳間隔（秒——每輪寫狀態檔＋檢查母親／閒置）
 HEARTBEAT_INTERVAL_SEC = 1.0
 
-# 閒置自殺上限（秒——核心行為，唔放 runtime.json；＝3 個 ping 週期）
-IDLE_EXIT_SEC = PRESENCE_PING_SEC * 3
+# 閒置自殺上限（秒——核心行為，唔放 runtime.json；條件＝冇 presence 活動＋冇進行中串流）
+# 為何係 180（本機取向）：bridge 冷啟動 1–2 秒；9 秒等於「每次關頁再開都要冷啟動」——過短
+# 雲端考量：多實例／按量計費應縮短甚至改「請求即喚醒」，唔靠 TTL 保證可用
+IDLE_EXIT_SEC = 180
 
 # ===== agent daemon 喚醒 =====
 

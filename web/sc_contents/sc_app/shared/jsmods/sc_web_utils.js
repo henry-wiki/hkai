@@ -141,6 +141,56 @@ const sc_web_utils = {
 
         return trimmed_number + suffix;
     },
+
+    // 相對時間（12s／5m／3h／2d／1w／6mo／2y——同後端 sc_format_relative_time() 同一階梯）
+    get_format_relative_time(date_text) {
+        const target_time = new Date(String(date_text).replace(" ", "T"));
+        const elapsed_seconds = Math.floor((Date.now() - target_time.getTime()) / 1000);
+
+        // 判定：未夠 1 分鐘 → 秒
+        if (elapsed_seconds < 60) {
+            return elapsed_seconds + "s";
+        }
+
+        const elapsed_minutes = Math.floor(elapsed_seconds / 60);
+
+        // 判定：未夠 1 小時 → 分
+        if (elapsed_minutes < 60) {
+            return elapsed_minutes + "m";
+        }
+
+        const elapsed_hours = Math.floor(elapsed_minutes / 60);
+
+        // 判定：未夠 1 日 → 時
+        if (elapsed_hours < 24) {
+            return elapsed_hours + "h";
+        }
+
+        const elapsed_days = Math.floor(elapsed_hours / 24);
+
+        // 判定：未夠 1 週 → 日
+        if (elapsed_days < 7) {
+            return elapsed_days + "d";
+        }
+
+        const elapsed_weeks = Math.floor(elapsed_days / 7);
+
+        // 判定：未夠 ~6 個月 → 週
+        if (elapsed_days < 180) {
+            return elapsed_weeks + "w";
+        }
+
+        const elapsed_months = Math.floor(elapsed_days / 30);
+
+        // 判定：未夠 2 年 → 月
+        if (elapsed_days < 730) {
+            return elapsed_months + "mo";
+        }
+
+        const elapsed_years = Math.floor(elapsed_days / 365);
+
+        return elapsed_years + "y";
+    }
 };
 
 // 掛全域（既有呼叫點 sc_web_utils.xxx() 零改動）

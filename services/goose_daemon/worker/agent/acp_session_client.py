@@ -155,7 +155,11 @@ def _extract_tool_detail(update: Any) -> dict[str, str]:
     # 輸出摘要（content[] 內 text → 首段、截短）
     output_parts: list[str] = []
 
-    for content_item in (getattr(update, "content", None) or []):
+    # 型別：update 係動態——cast 成 list 迭代（唔改行為）
+    content_items = cast("list[object]", getattr(update, "content", None) or [])
+
+    # 逐個內容塊：抽文字
+    for content_item in content_items:
         content_text = getattr(content_item, "text", "")
 
         # 判定：冇文字內容 → 跳過

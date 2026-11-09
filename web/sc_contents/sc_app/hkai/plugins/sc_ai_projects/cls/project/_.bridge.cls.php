@@ -31,7 +31,6 @@ class project_Class
     use view\project_list_fetch;
     use view\project_item_fetch;
     use view\render_project_item;
-    use view\get_project_item_html;
     use view\render_project_list;
     use view\render_project_sidebar;
 

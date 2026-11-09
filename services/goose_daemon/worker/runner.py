@@ -120,10 +120,16 @@ def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]"
             # 等足 30 秒都冇單＝閒置超時 → 工人自己收工（唔留長駐空殼浪費記憶體）
             except queue.Empty:
                 sc_logger.log("worker idle timeout, exit pid=" + str(process.self_pid()))
+
+                # 收工前先落標記：daemon 派工前見到即當本工人已不可派（同 daemon 層同一做法）
+                heartbeat_worker.write_closing_marker()
+
                 return
 
             # 哨兵（None）＝daemon 主動叫呢條工人收工（現時冇地方 put None——保留做安全出口）
             if msg_conf_path is None:
+                heartbeat_worker.write_closing_marker()
+
                 return
 
             # 載入本張工單語境（msg_conf → message_store 狀態；已終態＝False）
@@ -141,6 +147,10 @@ def run(job_queue: "Queue[str | None]", status_queue: "Queue[dict[str, object]]"
             if job_ok is False:
                 report.job_done(status_queue, process.self_pid(), "failed")
                 sc_logger.log("worker exits after job failure, pid=" + str(process.self_pid()))
+
+                # 收工前先落標記（同 idle 超時同一做法）
+                heartbeat_worker.write_closing_marker()
+
                 return
 
             # 正常完成 → 上報 success，返去等下一張

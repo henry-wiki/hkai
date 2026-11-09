@@ -1,6 +1,6 @@
 // jsmods/sc_stream/message/message.js —— SSE 連線（單例）
 // 職責：start(stream_url, event_names, on_event)——開線；每個事件原樣交 (name, payload) 俾 caller
-//       stop()——關線；done 事件 → 交 caller 後自動關線
+//       stop()——關線（caller 決定；done 唔自動關——對話級線要長開）
 // 設計：唔知 project_slug／message_id（URL 由 caller 砌）；唔改 DOM（渲染交 caller）
 
 class _message_stream {
@@ -98,11 +98,18 @@ class _message_stream {
                 thisObject.on_event(event_name, event_payload);
             }
 
-            // 判定：終態事件 → 關線
-            if (event_name === "done") {
-                thisObject.stop();
-            }
+            // done 唔關線（對話級線——該條訊息完結，線繼續等下條）
         });
+    }
+
+    // 線路仲開住？（readyState OPEN——唔靠「有冇收到幀」判斷）
+    is_open() {
+        // 判定：冇線 → 未開
+        if (this.event_source === null) {
+            return false;
+        }
+
+        return this.event_source.readyState === EventSource.OPEN;
     }
 
     // 停止（清 EventSource；登記除名）

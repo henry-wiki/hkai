@@ -36,9 +36,6 @@ class _bootstrap {
 
         await topnav.init();
 
-        // 狀態看守（根容器開頁即建＋觀察者啟動——零變化都要有容器）
-        await registry().sc_state_watch().init();
-
         const projects = registry().sc_ai_projects();
 
         await projects.init();

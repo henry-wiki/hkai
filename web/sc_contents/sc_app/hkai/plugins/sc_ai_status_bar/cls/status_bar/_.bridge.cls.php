@@ -8,8 +8,6 @@ namespace sc\app\hkai\plugins\sc_ai_status_bar\status_bar;
 
 class status_bar_Class
 {
-    use request\project_status_bar_fetch;
-    use request\chat_status_bar_fetch;
     use state\update;
     use render\render_project_region;
     use render\render_chat_region;

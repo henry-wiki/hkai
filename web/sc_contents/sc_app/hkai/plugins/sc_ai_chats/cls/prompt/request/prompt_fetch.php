@@ -96,6 +96,8 @@ public function prompt_fetch()
     // 新對話／有效對話 → 照渲染
     $composer_html = sc_ai_chats()->prompt()->render_chat_prompt($project_slug, $chat_sid);
 
+    // 模板資料已隨 composer 交付（render_chat_prompt 內隱藏 div）——此處唔再另帶
+
     return sc_response()->json([
         "ok"           => true,
         "html"         => [

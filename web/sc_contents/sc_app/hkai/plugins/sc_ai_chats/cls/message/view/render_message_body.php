@@ -91,6 +91,7 @@ trait render_message_body
                     // 未選對話空狀態（長駐窗口——未選顯示／有對話隱藏；前端只切 hidden 屬性）
                     $outputLines[] = sc_empty_state(hkai()->i18n()->get("empty.start_chat"), true, "sc_thread__empty_state");
                     $outputLines[] = "<div id='sc_scroll_anchor'></div>";
+
                 $outputLines[] = "</div>";
                 // 導航點 rail（右側固定——骨架喺後端；前端只建點／亮燈）
                 $outputLines[] = "<div class='sc_thread__scroll_rail'></div>";

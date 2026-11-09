@@ -17,6 +17,9 @@ class _workspace_stream {
 
         // 每個事件最新一份（遲訂閱者補發用）
         this.last_payloads = {};
+
+        // 事件處理鏈（嚴格 FIFO——每個訂閱者 handler await 完才下一個；幀與幀之間唔會插隊）
+        this.event_chain = Promise.resolve();
     }
 
     // 開線（同一個 project_slug＋chat_sid 已連 → 唔重開）
@@ -49,6 +52,7 @@ class _workspace_stream {
 
         this.bound_event_names = [];
         this.last_payloads = {};
+        this.event_chain = Promise.resolve();
         this.event_source = event_source;
     }
 
@@ -85,6 +89,13 @@ class _workspace_stream {
         };
     }
 
+    // UI 現況收集（ACK 回報用；交標準收集器——本檔唔自己砌結構）
+    async collect_observed(event_name) {
+        const { workspace_observed } = await import("./workspace_observed.js");
+
+        return workspace_observed().collect(event_name);
+    }
+
     // 收到無名幀（事件名單）→ 逐個名自行掛 listener（前端零寫死事件名）
     _on_manifest(event) {
         let manifest = null;
@@ -118,8 +129,9 @@ class _workspace_stream {
         }
     }
 
-    // 具名事件 → 記住最新一份＋派給訂閱者
+    // 具名事件 → 記住最新一份＋派給訂閱者（入嚴格 FIFO 鏈）
     _on_named_event(event_name, event) {
+        const thisObject = this;
         let event_payload = null;
 
         // 判定：解析失敗 → 唔派
@@ -131,11 +143,18 @@ class _workspace_stream {
 
         this.last_payloads[event_name] = event_payload;
 
-        this._dispatch(event_name, event_payload);
+        // 入鏈（逐幀處理完才下一幀——排位／補卡等非同步工作唔會被下一幀插隊）
+        this.event_chain = this.event_chain
+            .then(function () {
+                return thisObject._dispatch(event_name, event_payload);
+            })
+            .catch(function (dispatch_error) {
+                sc_console("workspace", "stream").error("派發失敗", event_name, dispatch_error);
+            });
     }
 
-    // 派發（只派同 event_name 嘅訂閱者）
-    _dispatch(event_name, event_payload) {
+    // 派發（逐個訂閱者 await——確保「先套用、後排位」嘅次序）
+    async _dispatch(event_name, event_payload) {
         // 逐個訂閱者派
         for (let subscriber_index = 0; subscriber_index < this.subscribers.length; subscriber_index++) {
             const subscriber_item = this.subscribers[subscriber_index];
@@ -145,7 +164,8 @@ class _workspace_stream {
                 continue;
             }
 
-            subscriber_item.handler(event_payload);
+            // await：handler 可能係 async（套用快照／補卡）——完成才到下一個
+            await subscriber_item.handler(event_payload);
         }
     }
 }

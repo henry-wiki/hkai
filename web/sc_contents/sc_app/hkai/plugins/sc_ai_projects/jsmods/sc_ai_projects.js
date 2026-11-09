@@ -57,7 +57,6 @@ class _sc_ai_projects {
         this.hooks["load_project_list"] = [];
         this.hooks["load_project_item"] = [];
         this.hooks["switch_project"] = [];
-        this.hooks["obs:project_item_updated"] = [];
         this.hooks["obs:url_changed"] = [];
         this.hooks["load_modal_form"] = [];
 
@@ -93,22 +92,6 @@ class _sc_ai_projects {
                 await registry().sc_ai_projects().obs_url_change();
             }
         });
-
-        // 專案項變動反應（project 域觀察器派 obs:project_item_updated → 逐項抓新內容換入；觀察器住 project/obs/project_item_observer.js）
-        this.register_hook("obs:project_item_updated", {
-            after: async function (affected_project_items) {
-                // 逐粒受變更項 → 取身份（project_slug）→ 抓新內容換入（只換 children——節點身份保留）
-                for (let item_index = 0; item_index < affected_project_items.length; item_index++) {
-                    const affected_project_slug = jQuery(affected_project_items[item_index]).attr("data-project_slug");
-
-                    await project_item_fetch_instance.project_item_fetch(affected_project_slug);
-                }
-
-                // 次序交唯一排位者（內容換完後——最後一下——FLIP 自動調位）
-                project_list_rank_refresh_instance.project_list_rank_refresh();
-            }
-        });
-
     }
 
     // URL 變化註冊（反應＋觀察器——一次性；觀察器只報真變化）
@@ -163,10 +146,6 @@ class _sc_ai_projects {
 
     // 專案側 hook 註冊（清單重繪 hook＋觀察器派信號 → 本機側反應——暫時分組，令 root 好睇）
     async project_hook_register() {
-        // 接駁（project 域 obs 橋——項目觀察器預先攞定；load_project_list hook 重掛用）
-        const project_instance = await this.project();
-        const project_item_observer_instance = await project_instance.obs().project_item_observer();
-
         const j_sidebar_project_list = jQuery(".sc_sidebar--projects");
 
         // 清單重繪 hook 反應（清單 DOM 已換——觀察器要重掛＋激活健康更新）
@@ -177,25 +156,6 @@ class _sc_ai_projects {
             after: async function () {
 
                 registry().sc_loading().stop_loading(j_sidebar_project_list);
-
-                // 項目觀察器重掛（動態——清單加減／重繪後新卡要重新盯；init 內置 disconnect 防重）
-                project_item_observer_instance.init();
-            }
-        });
-
-        // 單項換入 hook 反應（單項內容已換——項目觀察器重掛；同 load_project_list 同形）
-        this.register_hook("load_project_item", {
-            after: async function () {
-                // 項目觀察器重掛（單項內容換咗——重新盯；init 內置 disconnect 防重）
-                project_item_observer_instance.init();
-            }
-        });
-
-        // 切換專案 hook 反應（切換完成——項目觀察器重掛；同 load_project_item 同形）
-        this.register_hook("switch_project", {
-            after: async function () {
-                // 項目觀察器重掛（清單節點郁過——重新盯；init 內置 disconnect 防重）
-                project_item_observer_instance.init();
             }
         });
     }

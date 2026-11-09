@@ -39,6 +39,7 @@ class _queue_list {
 
         j_queue_list.replaceWith(queue_list);
     }
+
 }
 
 export const queue_list = (function (instance) {

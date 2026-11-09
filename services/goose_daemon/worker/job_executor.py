@@ -207,7 +207,6 @@ class job_executor_class:
     def _normalize_error_results(self) -> tuple[bool, str]:
         """錯誤原文存在 → 寫 msg_error.json（卡資料）＋agent-errors.log；回 True＝有錯誤。"""
         import datetime
-        import json as _json
 
         from . import error_text as _error_text
 
@@ -243,7 +242,7 @@ class job_executor_class:
         error_written_flag = message_store().get_message_dir() / "msg_error_written.flag"
 
         if error_written_flag.exists() is False and "[E_" not in existing_result_text:
-            error_written_flag.write_text("1", encoding="utf-8")
+            _ = error_written_flag.write_text("1", encoding="utf-8")
             result_display_text = error_payload["message"].replace("\\n", "\n")
             _ = message_log().append_response_result(0, result_display_text)
 

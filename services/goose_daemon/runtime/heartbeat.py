@@ -39,7 +39,6 @@ _heartbeat_thread = None
 # 停止旗：stop() 用 set() 通知收工；心跳執行緒每輪用 is_set() 檢查（True＝要走）
 _stop_requested = threading.Event()
 
-
 # ===== 對外入口 =====
 
 def init() -> None:
@@ -55,7 +54,6 @@ def init() -> None:
 
     entry_init()
     start()
-
 
 def start() -> None:
     """起背景心跳執行緒（已喺跑 → 唔重複開）。"""
@@ -75,7 +73,6 @@ def start() -> None:
     )
     _heartbeat_thread.start()
 
-
 def stop(reason: str = "") -> None:
     """停止心跳並結束程序：停執行緒 → lifecycle.exit(reason)（清狀態檔＋死亡）。"""
     # 停心跳執行緒（唔停 → 之後收尾刪檔會被佢重寫，殘檔復活）
@@ -83,7 +80,6 @@ def stop(reason: str = "") -> None:
 
     # 收工（lifecycle.exit 會清狀態檔再死）
     lifecycle.exit(reason)
-
 
 def exception_kill() -> None:
     """例外退出（atexit）：記 log → 停心跳（stop 內會刪狀態檔）。"""
@@ -96,7 +92,6 @@ def exception_kill() -> None:
         pass
 
     stop("unexpected interpreter exit")
-
 
 # ===== 狀態檔 =====
 
@@ -125,7 +120,6 @@ def entry_init() -> None:
 
     _ = write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
 
-
 def update_entry() -> None:
     """每拍覆寫 updated_at（檔案新鮮＝在跑）。"""
     global _beat_count
@@ -143,15 +137,38 @@ def update_entry() -> None:
 
     _ = write_json_atomic(_get_heartbeat_file(), _heartbeat_entry)
 
+def write_closing_marker() -> None:
+    """寫「收緊工」標記（{PROGRAM_NAME}.{pid}.closing）——外界見到即當本程序已不可用。"""
+    closing_file = get_closing_marker_file()
+
+    with contextlib.suppress(OSError):
+        _ = closing_file.write_text(str(int(time.time())), encoding="utf-8")
+
+def remove_closing_marker() -> None:
+    """刪「收緊工」標記（正常退出路徑——同心跳檔一齊清）。"""
+    closing_file = get_closing_marker_file()
+
+    # 判定：檔唔存在 → 無事可做
+    if closing_file.exists() is False:
+        return
+
+    with contextlib.suppress(OSError):
+        _ = closing_file.unlink()
+
+def get_closing_marker_file() -> Path:
+    """自己「收緊工」標記路徑（{PROGRAM_NAME}.{pid}.closing）。"""
+    return Path(context.PROCESS_DIR) / (context.PROGRAM_NAME + "." + str(process.self_pid()) + ".closing")
 
 def remove_heartbeat_file() -> None:
-    """刪自己狀態檔（程序結束——唔留殘檔）。"""
+    """刪自己狀態檔（程序結束——唔留殘檔）＋清「收緊工」標記。"""
     global _heartbeat_entry
 
     # 先停心跳執行緒（唔停 → 刪完佢再寫，殘檔復活）
     _stop_heartbeat_thread()
 
     _heartbeat_entry = None
+
+    remove_closing_marker()
 
     heartbeat_file = _get_heartbeat_file()
 
@@ -161,7 +178,6 @@ def remove_heartbeat_file() -> None:
 
     with contextlib.suppress(OSError):
         _ = heartbeat_file.unlink()
-
 
 # ===== 內部 =====
 
@@ -175,7 +191,6 @@ def _exit_if_mother_gone() -> None:
     if process.mother_is_gone():
         lifecycle.exit("mother gone")
 
-
 def _run_heartbeat() -> None:
     """背景心跳：每拍寫狀態檔；母親唔在 → 自殺。"""
     # 每輪先檢查停止旗：True（有人叫收工）→ 跳出迴圈，執行緒結束
@@ -187,7 +202,6 @@ def _run_heartbeat() -> None:
         _exit_if_mother_gone()
 
         time.sleep(context.HEARTBEAT_INTERVAL_SEC)
-
 
 def _stop_heartbeat_thread() -> None:
     """停心跳執行緒（設旗標 → 等佢跳出 → 清引用；自己係心跳執行緒就唔 join）。"""
@@ -207,10 +221,8 @@ def _stop_heartbeat_thread() -> None:
 
     heartbeat_thread.join(timeout=2.0)
 
-
 def _get_heartbeat_file() -> Path:
     """自己狀態檔路徑（{PROGRAM_NAME}.{pid}.json）。"""
     return Path(context.PROCESS_DIR) / (context.PROGRAM_NAME + "." + str(process.self_pid()) + ".json")
-
 
 _ = atexit.register(exception_kill)

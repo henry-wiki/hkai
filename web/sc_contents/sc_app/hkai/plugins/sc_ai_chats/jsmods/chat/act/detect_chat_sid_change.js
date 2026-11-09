@@ -1,5 +1,5 @@
 // jsmods/chat/act/detect_chat_sid_change.js —— 換對話偵測（本機側動作——act 層；一檔一事）
-// 職責：detect_chat_sid_change（前後兩條 URL 嘅 sid 有換＝交 chat 域 act 換主（窗側主鍵＋清單高亮）＋載入訊息窗＋prompt；冇換＝return——shallow 事件唔會嚟到（觀察者已篩））
+// 職責：detect_chat_sid_change（前後兩條 URL 嘅 sid 有換＝載入訊息窗＋prompt＋對齊主鍵／高亮；唔重抓清單；冇換＝return——shallow 事件唔會嚟到（觀察者已篩））
 // 結構同 act 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _detect_chat_sid_change {
@@ -26,24 +26,25 @@ class _detect_chat_sid_change {
             return;
         }
 
-        // 橋接（三邊 instance 先攞齊——先攞後發，同刻出發）
+        // 橋接（兩邊 instance 先攞齊——先攞後發，同刻出發）
         const message_instance = await registry().sc_ai_chats().message();
         const message_list_fetch_instance = await message_instance.act().message_list_fetch();
 
         const prompt_instance = await registry().sc_ai_chats().prompt();
         const prompt_fetch_instance = await prompt_instance.act().prompt_fetch();
 
-        const chat_list_fetch_instance = await chat_instance.act().chat_list_fetch();
-
-        // 三邊同時出發（訊息窗／prompt／對話清單——清單高亮同狀態列跟新 chat_sid 重繪）
+        // 兩邊同時出發（訊息窗／prompt）；清單唔重抓——換對話只係「揀邊個箱」，唔係重載清單
         const message_load_promise = message_list_fetch_instance.message_list_fetch();
         const prompt_load_promise  = prompt_fetch_instance.prompt_fetch();
-        const chat_list_promise    = chat_list_fetch_instance.chat_list_fetch();
 
         // 等齊（各自完成各自收遮罩）
         await message_load_promise;
         await prompt_load_promise;
-        await chat_list_promise;
+
+        // 清單高亮＋窗側主鍵對齊（唔重新抓列表；卡面內容由 workspace 快照校正）
+        const chat_item_switch_instance = await chat_instance.act().chat_item_switch();
+
+        await chat_item_switch_instance.chat_item_switch(curr_chat_sid);
     }
 }
 

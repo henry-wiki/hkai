@@ -16,9 +16,6 @@ class _project_item_insert {
         const project_instance = await registry().sc_ai_projects().project();
         const project_item_fetch_req_instance = await project_instance.req().project_item_fetch();
 
-        // 橋接駁（同域 obs 橋——成功回呼要同步用佢、預先攞定；新項唔掛觀察器＝時間／count 永遠唔更新）
-        const project_item_observer_instance = await project_instance.obs().project_item_observer();
-
         await project_item_fetch_req_instance.project_item_fetch(project_slug, {
             success: async function (response_data) {
                 // 新項（離線解析——先落容器再搬）
@@ -32,17 +29,6 @@ class _project_item_insert {
                 // 落清單尾（次序交後端——報告次序即顯示次序）
                 jQuery(".sc_project_list").append(j_new_item);
 
-                // 補掛觀察器（新項即納入觀察——data-update_time 一變 → 派 obs:project_item_updated → 抓新內容換入）
-                project_item_observer_instance.observe(j_new_item[0]);
-
-                // 新卡插入後按 store 現值補 polling 標記（插入 HTML 冇此 class）
-                const chat_instance             = await registry().sc_ai_chats().chat();
-                const polling_observer_instance = await chat_instance.obs().polling_state_observer();
-                const state_watch_domain        = registry().sc_state_watch().state_watch();
-                const store_instance            = await state_watch_domain.store();
-                const polling_snapshot          = store_instance.snapshot("polling");
-
-                await polling_observer_instance.refresh_project_polling(polling_snapshot.project || {});
             },
             error: function (response_data) {
                 // 失敗 → 唔補（維持現狀——等下一輪再試）

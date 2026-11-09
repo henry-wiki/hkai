@@ -58,11 +58,10 @@ class _project_item_fetch {
 
         return this.project_item_fetch(project_slug, {
             success: async function (response_data) {
-                // 狀態欄專案區跟隨（URL 驅動 fetch——單一來源）
+                // 狀態欄專案區跟隨（由清單 DOM 對齊——零請求；active 卡已喺上面設好）
                 const status_bar_domain = await registry().sc_ai_status_bar().status_bar();
-                const project_fetch_instance = await status_bar_domain.act().project_fetch();
 
-                project_fetch_instance.project_fetch();
+                status_bar_domain.refresh_project_from_list();
 
                 // topnav 路徑列同步（顯示切換後專案路徑——空＝placeholder）
                 const topnav = await registry().sc_topnav();

@@ -114,8 +114,6 @@ class _status_bar_act_bridge {
     async status_item_render()      { return (await import("./act/status_item_render.js")).status_item_render(); }
     async conn_status_item()        { return (await import("./act/conn_status_item.js")).conn_status_item(); }
     async open_project_git_modal()  { return (await import("./act/open_project_git_modal.js")).open_project_git_modal(); }
-    async project_fetch()           { return (await import("./act/project_fetch.js")).project_fetch(); }
-    async chat_fetch()              { return (await import("./act/chat_fetch.js")).chat_fetch(); }
     async git_status_item()         { return (await import("./act/git_status_item.js")).git_status_item(); }
 }
 
@@ -125,8 +123,6 @@ class _status_bar_req_bridge {
     init() {
 
     }
-    async project_status_bar_fetch()   { return (await import("./req/project_status_bar_fetch.js")).project_status_bar_fetch(); }
-    async chat_status_bar_fetch()      { return (await import("./req/chat_status_bar_fetch.js")).chat_status_bar_fetch(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）

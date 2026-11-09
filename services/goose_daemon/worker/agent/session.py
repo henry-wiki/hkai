@@ -14,6 +14,7 @@ import asyncio
 import json
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import TypedDict, cast
 
@@ -48,8 +49,11 @@ class StreamState(TypedDict):
     current_agent_turn_id: str
     first_content_seen: bool
     stream_opened_logged: bool
+    error_mode: bool
     usage: dict[str, object]
     tool_signatures: dict[str, str]
+    tool_seq_by_id: dict[str, int]
+    tool_open_ids: dict[str, bool]
 
 
 def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
@@ -100,9 +104,9 @@ def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
             continue
 
         attachment_original_name = str(attachment_file_item.get("original_filename", "") or attachment_filename)
-        attachment_size_bytes = int(attachment_file_item.get("file_size", 0) or 0)
-        attachment_width = int(attachment_file_item.get("image_width", 0) or 0)
-        attachment_height = int(attachment_file_item.get("image_height", 0) or 0)
+        attachment_size_bytes = int(str(attachment_file_item.get("file_size", 0) or 0))
+        attachment_width = int(str(attachment_file_item.get("image_width", 0) or 0))
+        attachment_height = int(str(attachment_file_item.get("image_height", 0) or 0))
 
         attachment_line = attachment_path + " （" + attachment_original_name
         # 判定：有尺寸 → 補寬高
@@ -188,8 +192,11 @@ def build_callbacks(session_request: SessionRequest) -> SessionCallbacks:
         "current_agent_turn_id":   "",
         "first_content_seen":   False,
         "stream_opened_logged": False,
+        "error_mode":           False,
         "usage":                {},
         "tool_signatures":      {},
+        "tool_seq_by_id":       {},
+        "tool_open_ids":        {},
     }
 
     return {
@@ -281,8 +288,11 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
 
         from .. import error_text as _error_text
 
+        # 型別：error_text 未標註——cast 取回布林函式（唔改行為）
+        looks_like_error = cast("Callable[[str], bool]", _error_text.looks_like_error)
+
         # 判定：已進入錯誤模式，或呢一段似錯誤 → 寫入 error detail（唔當正常回覆）
-        if stream_state.get("error_mode") is True or _error_text.looks_like_error(reply_text) is True:
+        if stream_state.get("error_mode") is True or looks_like_error(reply_text) is True:
             stream_state["error_mode"] = True
             _ = message_log().append_error_detail(reply_text)
             return
@@ -347,7 +357,7 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
             if tool_phase == "start":
                 tool_open_ids[tool_call_id] = True
             else:
-                tool_open_ids.pop(tool_call_id, None)
+                _ = tool_open_ids.pop(tool_call_id, None)
 
         tool_parts: list[str] = []
 
@@ -587,7 +597,7 @@ def _on_cancelled() -> None:
     _ = message_log().append_info_log(EVENT_CANCELLATION_REQUESTED, "Cancelled by user — stopping goose (ACP)")
 
 
-def _close_open_tool_calls(stream_state: dict, status: str) -> None:
+def _close_open_tool_calls(stream_state: StreamState, status: str) -> None:
     """未收尾嘅工具調用補 done 行（goose 對快命令唔發 completed——收尾時自行埋單）。"""
     open_ids = stream_state.setdefault("tool_open_ids", {})
     seq_by_id = stream_state.setdefault("tool_seq_by_id", {})
@@ -606,7 +616,7 @@ def _close_open_tool_calls(stream_state: dict, status: str) -> None:
 
         message_log().append_tool_call(int(stream_state["response_index"]), tool_record)
 
-        open_ids.pop(tool_call_id, None)
+        _ = open_ids.pop(tool_call_id, None)
 
 
 def _append_job_stdout(job_stdout_file: Path, raw_line: str) -> None:

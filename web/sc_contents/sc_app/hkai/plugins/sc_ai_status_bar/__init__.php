@@ -18,5 +18,3 @@ $plugin = $controller->register_plugin(__DIR__, [
 $plugin->setEnabled(true);
 
 // 註冊 request action（status bar 三區動態載入端點——一區一端點；前端 project_fetch／chat_fetch／workspace_fetch 三支各自叫）
-$plugin->add_request_action("project_status_bar_fetch",  __DIR__ . "/request/project_status_bar_fetch.php");
-$plugin->add_request_action("chat_status_bar_fetch",     __DIR__ . "/request/chat_status_bar_fetch.php");

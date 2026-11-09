@@ -55,7 +55,7 @@ class _chat_list_fetch {
 
         return await chat_list_fetch_instance.chat_list_fetch({
             success: async (response_data) => {
-                // 清單套用（diff——remove／insert／replaceWith；次序由 chat_state_observer 重排）
+                // 清單套用（diff——remove／insert／replaceWith；次序由 chat_snapshot_observer 重排）
                 const j_chat_list     = jQuery(".sc_chat_list");
                 const j_sidebar_chats = jQuery(".sc_sidebar--chats");
                 j_chat_list.empty();
@@ -68,15 +68,13 @@ class _chat_list_fetch {
                 // 載入標記（data-loaded 0→1——元素「已載入」語義；用家待未來）
                 j_chat_list.attr("data-loaded", "1");
 
-                // 清單重繪會抹走 polling 標記 → 用 store 现值重套
-                const polling_state_observer_instance = await chat_instance.obs().polling_state_observer();
+                // 清單重繪會抹走 .polling 標記 → 用 workspace 最後一份 polling 快照重套（零請求）
+                const message_instance_polling = await registry().sc_ai_chats().message();
+                const polling_observer_instance = await message_instance_polling.obs().message_polling_observer();
 
-                await polling_state_observer_instance.refresh_polling_cards_from_store();
+                await polling_observer_instance.reapply_from_last();
 
-                // 清單重繪亦會令卡面停留喺後端 HTML 舊值 → 用 store 現值重套（msg_count／lastupdate／status）
-                const chat_state_observer_instance = await chat_instance.obs().chat_state_observer();
-
-                await chat_state_observer_instance.apply_current();
+                // 清單重繪亦會令卡面停留喺後端 HTML 舊值 → 由 workspace 線 chat 快照覆寫
 
                 // 判定：歸檔語境（旗標由後台出）→ 上 .sc_chat_list.archived（卡片區）＋ .sc_sidebar--chats.archived（header 區）
                 if (response_data.is_archive === "1") {

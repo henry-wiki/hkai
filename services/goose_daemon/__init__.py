@@ -68,3 +68,6 @@ from bootstrap.path import REPO_ROOT as ROOT_DIR
 from bootstrap.path_resolve.get_data_dir import get_data_dir
 
 DATA_DIR = Path(get_data_dir())
+
+# 對外匯出（站台根常量）
+__all__ = ["BASE_DIR", "DATA_DIR", "ROOT_DIR", "RUNTIME_DIR"]

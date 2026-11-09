@@ -126,10 +126,6 @@ class sse_state_Class
     public function get_snapshot_changes_for_state($view_id)
     {
         $snapshot_changes = [];
-        $snapshot_changes["chat"]    = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
-        $snapshot_changes["project"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
-        $snapshot_changes["message"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
-        $snapshot_changes["polling"] = ["changed"=>0,"added"=>[],"updated"=>[],"deleted"=>[]];
 
         // 步驟①：刷新快照（state 線四個 target——只寫，唔讀）
         sc_stream()->snapshot()->state()->refresh_snapshot();

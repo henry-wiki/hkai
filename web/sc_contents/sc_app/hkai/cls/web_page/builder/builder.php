@@ -95,53 +95,9 @@ class builder_Class
         return implode("\r\n", $outputLines);
     }
 
-    // <body> 內容（最左功能列＋專案側欄＋對話側欄＋訊息主區——全由各 plugin view 提供；內容由 JS 動態載入）
-    // 狀態看守初始值（頁面唯一一次——polling 現值；之後只由 SSE 變化更新）
-    public function render_state_watch_seed()
-    {
-        $polling_snapshot = sc_stream()->monitor()->polling()->get_live_snapshot();
-
-        $outputLines   = [];
-        $outputLines[] = "<div class='sc_state_watch' hidden>";
-
-        // 判定：未有快照 → 只出空容器
-        if ($polling_snapshot === null) {
-            $outputLines[] = "</div>";
-
-            return implode("\r\n", $outputLines);
-        }
-
-        $polling_state  = $polling_snapshot["state"] ?? [];
-        $polling_entries = $polling_state["entries"] ?? [];
-        $project_counts  = $polling_entries["project"] ?? [];
-        $chat_counts     = $polling_entries["chat"] ?? [];
-
-        $outputLines[] = "    <div data-target='polling'>";
-
-        foreach ($project_counts as $project_slug => $project_count) {
-            $project_count_text = (string)$project_count;
-
-            $outputLines[] = "        <span data-unit='project' data-field='{$project_slug}'>{$project_count_text}</span>";
-        }
-
-        foreach ($chat_counts as $project_slug => $project_chat_counts) {
-            foreach ($project_chat_counts as $chat_sid => $chat_count) {
-                $chat_count_text = (string)$chat_count;
-
-                $outputLines[] = "        <span data-unit='chat' data-field='{$chat_sid}'>{$chat_count_text}</span>";
-            }
-        }
-
-        $outputLines[] = "    </div>";
-        $outputLines[] = "</div>";
-
-        return implode("\r\n", $outputLines);
-    }
-
     public function render_page_body($controller)
     {
         $outputLines   = [];
-        $outputLines[] = $this->render_state_watch_seed();
         $outputLines[] = $this->render_page_rail($controller);
         $outputLines[] = sc_ai_projects()->project()->render_project_sidebar();
         $outputLines[] = sc_ai_chats()->chat()->render_chat_sidebar();

@@ -19,10 +19,14 @@ PROGRAM_LABEL = identity.DAEMON_PROGRAM_LABEL
 HEARTBEAT_INTERVAL_SEC = 1.0
 
 # 暖 worker 閒置自殺（秒——收唔到工單即自己退出；daemon 下一輪清登錄）
-WARM_WORKER_IDLE_EXIT_SEC = 30
+# 為何係 600（本機取向）：本機單人互動開發——停手幾十秒再問係常態；30 秒會頻繁冷啟動（重新 spawn＋握手＝秒級延遲）
+# 雲端考量：多租戶／按量計費／記憶體上限場景，呢個數要按成本重算（可能 30–60 秒，甚至唔保留暖工人）
+WARM_WORKER_IDLE_EXIT_SEC = 600
 
 # 閒置自殺門檻（秒——同 bridge 同名同結構；判斷條件唔同：呢邊＝名冊冇工人）
-IDLE_EXIT_SEC = 30
+# 為何係 1800（本機取向）：daemon 開機成本高（載入 runtime／.env／API key／名冊），本機唔需要頻繁回收
+# 雲端考量：長時間零使用應積極回收；同時要留意「死緊但 pid 仍在」嘅喚醒競態（見 .issues 20261109-bug-worker-idle-suicide-race）
+IDLE_EXIT_SEC = 1800
 
 # 有冇母親？（daemon：有——母親＝bridge；bridge 死 → 自殺）
 NEED_MOTHER = True

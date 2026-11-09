@@ -54,6 +54,25 @@ trait ensure_home_project
         $project_datapairs["project_path"]       = $playground_path;
         $project_datapairs["project_sort_index"] = 1;
 
-        repo_update()->insert_project($project_datapairs);
+        // 判定：並行請求（頁面＋AJAX）可能同時見到「Home 未存在」→ 撞唯一鍵即代表另一方已建立
+        try {
+            repo_update()->insert_project($project_datapairs);
+        } catch (\Throwable $insert_error) {
+            $is_duplicate_key = false;
+            $previous_error   = $insert_error->getPrevious();
+
+            // 判定：底層係 PDOException 且 SQLSTATE 23000 → 唯一鍵衝突
+            if ($previous_error instanceof \PDOException) {
+                $is_duplicate_key = (string)$previous_error->getCode() === "23000";
+            }
+
+            // 判定：唔係唯一鍵衝突 → 原樣拋出（交上層處理）
+            if ($is_duplicate_key === false) {
+                throw $insert_error;
+            }
+
+            // 另一方已建立 → 重跑一次（第二次必走「Home 已存在」分支，順便對齊路徑）
+            $this->ensure_home_project();
+        }
     }
 }

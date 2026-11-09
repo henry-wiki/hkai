@@ -1,6 +1,6 @@
 // plugins/sc_stream/jsmods/sc_state_stream.js —— stream plugin 前端根入口（唯一入口）
 // 用途：registry().sc_state_stream().stream().act().<動作>()（狀態事件套用層）
-// 職責：接收 state_stream／prompt_stream 事件 → 交 act_*_updater 套用到 sc_state_watch
+// 職責：接收 state_stream／prompt_stream 事件 → 交 act_prompt_updater 套用（草稿還原）
 // 契約：1 域（stream）；動作住 stream/stream.js 檔尾（bridge class——每條自載）
 
 import { _domain_hooks } from "../../../jsmods/_common/_domain_hooks.js";

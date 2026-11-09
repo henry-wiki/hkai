@@ -20,7 +20,7 @@ goose session 同步（發問前檢查——entry.execute_job 呼叫）。
 換 model／effort：官方 ACP session/set_config_option（acp_client._apply_config_options——provider／model／thinking_effort）；
     唔再改 goose DB 記錄（session 歷史原樣保留）。
 
-開關：checkpoints 根資料夾（localdb/checkpoints）唔存在＝功能未開——整支跳過（原路徑直去 goose）。
+開關：無（常開）——checkpoints 根資料夾（localdb/checkpoints）唔存在＝當場自動建立；建立失敗＝上層盲捕記 log（fail-open，唔阻斷訊息）。
 異常：一律盲捕記 log（fail-open——唔阻斷訊息；有修改但同步失敗＝唔前進快照，下輪再試）。
 """
 
@@ -61,7 +61,7 @@ class conversation_sync_class:
     # ----------------------------------------------------------
 
     def reconcile_history(self) -> None:
-        """發問前同步對話歷史（資料夾開關 → chat_sid → 讀快照 → 對比 →（有變）重建 → 寫快照）。"""
+        """發問前同步對話歷史（確保資料夾 → chat_sid → 讀快照 → 對比 →（有變）重建 → 寫快照）。"""
         # 語境（msg_conf——execute_job 已載入）
         chat_id         = message_store().get_chat_id()
         chat_sid        = message_store().get_chat_sid()
@@ -71,9 +71,9 @@ class conversation_sync_class:
 
         checkpoints_base_dir = paths.resolve_checkpoints_dir()
 
-        # 判定：checkpoints 根唔存在＝功能未開 → 跳過（唔建立、唔讀寫——原路徑）
+        # 判定：checkpoints 根唔存在 → 當場自動建立（功能常開；建唔到＝上層盲捕記 log，唔阻斷訊息）
         if checkpoints_base_dir.is_dir() is False:
-            return
+            checkpoints_base_dir.mkdir(parents=True, exist_ok=True)
 
         # 判定：冇 chat_sid（msg_conf 未帶——PHP 正常必寫）→ 當錯誤（工單失敗、工人退出）
         if chat_sid == "":
@@ -114,7 +114,7 @@ class conversation_sync_class:
         """全量重寫該對話 session 的訊息（用我方對話——今次問題以外；goose 未建 session＝跳過，唔代佢建）。"""
         self._ensure_sessions_db(project_path)
 
-        session_name = "hkai-chat-" + chat_id
+        session_name = "hkai-" + message_store().get_chat_sid()
         goose_session_db = goose_db(project_path)
         session_id = goose_session_db.find_session_id(session_name)
 

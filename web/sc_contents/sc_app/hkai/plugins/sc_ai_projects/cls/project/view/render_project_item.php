@@ -34,6 +34,23 @@ trait render_project_item
             $archived_class = " sc_project_card--archived";
         }
 
+        // 專案路徑存在？唔存在 → 卡面紅色＋名稱前感嘆號（路徑係 agent 工作目錄，唔存在就一定跑唔到）
+        $project_path = (string)($project_item["project_path"] ?? "");
+        $project_path_exists = false;
+
+        // 判定：有路徑且目錄真實存在 → 有效
+        if ($project_path !== "" && is_dir($project_path) === true) {
+            $project_path_exists = true;
+        }
+
+        $invalid_class = "";
+
+        // 判定：路徑唔存在 → 加無效樣式
+        if ($project_path_exists === false) {
+            $invalid_class = " sc_project_card--invalid";
+        }
+
+
 
         // 專案連結（含歸檔語境形——URL 知識住 build_project_url；歸檔＝/archive@<project_slug>/）
         $project_link = $this->build_project_url($project_slug, $project_status);
@@ -88,7 +105,7 @@ trait render_project_item
         }
 
         $item_attr = [];
-        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}'";
+        $item_attr[] = "class='sc_project_card{$active_class}{$archived_class}{$home_class}{$invalid_class}'";
         $item_attr[] = "href='{$project_link}'";
         $item_attr[] = "data-project_slug='{$project_segment}'";
         $item_attr[] = "data-status='{$project_status}'";
@@ -105,7 +122,8 @@ trait render_project_item
         $content = [];
         $content[] = "<a {$item_attr}>";
         $content[] = "<div class='sc_project_card__primary'>";
-        $content[] = "<span class='sc_project_card__name' title='" . $project_name . "'>" . $project_name_html . "</span>";
+        $content[] = "<span class='sc_project_card__invalid_mark' title='專案路徑不存在'>!</span>";
+$content[] = "<span class='sc_project_card__name' title='" . $project_name . "'>" . $project_name_html . "</span>";
         $content[] = "<span class='sc_project_card__updated'>" . $project_updated_time . "</span>";
         // 判定：非 Home 卡 → 出編輯掣（齒輪——卡上單一入口；歸檔同未歸檔一致——還原唔喺卡面）
         if ($is_home_card === false) {

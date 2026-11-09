@@ -81,7 +81,7 @@ class chat_db_class(db_connection_class):
         try:
             tool_rows = self.query_all(
                 "SELECT message_id, tool_name, input_text, status FROM message_tool_call"
-                " WHERE chat_id = ? AND message_id < ? ORDER BY message_id, response_index, seq",
+                + " WHERE chat_id = ? AND message_id < ? ORDER BY message_id, response_index, seq",
                 (int(chat_id), int(message_id)),
             )
         except Exception:

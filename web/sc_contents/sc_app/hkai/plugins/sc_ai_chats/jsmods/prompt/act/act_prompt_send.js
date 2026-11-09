@@ -26,23 +26,20 @@ class _act_prompt_send {
             return;
         }
 
-        // 撳送出即入 loading（flush／提交期間都有反饋）
-        ui_context.j_send_button.attr("data-state", "loading");
+        // *** : 步驟 1——先讀走文字（只讀一次）；必須早過畫面清空，否則 before_send 清空之後就冇字可送
+        // 送出即擷取最終文字（唔再等 draft_save_meta 往返——文字隨 prompt_send 一併送，後端寫入 meta）
+        const prompt_text_snapshot = String(ui_context.j_dock_textarea.val() || "");
 
-        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
-        prompt_send_button_state_instance.refresh();
-
-        // 最後一次草稿保存（清走未到期節流＋即寫一次——後端只憑 meta 取內容）
-        const prompt_draft_save_instance = await prompt_instance.act().prompt_draft_save();
-        await prompt_draft_save_instance.flush_prompt_draft();
-
+        request_data.prompt_text       = prompt_text_snapshot;
         request_data.attachment_files = prompt_attach_instance.get_files();
 
         const thisObject = this;
 
+        // *** : 步驟 2——最後才發 HTTP；所以一切畫面反應交 before_send 回呼，唔可以等 handler 之後先做
         return prompt_send_instance.prompt_send(request_data, {
+            // 送出前：畫面即時反應（loading／清空／樂觀 chip＋氣泡／跳底）——統一交 before_send
             before_send: function () {
-                thisObject.prompt_before_send(ui_context, request_data);
+                thisObject.prompt_before_send(ui_context, request_data, prompt_text_snapshot);
             },
             // 已收下（正常送出／RECOVERABLE 已記錄）——輸入框維持清空；錯誤原因在訊息泡泡內呈現
             success: function (response_data) {
@@ -55,18 +52,66 @@ class _act_prompt_send {
         });
     }
 
-    // 發送前程序：按鈕 loading（輸入保留——收下後才清，避免空白草稿搶先覆蓋）
-    async prompt_before_send(ui_context, request_data) {
+    // 發送前程序（畫面即時反應一次做齊：loading／清空／樂觀 chip＋氣泡／跳底）
+    async prompt_before_send(ui_context, request_data, prompt_text_snapshot) {
         const j_send_button = ui_context.j_send_button;
 
+        // *** : 步驟 1——先落 in-flight 旗標；必須早過下一步 refresh，否則 refresh 讀到舊狀態
         j_send_button.attr("data-state", "loading");
 
+        // *** : 步驟 2——交唯一決策者重算按鈕兩態（Send↔Stop）；唔自己寫判斷
         // 撳發送即刷新主按鈕（loading＝進行中 → Stop 即出；唯一決策者判）
-        // 橋接駁（同域 act——新方式）
         const prompt_instance = await registry().sc_ai_chats().prompt();
         const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
 
         prompt_send_button_state_instance.refresh();
+
+        // *** : 步驟 3——立即清空輸入；使用者感知延遲就係呢一步，後台工作一律唔准阻塞畫面
+        // 立即清空輸入（後台工作唔再阻塞畫面；失敗時交 prompt_send_error 還原）
+        ui_context.j_dock_textarea.val("");
+
+        // *** : 步驟 4——判排隊只讀畫面真旗標（data-working）；忙碌才插樂觀 chip（模板取 composer 內隱藏 div）
+        // 判定：本對話已有回覆進行中 → 今次會入等待列 → 先插樂觀 chip（回應一到由後端整排替換）
+        const is_chat_busy = jQuery(".sc_thread__viewport .message_wrapper[data-working='1']").length > 0;
+
+        if (is_chat_busy) {
+            const queue_template_b64 = jQuery("[data-tpl='queue_list_template']").text();
+            const queue_template_bytes = Uint8Array.from(window.atob(queue_template_b64), (char_item) => char_item.charCodeAt(0));
+            const queue_template_html = new TextDecoder("utf-8").decode(queue_template_bytes);
+            const j_optimistic_chip = jQuery(queue_template_html);
+
+            j_optimistic_chip.attr("data-optimistic", "1");
+            j_optimistic_chip.find(".queue_text").text(prompt_text_snapshot.trim());
+
+            // 空容器常駐（hidden）→ 解除隱藏才見到 chip
+            jQuery(".sc_composer__queue_list").removeAttr("hidden").append(j_optimistic_chip);
+        }
+
+        // *** : 步驟 5——樂觀氣泡：同一份後端骨架（隱藏 div 內 base64），打完即見自己句字；data-optimistic 做日後移除／轉紅把手
+        // 樂觀插入：取隱藏 div 的 base64 模板（唯一真相）→ 即時顯示自己打嘅字（回應一到換成真氣泡）
+        const message_instance = await registry().sc_ai_chats().message();
+        const message_template_b64 = jQuery("[data-tpl='message_template']").text();
+        const message_template_bytes = Uint8Array.from(window.atob(message_template_b64), (char_item) => char_item.charCodeAt(0));
+        const message_template_html = new TextDecoder("utf-8").decode(message_template_bytes);
+        const j_optimistic_message = jQuery(message_template_html);
+
+        j_optimistic_message.attr("data-optimistic", "1");
+        j_optimistic_message.find("[data-text='user_content']").text(prompt_text_snapshot.trim());
+
+        const j_viewport = jQuery(".sc_thread__viewport");
+        const j_scroll_anchor = j_viewport.children("#sc_scroll_anchor");
+
+        // 判定：有錨點 → 插錨點前（同真氣泡同一位置規則）
+        if (j_scroll_anchor.length) {
+            j_optimistic_message.insertBefore(j_scroll_anchor);
+        } else {
+            j_viewport.append(j_optimistic_message);
+        }
+
+        // *** : 步驟 6——跳底最後做；氣泡已入 DOM 才跳得正確
+        const message_scroll_instance = await message_instance.act().message_scroll_to_bottom();
+
+        message_scroll_instance.message_scroll_to_bottom(true);
     }
 
     // 本機側成功程序：已收下訊息入畫面（html.new_message 氣泡／html.queue_list 整排替換／is_new_chat_row 換 URL）＋send 按鈕復原
@@ -86,7 +131,22 @@ class _act_prompt_send {
         // 本次請求新建對話（後端事實 is_new_chat_row）→ 換 URL 入該對話（shallow——只追上畫面唔導航：唔觸發 URL 變化鏈、唔重載；URL 仍係唯一真相、重載後仍停在該對話）
         if (response_data.is_new_chat_row) {
             sc_url.shallow_replace_url(response_data.chat_url);
+
+            const chat_instance_new_row = await registry().sc_ai_chats().chat();
+
+            // 新對話卡只有後端一份渲染源 → 重抓一次清單（唔自己砌卡）
+            const chat_list_fetch_instance = await chat_instance_new_row.act().chat_list_fetch();
+
+            await chat_list_fetch_instance.chat_list_fetch();
+
+            // 新卡入場 → 對齊窗側主鍵＋清單高亮（chat_item_switch 係唯一對齊路徑）
+            const chat_item_switch_instance = await chat_instance_new_row.act().chat_item_switch();
+
+            await chat_item_switch_instance.chat_item_switch(chat_instance_new_row.get_chat_sid());
         }
+
+        // 真氣泡入場前，先移除樂觀臨時氣泡（避免重複顯示同一句）
+        jQuery(".sc_thread__viewport .message_wrapper[data-optimistic='1']").remove();
 
         // 新訊息模板（後端渲染——insert；與重載時 fetch 同一渲染源——先清空狀態再插，同 message_list_fetch 同一條路）
         if (result_html.new_message) {
@@ -145,10 +205,22 @@ class _act_prompt_send {
         const message_instance_stream = await registry().sc_ai_chats().message();
         const message_stream_instance = await message_instance_stream.act().message_stream();
 
-        await message_stream_instance.open(response_data.project_slug, response_data.chat_sid, response_data.prompt_id, 0);
+        await message_stream_instance.open(response_data.project_slug, response_data.chat_sid);
 
         // 派發 prompt_sent hook（after 相位——已收下；現時零 listener）
         registry().sc_ai_chats().execute_hook_after("prompt_sent", response_data);
+
+        // 判定：送出期間曾撳停止（空窗期）→ 訊息一到手即發取消（B 方案配套）
+        if (jQuery(document).data("sc_stop_pending")) {
+            jQuery(document).data("sc_stop_pending", false);
+
+            const prompt_stop_act_instance = await prompt_instance.act().prompt_stop();
+
+            await prompt_stop_act_instance.prompt_stop(
+                { message_id: response_data.message_id },
+                { j_stop_button: jQuery("[data-action='stop']"), j_dock_textarea: ui_context.j_dock_textarea }
+            );
+        }
     }
 
     // 未收下（FATAL／網路失敗——後端不記錄）：按鈕對賬＋還原輸入＋提示（queue＝warning popup；其餘＝error modal）
@@ -165,11 +237,91 @@ class _act_prompt_send {
         // 出清 in-flight 標記（loading 完結——失敗唔可以扮「queued」；兩態交唯一決策者判）
         j_send_button.removeAttr("data-state");
 
-        // 恢復 textarea 內容（沒送出去——不清空）
+        // 失敗 → 保留樂觀氣泡，標記 failed（畫面轉紅）；後端冇記錄 → 重載頁面即消失
+        const j_optimistic_message = jQuery(".sc_thread__viewport .message_wrapper[data-optimistic='1']");
+
+        // 失敗 → 移除樂觀排隊 chip（否則會殘留一個假排隊項目）
+        jQuery(".sc_composer__queue_list .queue_item[data-optimistic='1']").remove();
+
+        // 恢復 textarea 內容（沒送出去——不清空；用戶可重試）
         j_dock_textarea.val(content);
 
         // 按鈕對賬（恢復內容之後——重算先睇到真狀態；同步 send／stop）
         jQuery("#sc_input").trigger("input");
+
+        // 標準欄位錯誤：逐欄紅框＋訊息（後端 errors＝{field_key:{message,code}}）
+        const error_map = {};
+
+        // 判定：後端有帶 errors → 收成 {field: message}
+        if (error_result.errors) {
+            const error_field_list = Object.keys(error_result.errors);
+
+            for (let error_index = 0; error_index < error_field_list.length; error_index++) {
+                const error_field = error_field_list[error_index];
+                const error_entry = error_result.errors[error_field] || {};
+
+                error_map[error_field] = String(error_entry.message || "");
+            }
+        }
+
+        // 判定：有欄位錯誤 → 套落 composer（冇對應欄位會自然略過）
+        if (Object.keys(error_map).length > 0) {
+            shared.sc_web_utils().apply_form_errors(jQuery(".sc_composer"), error_map);
+        }
+
+        // 失敗氣泡收尾（狀態 failed＝紅色 �� 標記；後端冇記錄——重載即消失）
+        if (j_optimistic_message.length > 0) {
+            j_optimistic_message.attr("data-status", "failed");
+            j_optimistic_message.attr("data-working", "0");
+
+            const j_agent_message = j_optimistic_message.find(".agent_message");
+
+            // 判定：有 agent 槽 → 三段表達（標題／原因／欄位錯誤／提示）；modal 照舊保留
+            if (j_agent_message.length > 0) {
+                j_agent_message.empty();
+
+                const error_title   = String(error_result.title || "");
+                const error_message = String(error_result.message || error_result.error || "");
+                const error_hint    = String(error_result.hint || "");
+
+                const j_error_box = jQuery("<div class='optimistic_error'></div>");
+                j_error_box.attr("data-error_code", String(error_result.code || ""));
+
+                // 判定：有標題 → 一行粗體
+                if (error_title !== "") {
+                    j_error_box.append(jQuery("<div class='optimistic_error__title'></div>").text(error_title));
+                }
+
+                // 判定：有原因 → 一行細字
+                if (error_message !== "") {
+                    j_error_box.append(jQuery("<div class='optimistic_error__message'></div>").text(error_message));
+                }
+
+                // 判定：有欄位錯誤 → 逐項列點（field_key：訊息）
+                const error_field_list = Object.keys(error_result.errors || {});
+
+                if (error_field_list.length > 0) {
+                    const j_field_list = jQuery("<ul class='optimistic_error__fields'></ul>");
+
+                    for (let error_index = 0; error_index < error_field_list.length; error_index++) {
+                        const error_field = error_field_list[error_index];
+                        const error_entry = error_result.errors[error_field] || {};
+                        const error_field_message = String(error_entry.message || error_entry || "");
+
+                        j_field_list.append(jQuery("<li></li>").text(error_field + "：" + error_field_message));
+                    }
+
+                    j_error_box.append(j_field_list);
+                }
+
+                // 判定：有提示 → 一行細字（可做咩）
+                if (error_hint !== "") {
+                    j_error_box.append(jQuery("<div class='optimistic_error__hint'></div>").text(error_hint));
+                }
+
+                j_agent_message.append(j_error_box);
+            }
+        }
 
         // 判定：等待上限（後台拒收——warning popup 即可；文案＝後台帶返）
         if (error_result.code === "E_QUEUE_LIMIT") {

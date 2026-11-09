@@ -9,7 +9,7 @@ namespace sc\app\hkai\plugins\sc_stream\snapshot\state;
 class state_Class
 {
     // 本線監視 target 清單（state 線四個——git 交 workspace_stream）
-    public $snapshot_targets = ["chat", "project", "message", "polling"];
+    public $snapshot_targets = [];
 
     private static $instance = null;
 
@@ -30,13 +30,7 @@ class state_Class
     // 初始化快照本體（頁面載入——逐個 target 只寫，唔讀）
     public function init_snapshot()
     {
-        // 逐個 target 初始化（各 target 自己 is_ready 判斷）
-        sc_stream()->monitor()->chat()->init_snapshot();
-        sc_stream()->monitor()->project()->init_snapshot();
-        sc_stream()->monitor()->polling()->init_snapshot();
-
-        // message：必須有 chat_sid（is_ready() 判斷；冇 → 跳過）
-        sc_stream()->monitor()->message()->init_snapshot();
+        // state 線唔再初始化任何 target：chat／project／message／polling 一律由 bridge workspace_stream 推（單一來源）
 
     }
 
@@ -51,10 +45,6 @@ class state_Class
     {
         $target_states = [];
 
-        $target_states["chat"]    = $this->get_ready_target_snapshot("chat");
-        $target_states["project"] = $this->get_ready_target_snapshot("project");
-        $target_states["message"] = $this->get_ready_target_snapshot("message");
-        $target_states["polling"] = $this->get_ready_target_snapshot("polling");
 
         return $target_states;
     }
@@ -136,9 +126,5 @@ class state_Class
             return;
         }
 
-        sc_stream()->monitor()->chat()->sync_snapshot_to_view($view_id);
-        sc_stream()->monitor()->project()->sync_snapshot_to_view($view_id);
-        sc_stream()->monitor()->polling()->sync_snapshot_to_view($view_id);
-        sc_stream()->monitor()->message()->sync_snapshot_to_view($view_id);
     }
 }

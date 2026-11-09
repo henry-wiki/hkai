@@ -84,13 +84,13 @@ class _chat {
         await this.act().init();
         await this.req().init();
 
-        // 向 sc_state_watch 登記 polling 通知（收到「有變」自行掃描）
-        const polling_state_observer_instance = await this.obs().polling_state_observer();
-        await polling_state_observer_instance.init();
+        // workspace 線 chat 快照 → 整份套用＋回 ACK（at-least-once）
+        const chat_snapshot_observer_instance = await this.obs().chat_snapshot_observer();
+        await chat_snapshot_observer_instance.init();
 
-        // chat state 唯一消費者（新增／消失／換卡都由 state 通知帶動）
-        const chat_state_observer_instance = await this.obs().chat_state_observer();
-        await chat_state_observer_instance.init();
+        // 對話清單排位（訂閱同一條 chat 事件——套用完之後按 data-update_time 重排）
+        const chat_list_rank_observer_instance = await this.obs().chat_list_rank_observer();
+        await chat_list_rank_observer_instance.init();
     }
 
 }
@@ -140,11 +140,9 @@ class _chat_act_bridge {
     async chat_restore() { return (await import("./act/chat_restore.js")).chat_restore();      }
     async chat_delete() { return (await import("./act/chat_delete.js")).chat_delete();         }
     async chat_card_move_to_top() { return (await import("./act/chat_card_move_to_top.js")).chat_card_move_to_top(); }
-    async chat_item_fetch() { return (await import("./act/chat_item_fetch.js")).chat_item_fetch(); }
-    async chat_item_insert() { return (await import("./act/chat_item_insert.js")).chat_item_insert(); }
-    async chat_item_remove() { return (await import("./act/chat_item_remove.js")).chat_item_remove(); }
     async chat_item_switch() { return (await import("./act/chat_item_switch.js")).chat_item_switch(); }
     async chat_list_fetch() { return (await import("./act/chat_list_fetch.js")).chat_list_fetch(); }
+    async chat_item_fetch() { return (await import("./act/chat_item_fetch.js")).chat_item_fetch(); }
     async chat_start_new() { return (await import("./act/chat_start_new.js")).chat_start_new(); }
     async detect_chat_list_context_change() { return (await import("./act/detect_chat_list_context_change.js")).detect_chat_list_context_change(); }
     async detect_chat_sid_change() { return (await import("./act/detect_chat_sid_change.js")).detect_chat_sid_change(); }
@@ -161,8 +159,8 @@ class _chat_req_bridge {
     async chat_archive() { return (await import("./req/chat_archive.js")).chat_archive();      }
     async chat_restore() { return (await import("./req/chat_restore.js")).chat_restore();      }
     async chat_delete() { return (await import("./req/chat_delete.js")).chat_delete();         }
-    async chat_item_fetch() { return (await import("./req/chat_item_fetch.js")).chat_item_fetch(); }
     async chat_list_fetch() { return (await import("./req/chat_list_fetch.js")).chat_list_fetch(); }
+    async chat_item_fetch() { return (await import("./req/chat_item_fetch.js")).chat_item_fetch(); }
 }
 
 // obs（DOM 觀察器——變化派 hook 信號；唔判斷）
@@ -170,7 +168,7 @@ class _chat_obs_bridge {
     constructor() {}
     async page_loaded_observer() { return (await import("./obs/page_loaded_observer.js")).page_loaded_observer(); }
     async url_changed_observer() { return (await import("./obs/url_changed_observer.js")).url_changed_observer(); }
-    async polling_state_observer() { return (await import("./obs/polling_state_observer.js")).polling_state_observer(); }
     async chat_card_observer() { return (await import("./obs/chat_card_observer.js")).chat_card_observer(); }
-    async chat_state_observer() { return (await import("./obs/chat_state_observer.js")).chat_state_observer(); }
+    async chat_snapshot_observer() { return (await import("./obs/chat_snapshot_observer.js")).chat_snapshot_observer(); }
+    async chat_list_rank_observer() { return (await import("./obs/chat_list_rank_observer.js")).chat_list_rank_observer(); }
 }
