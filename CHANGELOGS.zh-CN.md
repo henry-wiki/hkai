@@ -6,24 +6,33 @@
 
 ### 新增
 
-- 内置 Python 3.13（`execute/python313`），含 pip 与服务依赖（FastAPI、Uvicorn、pydantic、psutil、python-dotenv）。
-- 内置 OCR：OpenCV、NumPy、Pillow、RapidOCR——没有系统 Python 也能做图片文字识别。
-- 运行期设置写入 `<data>/config/httpd-runtime.conf`，不再写入程序目录。
-- 供应商 API key 统一存放 `<data>/config/api_keys.json`——设置页与引擎读写同一份，界面一律以遮罩显示（`**************` 加末 4 位）。
-- 全界面多语言：PHP 与 JavaScript 每一句用户可见文字都由语言字典提供；繁体中文／英文两份 key 完全一致。
-- 安装向导显示安装位置、版本／BUILD，以及每一步的目标文件。
+- 数据根单一入口：数据库、设置、供应商 key、日志、playground、临时文件全部经同一个解析器（PHP `sc_data_path`、Python `bootstrap.path_resolve`），只读安装不会再漂移到第二个数据位置。
+- `<data>/config/api_keys.json` 是供应商 key 唯一存放处：设置页写入、引擎读取同一个文件。
+- `<data>/config/settings.json` 存放界面设置（语言、时区），不再写入 `.env`。
+- 内置 Python 3.13（`execute/python313`）与 OCR 组合（OpenCV、NumPy、Pillow、RapidOCR）——无需系统 Python。
+- 全界面多语言：PHP 视图、错误信息、JS 提示全部由语言字典提供；繁中与英文 key 集完全对齐。
+- 安装向导显示安装位置、版本／BUILD 标记，以及每一步的目标文件。
+- 开页自检（preflight）：每次加载检查可重算的值（例如 Home 项目路径），发现过期即就地修正；每条检查幂等、异常不会阻塞页面。
+- 供应商错误直接显示在回复中：异常归入 `E_*` 分类（`E_AUTH`、`E_RATE_LIMIT`…），并以白话说明需要修什么（不写死任何供应商名）。
+- `.deploy` 文件夹：部署清单（`.includes`／`.excludes`／`.mkdirs`）＋`github\\assets` 母本与规格，部署可重现而不靠人手。
 
 ### 变更
 
-- 数据根判断顺序：`HKAI_DATA_DIR` → 站点 `data/`（已有数据库时）→ `%LOCALAPPDATA%\seacorner\hkai\data`。
-- Apache 日志与 PID 文件改放 `<data>/logs/`，不再放在 `execute/bin/apache-*/logs/`。
-- Launcher 与运行时检查优先使用内置 Python；`.env` 的 `python_executable` 仍可覆盖。
-- LocalAppData 探测增加多重 fallback（环境变量／运行账户），FastCGI 与 launcher 解析到同一路径。
-- 随产品附带的 `.env` 只含相对机器路径，程序永不写入；所有可变状态移入数据根（数据库版本标记 `<data>/localdb/DB.VERSION`、设置 `<data>/config/settings.json`、密钥 `<data>/config/api_keys.json`、日志、playground）。
-- 所有路径一律经同一个数据根入口解析——只读安装目录不会再悄悄走第二条路、分裂出另一个数据位置。
+- 通道后缀跟现行域名（`.dev.internal` → `-dev`、`.staging.internal` → `-staging`；production 用基底 `data`），PHP 与 Python 计算出同一数据根。
+- bridge 启动确认由等 45 秒缩短至最多 6 秒。
+- Home 项目路径永远对齐 `<data_dir>/playground`；数据库旧路径自动校正。
+- origin 白名单改为整份覆写（每次开页／启动 server 以本次来源重写），不再累积旧端口。
+- 供应商模型更新直接写入 `<data>/providers/model_store`（读取仍以 override 层优先）。
+- 安装向导：移除失效安装步与两个过时检查（mod_rewrite、FcgidMaxRequestLen）；python／goose／env 改为纯检查项。
+- SSE 重连：每次开线重置本页 view 基准，下一 tick 全量补，换线不会再让 polling 卡住。
+- prompt 验证跟模型能力（推理等级、上下文长度）；检测项目不再改写 URL。
+- bridge 工作目录改到 `<data>/tmp`，运行期源码目录零写入。
+- 后台服务共用同一份日志实现（`bootstrap/sc_logger.py`），统一轮替与存放于 `<data>/logs`。
 
 ### 移除
 
-- 不再要求用户手动安装 Python 3.13。
-- 运行期不再写入程序目录（支持只读安装）。
-- `.env.example` 模板——发布包已附带可用的 `.env`，向导也不再创建或迁移环境文件。
+- 运行期写入应用程序文件夹（现支持只读安装）。
+- 运行期写入 `.env`，以及 `.env.example`／`.env.package` 模板——发布只带一份全相对路径的 `.env`。
+- 手动安装 Python 3.13 的要求。
+- `SKIP_MODEL_CHECK` 测试开关——模型存在性始终检查。
+- 各服务各自一份的 logger 与 settings／env 读取器（现统一一份实现）。
