@@ -65,7 +65,7 @@ class server_port_Class
     public function __construct()
     {}
 
-    // 隨機揀一個可用埠（設定表 → 候選清單 → 排除封鎖／佔用 → 抽一個；0＝冇候選）
+    // 隨機揀一個可用埠（設定表 → 候選清單 → 排除封鎖／佔用 → 真 bind 驗證 → 抽一個；0＝冇候選）
     public function find_available_port()
     {
         $listening_ports = $this->port_platform()->get_listening_ports();
@@ -89,9 +89,23 @@ class server_port_Class
             return 0;
         }
 
-        $random_index = random_int(0, count($free_port_candidates) - 1);
+        shuffle($free_port_candidates);
 
-        return (int)$free_port_candidates[$random_index];
+        // 逐個候選試真 bind（Windows 保留埠段冇 listener 但 bind 會被拒——只查 listener 會漏）
+        foreach ($free_port_candidates as $free_port_candidate_item) {
+            $bind_socket = @stream_socket_server("tcp://127.0.0.1:" . $free_port_candidate_item, $bind_error_code, $bind_error_message);
+
+            // 判定：bind 失敗（保留埠／被佔用）→ 試下一個
+            if ($bind_socket === false) {
+                continue;
+            }
+
+            fclose($bind_socket);
+
+            return (int)$free_port_candidate_item;
+        }
+
+        return 0;
     }
 
     // 由設定表砌候選埠（"6200,6300"＝範圍；"6578"＝單一；再扣九組不可用埠）
@@ -103,7 +117,7 @@ class server_port_Class
 
         // 判定：未設定 → 用預設整段
         if (is_array($port_ranges) === false || count($port_ranges) < 1) {
-            $port_ranges = ["6001,6999"];
+            $port_ranges = ["13001,13159", "13225,13399", "13401,13719"];
         }
 
         $port_candidates = [];

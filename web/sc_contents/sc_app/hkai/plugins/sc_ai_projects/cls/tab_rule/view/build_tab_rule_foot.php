@@ -18,7 +18,7 @@ trait build_tab_rule_foot
 
         $reset_wrapper   = [];
         $reset_wrapper[] = "<div class='sc_btn_wrapper'>";
-        $reset_wrapper[] = "<button class='project_modal_btn btn_item' data-btn='reset_tab_rule' data-confirm_msg='" . sc_html_encode($reset_confirm_msg) . "' data-confirm_msg_second='" . sc_html_encode($reset_confirm_msg_second) . "'>重設</button>";
+        $reset_wrapper[] = "<button class='project_modal_btn btn_item' data-btn='reset_tab_rule' data-confirm_msg='" . sc_html_encode($reset_confirm_msg) . "' data-confirm_msg_second='" . sc_html_encode($reset_confirm_msg_second) . "'>" . hkai()->i18n()->get("common.reset") . "</button>";
         $reset_wrapper[] = "</div>";
         $button_lines[]  = implode("\r\n", $reset_wrapper);
 
@@ -27,7 +27,7 @@ trait build_tab_rule_foot
 
         $save_wrapper   = [];
         $save_wrapper[] = "<div class='sc_btn_wrapper'>";
-        $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='save_tab_rule' data-confirm_msg='" . sc_html_encode($save_confirm_msg) . "'>儲存</button>";
+        $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='save_tab_rule' data-confirm_msg='" . sc_html_encode($save_confirm_msg) . "'>" . hkai()->i18n()->get("common.save") . "</button>";
         $save_wrapper[] = "</div>";
         $button_lines[] = implode("\r\n", $save_wrapper);
 

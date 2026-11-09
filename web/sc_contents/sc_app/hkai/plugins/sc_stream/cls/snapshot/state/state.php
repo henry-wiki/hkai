@@ -72,6 +72,27 @@ class state_Class
         return sc_stream()->monitor()->get_target_snapshot($target_name);
     }
 
+    // 清本頁已見版本（開線／重連用——清走基準，下一 tick 全部當新增，全量補一次）
+    // 上游：sse_state::run_state_stream()（每次開線）
+    // 下游：snapshot()->get_snapshot_view_file()（逐 target 刪檔）
+    public function reset_view_snapshot_states($view_id)
+    {
+        // 判定：冇 view id → 唔做
+        if ($view_id === "") {
+            return;
+        }
+
+        // 逐個 target 刪本頁基準檔
+        foreach ($this->snapshot_targets as $target_name) {
+            $view_file = sc_stream()->snapshot()->get_snapshot_view_file($target_name, $view_id);
+
+            // 判定：檔案存在 → 刪（唔存在＝零動作）
+            if (is_file($view_file) === true) {
+                @unlink($view_file);
+            }
+        }
+    }
+
     // 讀本頁已見版本（五個 state target——view/<target>/<view_id>.json → {target: state}）
     public function get_view_snapshot_states($view_id)
     {

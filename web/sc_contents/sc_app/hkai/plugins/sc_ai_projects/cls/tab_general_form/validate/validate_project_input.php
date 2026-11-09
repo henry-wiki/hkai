@@ -13,13 +13,13 @@ trait validate_project_input
 
         // project_path 未填
         if ($project_path === "") {
-            $errors["project_path"] = "請填寫專案路徑";
+            $errors["project_path"] = hkai()->i18n()->get("project.form.path_required");
         }
 
         // project_path 已填 → 檢查目錄存在
         if ($project_path !== "") {
             if (!is_dir($project_path)) {
-                $errors["project_path"] = "專案路徑不存在或不是目錄";
+                $errors["project_path"] = hkai()->i18n()->get("project.form.path_invalid");
             }
         }
 

@@ -21,7 +21,7 @@ import cv2
 
 from . import box_store, context
 from .pipeline import basic, ocr, qr, visual
-from .runtime import sc_logger
+from .runtime import event_log
 
 # meta 格式版本（向後兼容用）
 META_VERSION = 1
@@ -40,7 +40,7 @@ class extractor_class:
 
         # 判定：meta 讀唔到 → 唔做
         if meta_data is None:
-            sc_logger.log("BOX_INVALID", "meta.json invalid: " + str(self.box_dir))
+            event_log.log_event("BOX_INVALID", "meta.json invalid: " + str(self.box_dir))
             return 0
 
         self.job_files = box_store.list_attachment_files(self.box_dir, meta_data)
@@ -48,7 +48,7 @@ class extractor_class:
 
         # 判定：冇圖片 → 直接跳過（正常路徑）＋放行
         if len(self.job_files) < 1:
-            sc_logger.log("JOB_EMPTY", "no image attachment: message_id=" + str(message_id))
+            event_log.log_event("JOB_EMPTY", "no image attachment: message_id=" + str(message_id))
             _ = box_store.write_status(self.box_dir, "polling")
             return 0
 
@@ -79,7 +79,7 @@ class extractor_class:
         """處理一張圖；成功回 True。"""
         file_path = Path(file_path_text).resolve()
 
-        sc_logger.log("IMAGE_STARTED", "idx=" + str(file_index), {"path": str(file_path)})
+        event_log.log_event("IMAGE_STARTED", "idx=" + str(file_index), {"path": str(file_path)})
 
         start_time = time.perf_counter()
 
@@ -89,7 +89,7 @@ class extractor_class:
             meta_data["elapsed_ms"] = elapsed_ms
             meta_path = self._write_meta(file_path, meta_data)
 
-            sc_logger.log(
+            event_log.log_event(
                 "IMAGE_DONE",
                 "idx=" + str(file_index),
                 {"elapsed_ms": elapsed_ms, "meta_path": str(meta_path)},
@@ -111,7 +111,7 @@ class extractor_class:
             # 失敗都要落檔（狀態睇得到；亦避免無限重試同一張）
             _ = self._write_meta(file_path, failure_data)
 
-            sc_logger.log(
+            event_log.log_event(
                 "IMAGE_FAILED",
                 type(error).__name__ + ": " + str(error),
                 {"idx": file_index, "elapsed_ms": elapsed_ms},
@@ -160,7 +160,7 @@ class extractor_class:
         try:
             return visual.read_visual_info(image_array)
         except Exception as error:  # noqa: BLE001 —— 單項防護
-            sc_logger.log("VISUAL_FAILED", type(error).__name__ + ": " + str(error))
+            event_log.log_event("VISUAL_FAILED", type(error).__name__ + ": " + str(error))
             return {}
 
     def _run_qr_safe(self, image_array: Any) -> list[dict[str, Any]]:
@@ -168,7 +168,7 @@ class extractor_class:
         try:
             return qr.read_qr(image_array)
         except Exception as error:  # noqa: BLE001 —— 單項防護
-            sc_logger.log("QR_FAILED", type(error).__name__ + ": " + str(error))
+            event_log.log_event("QR_FAILED", type(error).__name__ + ": " + str(error))
             return []
 
     def _run_ocr_safe(self, image_array: Any) -> dict[str, Any]:
@@ -178,7 +178,7 @@ class extractor_class:
         try:
             return ocr.read_ocr(image_array)
         except Exception as error:  # noqa: BLE001 —— 單項防護
-            sc_logger.log("OCR_FAILED", type(error).__name__ + ": " + str(error))
+            event_log.log_event("OCR_FAILED", type(error).__name__ + ": " + str(error))
             return empty_ocr
 
     def _assert_allowed_path(self, file_path: Path) -> None:

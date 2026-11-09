@@ -1,256 +1,406 @@
-{
-    "common.coming_soon": "Coming soon — stay tuned.",
-    "common.loading": "Loading...",
-    "thinking.label_done": "Thinking",
-    "summarize.label_done": "Summarize",
-    "message.total_elapsed": "Total elapsed",
-    "answer.zoom": "Zoom",
-    "answer.zoom_title": "Answer",
-    "user.zoom_title": "Your message",
-    "answer.copy": "Copy",
-    "message.delete_confirm": "Delete this message? The whole message and its response will be removed.",
-    "chat.archive_confirm": "Archive this chat? You can restore it anytime.",
-    "chat.restore_confirm": "Restore this chat? It will return to the normal list.",
-    "chat.delete_confirm": "Delete this chat? The chat and all its messages will be permanently removed.",
-    "message.delete_failed": "Delete failed. Please try again.",
-    "chat.delete": "Delete",
-    "chat.delete_failed": "Delete chat failed. Please try again.",
-    "chat.archive": "Archive",
-    "chat.archive_failed": "Archive chat failed. Please try again.",
-    "chat.archive_leave": "Leave archive",
-    "chat.archive_kicker": "Archived · not in use",
-    "chat.restore": "Restore",
-    "chat.restore_failed": "Restore chat failed. Please try again.",
-    "project.archive": "Archive",
-    "project.archive_leave": "Leave archive",
-    "project.restore": "Restore",
-    "project.restore_confirm": "Restore this project? It will return to the normal list.",
-    "project.restore_failed": "Restore project failed. Please try again.",
-    "error.E_VALIDATION_FATAL.title": "Incomplete submission",
-    "error.E_VALIDATION_FATAL.hint": "Fix the issues below and retry.",
-    "error.E_VALIDATION_RECOVERABLE.title": "Cannot send",
-    "error.E_VALIDATION_RECOVERABLE.hint": "Message recorded — fix the issues below and retry.",
-    "error.E_SERVER_DOWN.title": "Server not started",
-    "error.E_NETWORK.title": "Connection failed",
-    "error.E_NETWORK.hint": "No response from backend — is the server running?",
-    "error.chat_not_found": "Invalid chat",
-    "error.project_not_found": "Invalid project",
-    "queue.limit_title": "Queue full",
-    "queue.limit_message": "3 messages are already waiting (limit) — wait for a reply to finish, then send again.",
-    "queue.cancel": "Cancel this message",
-    "prompt.input_placeholder": "Type a message… (Enter to send, Shift+Enter for new line)",
-    "prompt.tool_attach": "Attach",
-    "prompt.tool_add_context": "Add context",
-    "prompt.tool_scroll_top": "Top",
-    "prompt.tool_scroll_bottom": "Bottom",
-    "prompt.tool_queue_clear": "Clear queue",
-    "prompt.tool_inspiration": "Inspiration",
-    "empty.create_project": "Please create a project",
-    "empty.start_chat": "Please start your chat",
-    "rule.updated_label": "Last updated: ",
-    "rule.default_note": "Default version — click Save to create this project's version",
-    "rule.save_confirm": "Save the rule? This writes to AGENTS.md in the project root.",
-    "rule.conflict_error": "The rule file was changed externally — refresh and try saving again.",
-    "rule.reset_confirm": "Reset the rule? This clears the project's AGENTS.md.",
-    "rule.reset_confirm_again": "Confirm again: AGENTS.md will be deleted and the rule returns to the default version. Continue?",
-    "environment.updated_label": "Last updated: ",
-    "environment.not_generated": "Not generated yet — press Update to retry",
-    "git.load_failed": "Failed to read Git status",
-    "git.not_initialized": "Not initialized",
-    "git.not_initialized_tip": "This project path is not a Git repository yet",
-    "git.no_branch": "(no branch)",
-    "git.clean": "clean",
-    "git.unit_files": "files",
-    "git.unit_conflicts": "conflicts",
-    "git.sync_upload": "Unpushed",
-    "git.sync_download": "Behind",
-    "git.sync_unit": "",
-    "git.sync_synced": "In sync",
-    "git.file_added": "Added",
-    "git.file_modified": "Modified",
-    "git.file_deleted": "Deleted",
-    "git.file_renamed": "Renamed",
-    "git.file_conflicts": "Conflicts",
-    "git.no_commits": "(no commits yet)",
-    "git.row_status": "Status",
-    "git.row_branch": "Branch",
-    "git.row_staged": "To Commit",
-    "git.row_unstaged": "To Pack",
-    "git.row_last_commit": "Last commit",
-    "git.row_not_initialized": "Git not initialized",
-    "git.recent_commits": "Recent commits",
-    "git.stage_all": "Pack Changes",
-    "git.commit": "Commit Now",
-    "git.read_failed": "Read failed: ",
-    "git.need_save": "Save the project first, then check Git status.",
-    "git.modal_new": "New Project",
-    "git.modal_edit": "Edit Project",
-    "git.line_sync": "Sync: ",
-    "git.line_files": "Files: ",
-    "git.line_diff": "Lines: ",
-    "git.line_commit": "Last commit: ",
-    "git.line_remote": "Remote: ",
-    "common.cancel": "Cancel",
-    "diagnostics.need_save": "Save the project first, then check diagnostics.",
-    "diagnostics.headline": "File path length",
-    "diagnostics.no_problem": "No over-long paths found",
-    "diagnostics.over_long": "over-long paths",
-    "diagnostics.scanned": "Files scanned",
-    "diagnostics.warn": "Warning (over 200 chars)",
-    "diagnostics.danger": "Danger (over 220 chars)",
-    "diagnostics.critical": "Critical (over 250 chars)",
-    "diagnostics.elapsed": "Scan time",
-    "diagnostics.unit_files": "files",
-    "diagnostics.unit_ms": "ms",
-    "diagnostics.th_level": "Level",
-    "diagnostics.th_path": "Path",
-    "diagnostics.th_length": "Length",
-    "diagnostics.lv_warn": "Warning",
-    "diagnostics.lv_danger": "Danger",
-    "diagnostics.lv_crit": "Critical",
-    "diagnostics.advice": "Suggestion: rename / move / delete these files so tools like git / PHP / archivers won't fail later.",
-    "diagnostics.tab_path": "File path",
-    "diagnostics.tab_git": "Git",
-    "diagnostics.cfg_key": "Key",
-    "diagnostics.cfg_value": "Value",
-    "diagnostics.tab_general": "General",
-    "diagnostics.git_installed": "Git installed",
-    "diagnostics.git_installed_desc": "Git must be installed locally to initialize and commit",
-    "diagnostics.path_exists": "Project path exists",
-    "diagnostics.path_exists_desc": "Verify the local project path is correct",
-    "diagnostics.has_gitignore": "Has .gitignore",
-    "diagnostics.has_gitignore_desc": "Project root is missing .gitignore.",
-    "diagnostics.cfg_longpaths_desc": "Windows caps paths at 260 chars - enables the git long-path API (~32k) so deep paths can be staged",
-    "diagnostics.cfg_identity_desc": "Every commit is signed with these - if unset, commits fail or get the wrong author",
-    "diagnostics.cfg_autocrlf_desc": "Line-endings switch: true/input auto-rewrites file line endings (mixed-EOL projects flood with fake changes); correct = false or unset (no conversion)",
-    "diagnostics.truncated": "(the list shows only the longest 200 files)",
-    "permission.title": "Permission request",
-    "permission.allow": "Allow",
-    "permission.deny": "Deny",
-    "permission.apply_all": "Apply to all (this round)",
-    "permission.auto_deny_suffix": " until auto-deny",
-    "status_bar.conn_online": "Online",
-    "status_bar.conn_offline": "Offline",
-    "status_bar.no_chat": "No chat selected",
-    "status_bar.no_project": "No project selected",
-    "common.save": "Save",
-    "common.update": "Update",
-    "common.reset": "Reset",
-    "common.refresh": "Refresh",
-    "settings.section.general": "General",
-    "settings.section.instructions": "Instructions",
-    "settings.section.system_prompt": "System Prompt",
-    "settings.section.system_env": "Environment",
-    "settings.section.provider": "Provider",
-    "settings.section.server": "Server",
-    "settings.section.process_viewer": "Process viewer",
-    "settings.about.title": "About HKAI",
-    "settings.about.version": "Version",
-    "settings.about.build": "Build",
-    "settings.about.tech": "Technology",
-    "settings.about.updated": "Updated",
-    "settings.about.check_update": "Check for updates",
-    "settings.about.author": "Author",
-    "settings.about.supported_by": "Supported by",
-    "settings.about.up_to_date": "Up to date",
-    "settings.about.update_available": "New version %s",
-    "settings.about.update_unknown": "Check unavailable",
-    "settings.about.links": "Links",
-    "settings.about.report_issue": "Report an issue",
-    "settings.about.issues": "Issues",
-    "settings.about.repository": "Source",
-    "settings.about.tagline": "Nothing is impossible — only unimagined.",
-    "settings.general.language_label": "Language",
-    "settings.general.theme_label": "Theme",
-    "settings.general.saved": "Saved.",
-    "settings.general.save_request_failed": "Save failed: request error",
-    "settings.general.error_language_empty": "Language cannot be empty.",
-    "settings.general.error_language_unsupported": "Unsupported language: ",
-    "settings.instructions.subtitle_env_readonly": "Auto-detected system environment (read-only — press Update to re-detect).",
-    "settings.instructions.subtitle_env_editable": "Auto-detected system environment (editable — press Update to re-detect).",
-    "settings.instructions.subtitle_prompt": "Edit the custom text sent to the AI each time; leave empty to use the factory default.",
-    "settings.instructions.default_version": "Default version",
-    "settings.instructions.updated": "Updated: ",
-    "settings.instructions.btn_restore": "Restore default",
-    "settings.instructions.reset_confirm": "Reset to the default version? Your custom version will be removed.",
-    "settings.instructions.save_confirm": "Save changes?",
-    "settings.instructions.toolbar_toggle": "Edit / view mode",
-    "settings.instructions.toolbar_heading_1": "Level-1 heading",
-    "settings.instructions.toolbar_heading_2": "Level-2 heading",
-    "settings.instructions.toolbar_heading_3": "Level-3 heading",
-    "settings.instructions.toolbar_ordered_list": "Ordered list (1. 2. 3.)",
-    "settings.instructions.toolbar_bullet_list": "Bullet list",
-    "settings.instructions.toolbar_bold": "Bold",
-    "settings.instructions.toolbar_italic": "Italic",
-    "settings.instructions.toolbar_code_block": "Code block (three backticks)",
-    "settings.provider.token_placeholder": "Enter API token",
-    "settings.provider.token_placeholder_new": "Enter new token",
-    "settings.provider.empty_token_confirm": "Input is empty — saving will clear this token. Save anyway?",
-    "settings.provider.token_multiline_error": "API token cannot contain line breaks.",
-    "settings.server.title": "Server Settings",
-    "settings.server.subtitle": "Configure the Python server connection.",
-    "settings.server.section_connection": "Connection",
-    "settings.server.section_status": "Status",
-    "settings.server.section_action": "Action",
-    "settings.server.section_live_logs": "Live logs",
-    "settings.server.label_host_port": "Host / Port",
-    "settings.server.desc_host_port": "Python server host address; the port is assigned automatically.",
-    "settings.server.desc_status": "Current server running state.",
-    "settings.server.desc_action": "Start, restart, or stop the Python server.",
-    "settings.server.status_running": "Running",
-    "settings.server.status_stopped": "Stopped",
-    "settings.server.btn_restart": "Restart",
-    "settings.server.btn_stop": "Stop",
-    "settings.server.btn_start": "Start",
-    "settings.server.error_no_available_port": "All ports in 6001–6999 are in use — free one first",
-    "settings.server.error_host_empty": "Host cannot be empty.",
-    "settings.server.error_port_empty": "Port cannot be empty.",
-    "settings.server.error_port_not_number": "Port must be a number.",
-    "settings.server.error_port_range": "Port must be within 1-65535.",
-    "settings.server.test_no_response": "Connection failed: no response.",
-    "settings.server.test_ok": "Connected (local server responded).",
-    "settings.server.test_occupied": "Port is in use by another service (HTTP ",
-    "settings.process.kill_confirm": "Terminate [[process_program]] (pid [[process_pid]])?",
-    "settings.process.kill_title": "Terminate this process",
-    "stream.full_title": "Connections full",
-    "stream.full_message": "This browser allows at most [[max_connections]] live connections per site and [[used_count]] are in use — this action needs a new connection and may not receive live updates.",
-    "presence.connect_timeout_title": "Live connection not established",
-    "presence.connect_timeout_message": "Not connected to bridge within 6 seconds — the browser limit may be reached ([[max_connections]] connections per site). Close other pages and reload.",
-    "benchmark.date": "Date",
-    "benchmark.download": "download leaderboard",
-    "benchmark.release_date": "Release Date",
-    "benchmark.released": "Released",
-    "benchmark.score": "Score",
-    "benchmark.search_filter": "search / model filtering",
-    "benchmark.votes": "Votes",
-    "chat.select_model": "Please select model",
-    "common.back_to_workspace": "hkai · Back to workspace",
-    "common.model": "Model",
-    "message.delete": "Delete",
-    "message.favorite": "Favorite",
-    "message.forward": "Forward",
-    "message.model_label": "MODEL",
-    "message.project_path": "Project path",
-    "process.active": "ACTIVE PROCESSES",
-    "process.close": "Close",
-    "process.kill": "KILL",
-    "process.viewer": "Process Viewer",
-    "project.home_locked": "Home project is read-only",
-    "prompt.input_message": "Input message",
-    "prompt.send": "Send",
-    "prompt.stop": "Stop",
-    "provider.agentic": "Agentic",
-    "provider.apply": "Apply",
-    "provider.coding": "Coding",
-    "provider.context": "Context",
-    "provider.download": "download model list",
-    "provider.label": "Provider",
-    "provider.name": "Name",
-    "provider.search_filter": "search / provider filtering",
-    "rule.code_block": "Code block (triple backtick)",
-    "settings.general": "General",
-    "settings.search": "Search settings...",
-    "sidebar.chats": "Chats",
-    "sidebar.projects": "Projects",
-    "sidebar.workspace": "Workspace"
-}
+{
+    "common.coming_soon": "Coming soon — stay tuned.",
+    "common.loading": "Loading...",
+    "thinking.label_done": "Thinking",
+    "summarize.label_done": "Summarize",
+    "message.total_elapsed": "Total elapsed",
+    "answer.zoom": "Zoom",
+    "answer.zoom_title": "Answer",
+    "user.zoom_title": "Your message",
+    "answer.copy": "Copy",
+    "message.delete_confirm": "Delete this message? The whole message and its response will be removed.",
+    "chat.archive_confirm": "Archive this chat? You can restore it anytime.",
+    "chat.restore_confirm": "Restore this chat? It will return to the normal list.",
+    "chat.delete_confirm": "Delete this chat? The chat and all its messages will be permanently removed.",
+    "message.delete_failed": "Delete failed. Please try again.",
+    "chat.delete": "Delete",
+    "chat.delete_failed": "Delete chat failed. Please try again.",
+    "chat.archive": "Archive",
+    "chat.archive_failed": "Archive chat failed. Please try again.",
+    "chat.archive_leave": "Leave archive",
+    "chat.archive_kicker": "Archived · not in use",
+    "chat.restore": "Restore",
+    "chat.restore_failed": "Restore chat failed. Please try again.",
+    "project.archive": "Archive",
+    "project.archive_leave": "Leave archive",
+    "project.restore": "Restore",
+    "project.restore_confirm": "Restore this project? It will return to the normal list.",
+    "project.restore_failed": "Restore project failed. Please try again.",
+    "error.E_VALIDATION_FATAL.title": "Incomplete submission",
+    "error.E_VALIDATION_FATAL.hint": "Fix the issues below and retry.",
+    "error.E_VALIDATION_RECOVERABLE.title": "Cannot send",
+    "error.E_VALIDATION_RECOVERABLE.hint": "Message recorded — fix the issues below and retry.",
+    "error.E_SERVER_DOWN.title": "Server not started",
+    "error.E_NETWORK.title": "Connection failed",
+    "error.E_NETWORK.hint": "No response from backend — is the server running?",
+    "error.chat_not_found": "Invalid chat",
+    "error.project_not_found": "Invalid project",
+    "queue.limit_title": "Queue full",
+    "queue.limit_message": "3 messages are already waiting (limit) — wait for a reply to finish, then send again.",
+    "queue.cancel": "Cancel this message",
+    "prompt.input_placeholder": "Type a message… (Enter to send, Shift+Enter for new line)",
+    "prompt.attach.too_large_title": "Image too large",
+    "prompt.attach.too_large_desc": "Long edge exceeds ",
+    "prompt.attach.too_large_mid": " px — skipped: ",
+    "prompt.attach.limit_title": "Attachment limit",
+    "prompt.attach.limit_desc": "Max ",
+    "prompt.attach.limit_unit": " images per message",
+    "prompt.attach.delete_failed_title": "Delete failed",
+    "prompt.attach.delete_failed_desc": "The draft file could not be deleted. Please try again.",
+    "prompt.attach.uploading_title": "Images still uploading",
+    "prompt.attach.uploading_desc": "Wait for the uploads to finish before sending.",
+    "prompt.effort.not_applicable": "Not applicable (this model does not support reasoning effort)",
+    "prompt.tool_attach": "Attach",
+    "prompt.tool_add_context": "Add context",
+    "prompt.tool_scroll_top": "Top",
+    "prompt.tool_scroll_bottom": "Bottom",
+    "prompt.tool_queue_clear": "Clear queue",
+    "prompt.tool_inspiration": "Inspiration",
+    "empty.create_project": "Please create a project",
+    "empty.start_chat": "Please start your chat",
+    "rule.updated_label": "Last updated: ",
+    "rule.default_note": "Default version — click Save to create this project's version",
+    "rule.save_confirm": "Save the rule? This writes to AGENTS.md in the project root.",
+    "rule.conflict_error": "The rule file was changed externally — refresh and try saving again.",
+    "rule.reset_confirm": "Reset the rule? This clears the project's AGENTS.md.",
+    "rule.reset_confirm_again": "Confirm again: AGENTS.md will be deleted and the rule returns to the default version. Continue?",
+    "environment.updated_label": "Last updated: ",
+    "environment.not_generated": "Not generated yet — press Update to retry",
+    "git.load_failed": "Failed to read Git status",
+    "git.not_initialized": "Not initialized",
+    "git.not_initialized_tip": "This project path is not a Git repository yet",
+    "git.no_branch": "(no branch)",
+    "git.clean": "clean",
+    "git.unit_files": "files",
+    "git.unit_conflicts": "conflicts",
+    "git.sync_upload": "Unpushed",
+    "git.sync_download": "Behind",
+    "git.sync_unit": "",
+    "git.sync_synced": "In sync",
+    "git.file_added": "Added",
+    "git.file_modified": "Modified",
+    "git.file_deleted": "Deleted",
+    "git.file_renamed": "Renamed",
+    "git.file_conflicts": "Conflicts",
+    "git.no_commits": "(no commits yet)",
+    "git.row_status": "Status",
+    "git.row_branch": "Branch",
+    "git.row_staged": "To Commit",
+    "git.row_unstaged": "To Pack",
+    "git.row_last_commit": "Last commit",
+    "git.row_not_initialized": "Git not initialized",
+    "git.recent_commits": "Recent commits",
+    "git.stage_all": "Pack Changes",
+    "git.commit": "Commit Now",
+    "git.read_failed": "Read failed: ",
+    "git.need_save": "Save the project first, then check Git status.",
+    "git.modal_new": "New Project",
+    "git.modal_edit": "Edit Project",
+    "git.line_sync": "Sync: ",
+    "git.line_files": "Files: ",
+    "git.line_diff": "Lines: ",
+    "git.line_commit": "Last commit: ",
+    "git.line_remote": "Remote: ",
+    "common.cancel": "Cancel",
+    "diagnostics.need_save": "Save the project first, then check diagnostics.",
+    "diagnostics.headline": "File path length",
+    "diagnostics.no_problem": "No over-long paths found",
+    "diagnostics.over_long": "over-long paths",
+    "diagnostics.scanned": "Files scanned",
+    "diagnostics.warn": "Warning (over 200 chars)",
+    "diagnostics.danger": "Danger (over 220 chars)",
+    "diagnostics.critical": "Critical (over 250 chars)",
+    "diagnostics.elapsed": "Scan time",
+    "diagnostics.unit_files": "files",
+    "diagnostics.unit_ms": "ms",
+    "diagnostics.th_level": "Level",
+    "diagnostics.th_path": "Path",
+    "diagnostics.th_length": "Length",
+    "diagnostics.lv_warn": "Warning",
+    "diagnostics.lv_danger": "Danger",
+    "diagnostics.lv_crit": "Critical",
+    "diagnostics.advice": "Suggestion: rename / move / delete these files so tools like git / PHP / archivers won't fail later.",
+    "diagnostics.tab_path": "File path",
+    "diagnostics.tab_git": "Git",
+    "diagnostics.cfg_key": "Key",
+    "diagnostics.cfg_value": "Value",
+    "diagnostics.tab_general": "General",
+    "diagnostics.git_installed": "Git installed",
+    "diagnostics.git_installed_desc": "Git must be installed locally to initialize and commit",
+    "diagnostics.path_exists": "Project path exists",
+    "diagnostics.path_exists_desc": "Verify the local project path is correct",
+    "diagnostics.has_gitignore": "Has .gitignore",
+    "diagnostics.has_gitignore_desc": "Project root is missing .gitignore.",
+    "diagnostics.cfg_longpaths_desc": "Windows caps paths at 260 chars - enables the git long-path API (~32k) so deep paths can be staged",
+    "diagnostics.cfg_identity_desc": "Every commit is signed with these - if unset, commits fail or get the wrong author",
+    "diagnostics.cfg_autocrlf_desc": "Line-endings switch: true/input auto-rewrites file line endings (mixed-EOL projects flood with fake changes); correct = false or unset (no conversion)",
+    "diagnostics.truncated": "(the list shows only the longest 200 files)",
+    "permission.title": "Permission request",
+    "permission.allow": "Allow",
+    "permission.deny": "Deny",
+    "permission.apply_all": "Apply to all (this round)",
+    "permission.auto_deny_suffix": " until auto-deny",
+    "status_bar.conn_online": "Online",
+    "status_bar.conn_offline": "Offline",
+    "status_bar.no_chat": "No chat selected",
+    "status_bar.no_project": "No project selected",
+    "common.save": "Save",
+    "common.update": "Update",
+    "common.reset": "Reset",
+    "common.refresh": "Refresh",
+    "settings.section.general": "General",
+    "settings.section.instructions": "Instructions",
+    "settings.section.system_prompt": "System Prompt",
+    "settings.section.system_env": "Environment",
+    "settings.section.provider": "Provider",
+    "settings.section.server": "Server",
+    "settings.section.process_viewer": "Process viewer",
+    "settings.about.title": "About HKAI",
+    "settings.about.version": "Version",
+    "settings.about.build": "Build",
+    "settings.about.tech": "Technology",
+    "settings.about.updated": "Updated",
+    "settings.about.check_update": "Check for updates",
+    "settings.about.author": "Author",
+    "settings.about.supported_by": "Supported by",
+    "settings.about.up_to_date": "Up to date",
+    "settings.about.update_available": "New version %s",
+    "settings.about.update_unknown": "Check unavailable",
+    "settings.about.links": "Links",
+    "settings.about.report_issue": "Report an issue",
+    "settings.about.issues": "Issues",
+    "settings.about.repository": "Source",
+    "settings.about.tagline": "Nothing is impossible — only unimagined.",
+    "settings.general.language_label": "Language",
+    "settings.general.theme_label": "Theme",
+    "settings.general.saved": "Saved.",
+    "settings.general.save_request_failed": "Save failed: request error",
+    "settings.general.error_language_empty": "Language cannot be empty.",
+    "settings.general.error_language_unsupported": "Unsupported language: ",
+    "settings.instructions.subtitle_env_readonly": "Auto-detected system environment (read-only — press Update to re-detect).",
+    "settings.instructions.subtitle_env_editable": "Auto-detected system environment (editable — press Update to re-detect).",
+    "settings.instructions.subtitle_prompt": "Edit the custom text sent to the AI each time; leave empty to use the factory default.",
+    "settings.instructions.default_version": "Default version",
+    "settings.instructions.updated": "Updated: ",
+    "settings.instructions.btn_restore": "Restore default",
+    "settings.instructions.reset_confirm": "Reset to the default version? Your custom version will be removed.",
+    "settings.instructions.save_confirm": "Save changes?",
+    "settings.instructions.toolbar_toggle": "Edit / view mode",
+    "settings.instructions.toolbar_heading_1": "Level-1 heading",
+    "settings.instructions.toolbar_heading_2": "Level-2 heading",
+    "settings.instructions.toolbar_heading_3": "Level-3 heading",
+    "settings.instructions.toolbar_ordered_list": "Ordered list (1. 2. 3.)",
+    "settings.instructions.toolbar_bullet_list": "Bullet list",
+    "settings.instructions.toolbar_bold": "Bold",
+    "settings.instructions.toolbar_italic": "Italic",
+    "settings.instructions.toolbar_code_block": "Code block (three backticks)",
+    "settings.provider.token_placeholder": "Enter API token",
+    "settings.provider.token_placeholder_new": "Enter new token",
+    "settings.provider.empty_token_confirm": "Input is empty — saving will clear this token. Save anyway?",
+    "settings.provider.token_multiline_error": "API token cannot contain line breaks.",
+    "settings.provider.token_too_short": "API token must be longer than 20 characters.",
+    "settings.server.title": "Server Settings",
+    "settings.server.subtitle": "Configure the Python server connection.",
+    "settings.server.section_connection": "Connection",
+    "settings.server.section_status": "Status",
+    "settings.server.section_action": "Action",
+    "settings.server.section_live_logs": "Live logs",
+    "settings.server.label_host_port": "Host / Port",
+    "settings.server.desc_host_port": "Python server host address; the port is assigned automatically.",
+    "settings.server.desc_status": "Current server running state.",
+    "settings.server.desc_action": "Start, restart, or stop the Python server.",
+    "settings.server.status_running": "Running",
+    "settings.server.status_stopped": "Stopped",
+    "settings.server.btn_restart": "Restart",
+    "settings.server.btn_stop": "Stop",
+    "settings.server.btn_start": "Start",
+    "settings.server.error_no_available_port": "All ports in 13001–13719 are in use — free one first",
+    "settings.server.error_host_empty": "Host cannot be empty.",
+    "settings.server.error_port_empty": "Port cannot be empty.",
+    "settings.server.error_port_not_number": "Port must be a number.",
+    "settings.server.error_port_range": "Port must be within 1-65535.",
+    "settings.server.test_no_response": "Connection failed: no response.",
+    "settings.server.test_ok": "Connected (local server responded).",
+    "settings.server.test_occupied": "Port is in use by another service (HTTP ",
+    "settings.process.kill_confirm": "Terminate [[process_program]] (pid [[process_pid]])?",
+    "settings.process.kill_title": "Terminate this process",
+    "stream.full_title": "Connections full",
+    "stream.full_message": "This browser allows at most [[max_connections]] live connections per site and [[used_count]] are in use — this action needs a new connection and may not receive live updates.",
+    "presence.connect_timeout_title": "Live connection not established",
+    "presence.connect_timeout_message": "Not connected to bridge within 6 seconds — the browser limit may be reached ([[max_connections]] connections per site). Close other pages and reload.",
+    "benchmark.date": "Date",
+    "benchmark.download": "download leaderboard",
+    "benchmark.release_date": "Release Date",
+    "benchmark.released": "Released",
+    "benchmark.score": "Score",
+    "benchmark.search_filter": "search / model filtering",
+    "benchmark.votes": "Votes",
+    "chat.select_model": "Please select model",
+    "common.back_to_workspace": "hkai · Back to workspace",
+    "common.model": "Model",
+    "common.close": "Close",
+    "message.failed.title": "Could not send",
+    "message.failed.hint": "The message was recorded; fix the issues below and retry",
+    "common.confirm": "OK",
+    "common.share": "Share",
+    "common.notifications": "Notifications",
+    "common.logout": "Log out",
+    "common.you": "You",
+    "message.delete": "Delete",
+    "message.favorite": "Favorite",
+    "message.forward": "Forward",
+    "message.model_label": "MODEL",
+    "message.project_path": "Project path",
+    "message.edit.original": "**Original**",
+    "message.edit.new": "**New**",
+    "message.edit.none": "(none)",
+    "message.topbar.collapse_chats": "Collapse chat column",
+    "message.topbar.copy_project_path": "Copy project path",
+    "message.topbar.model_settings": "Current model and chat settings",
+    "message.topbar.members": "Collaborators",
+    "message.topbar.account_menu": "Account menu",
+    "message.topbar.account_settings": "Account and personal settings",
+    "message.topbar.switch_workspace": "Switch workspace",
+    "message.topbar.members_billing": "Members and billing",
+    "message.topbar.local_machine": "hkai · local",
+    "process.active": "ACTIVE PROCESSES",
+    "process.close": "Close",
+    "process.kill": "KILL",
+    "process.viewer": "Process Viewer",
+    "project.home_locked": "Home project is read-only",
+    "project.form.saved": "Saved",
+    "project.form.created": "Project created",
+    "project.form.save_failed": "Save failed — please check the fields",
+    "server.already_running": "The server is already running",
+    "server.start_failed": "Start failed: no ready response from the server.",
+    "prompt.error.no_content": "Please enter a message",
+    "prompt.error.provider_required": "Select a provider",
+    "prompt.error.model_required": "Select a model",
+    "prompt.error.mode_required": "Select a chat mode",
+    "prompt.error.provider_missing": "Select a model provider",
+    "prompt.error.provider_invalid": "Invalid model provider:",
+    "prompt.error.model_missing": "Select a model",
+    "prompt.error.model_invalid": "Invalid model:",
+    "prompt.error.provider_suffix": " (provider:",
+    "prompt.error.context_length": "The model has no valid context length (context_length):",
+    "prompt.error.effort_required": "Select a reasoning effort",
+    "prompt.error.effort_invalid": "Invalid reasoning effort:",
+    "prompt.error.server_offline": "Cannot reach the local server; the message was not sent.",
+    "prompt.error.server_start_hint": "Start the server first (Settings → Server → Enable), then send again.",
+    "prompt.error.project_missing": "Project not found:",
+    "prompt.error.chat_invalid": "Invalid chat ID:",
+    "prompt.error.attach_incomplete": "Attachment data is incomplete",
+    "prompt.error.attach_format": "Attachment data has the wrong format",
+    "prompt.error.attach_type": "Only PNG/JPG/GIF/WEBP are supported; max size per file ",
+    "git.change.clean": "Clean (no uncommitted changes)",
+    "git.change.files": "{total} files (staged {staged} / unstaged {unstaged} / untracked {untracked})",
+    "git.change.conflicts": "; ⚠ {conflicts} conflicts",
+    "git.remote.none": "(origin not set)",
+    "git.sync.none": "(upstream not set)",
+    "project.modal.add_title": "New project",
+    "project.modal.edit_title": "Edit project",
+    "project.sidebar.title": "Projects",
+    "project.sidebar.add": "New project",
+    "project.sidebar.resize": "Drag to resize the project column",
+    "chat.sidebar.title": "Chats",
+    "project.item.edit": "Edit",
+    "project.form.create_button": "Create project",
+    "project.form.path_in_use": "This path is already used by project “{project_name}”",
+    "project.form.path_required": "Project path is required",
+    "project.form.path_invalid": "Project path does not exist or is not a directory",
+    "project.env.not_saved": "Save the project first, then view environment data.",
+    "project.env.not_generated": "Environment data not generated (detection failed) — click Update to retry.",
+    "project.rule.not_saved": "Save the project first, then view the rules.",
+    "project.rule.toggle_edit": "Toggle edit/view",
+    "project.rule.heading_1": "Heading level 1",
+    "project.rule.heading_2": "Heading level 2",
+    "project.rule.heading_3": "Heading level 3",
+    "project.rule.ordered_list": "Ordered list (1. 2. 3.)",
+    "project.rule.bullet_list": "Bullet list",
+    "project.rule.bold": "Bold",
+    "project.rule.italic": "Italic",
+    "project.form.name_placeholder": "e.g. ecommerce-api",
+    "project.form.name_subtitle": "If empty, the folder name of the project path is used as the project name",
+    "project.form.path_subtitle": "Full local path of the project",
+    "project.form.section_basic": "Project details",
+    "project.form.section_basic_desc": "Basic details that identify this project.",
+    "project.form.name_label": "Project name",
+    "project.form.path_label": "Project path",
+    "project.form.section_extra": "Additional details",
+    "project.form.section_extra_desc": "Optional — for you or your team.",
+    "project.tab.general_form": "Form",
+    "project.tab.rule": "Rules",
+    "project.tab.environment": "Environment",
+    "project.tab.diagnostics": "Diagnostics",
+    "project.tab.delete": "Delete",
+    "sidebar.search": "Search",
+    "chat.add": "New chat",
+    "sidebar.resize_chats": "Drag to resize the chat column",
+    "nav.main": "Main navigation",
+    "nav.collapse_all": "Collapse all panels",
+    "nav.projects": "Projects",
+    "nav.chats": "Chats",
+    "nav.ranking": "Leaderboard",
+    "nav.db": "Database",
+    "nav.settings": "Settings",
+    "nav.about": "About HKAI",
+    "project.actions.restore_confirm": "Restore project [[project_name]]? It will return to the project list.",
+    "project.actions.restore_button": "Restore this project",
+    "project.actions.restore_title": "Restore project",
+    "project.actions.restore_desc": "The project returns to the normal list after restoring.",
+    "project.actions.archive_confirm": "Archive project [[project_name]]? It will be hidden from the project list; all data is kept.",
+    "project.actions.archive_button": "Archive this project",
+    "project.actions.archive_title": "Archive project",
+    "project.actions.archive_desc": "Archiving deletes nothing.",
+    "project.delete.chat_summary_empty": "No conversations yet.",
+    "project.delete.chat_summary_archived": "{chat_count} total — {archived_chat_count} archived.",
+    "project.delete.chat_summary_all": "{chat_count} total — none archived.",
+    "project.delete.message_summary": "{message_count} messages.",
+    "project.delete.description": "This cannot be undone — “{project_name}” and all data above will be deleted.",
+    "project.delete.confirm_msg": "Delete project {project_name}? All conversations and data will be deleted and cannot be recovered.",
+    "project.delete.section_title": "Delete project",
+    "project.delete.section_desc": "Dangerous action — confirm before proceeding.",
+    "project.delete.chats_label": "Conversations",
+    "project.delete.messages_label": "Messages",
+    "project.delete.confirm_label": "Confirm deletion",
+    "project.delete.button": "Delete this project",
+    "project.checklist.git_installed": "Git installed",
+    "project.checklist.group_system": "System checks (project independent)",
+    "project.checklist.hint_git_installed": "Git is required to initialise and commit on this machine",
+    "project.checklist.path_exists": "Project path exists",
+    "project.checklist.hint_path_exists": "Make sure the local project path is correct",
+    "project.checklist.git_repo": "Project has Git initialised",
+    "project.checklist.group_project": "Project checks",
+    "project.checklist.hint_git_repo": "No .git detected. You can run git init in this project path.",
+    "project.checklist.has_commit": "Has a first commit",
+    "project.checklist.hint_has_commit": "The repository has no commits yet.",
+    "project.checklist.has_gitignore": "Has .gitignore",
+    "project.checklist.hint_has_gitignore": "The project root is missing .gitignore.",
+    "project.checklist.has_remote": "Remote origin configured",
+    "project.checklist.hint_has_remote": "No origin remote configured yet.",
+    "project.checklist.has_description": "Description filled",
+    "project.checklist.hint_has_description": "Fill in the project description in the form.",
+    "prompt.input_message": "Input message",
+    "prompt.send": "Send",
+    "prompt.stop": "Stop",
+    "provider.agentic": "Agentic",
+    "provider.apply": "Apply",
+    "provider.coding": "Coding",
+    "provider.context": "Context",
+    "provider.download": "download model list",
+    "provider.label": "Provider",
+    "provider.name": "Name",
+    "provider.search_filter": "search / provider filtering",
+    "rule.code_block": "Code block (triple backtick)",
+    "settings.general": "General",
+    "settings.search": "Search settings...",
+    "sidebar.chats": "Chats",
+    "sidebar.collapse_projects": "Collapse project column",
+    "sidebar.expand_projects": "Expand project column",
+    "sidebar.collapse_chats": "Collapse chat column",
+    "sidebar.expand_chats": "Expand chat column",
+    "sidebar.collapse_all": "Collapse all panels",
+    "sidebar.expand_all": "Expand all panels",
+    "sidebar.projects": "Projects",
+    "sidebar.workspace": "Workspace"
+}

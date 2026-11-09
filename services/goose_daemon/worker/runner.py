@@ -22,7 +22,8 @@ from pathlib import Path
 
 from .. import context
 from ..context import daemon, entry, job_executor, message_log, message_status
-from ..runtime import heartbeat_agent, heartbeat_worker, lifecycle, process, sc_logger
+from bootstrap import sc_logger
+from ..runtime import heartbeat_agent, heartbeat_worker, lifecycle, process
 from . import memory_guard, report
 from .agent import chat_mode
 

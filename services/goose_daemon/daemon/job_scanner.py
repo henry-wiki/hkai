@@ -19,7 +19,8 @@ from pathlib import Path
 from typing import TypedDict, cast
 
 from ..context import message_status, message_store
-from ..runtime import process, sc_logger
+from bootstrap import sc_logger
+from ..runtime import process
 from ..utils import io
 
 

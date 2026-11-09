@@ -39,7 +39,9 @@ trait record_failed_message
         $error_text = implode("；", $error_messages);
 
         // 錯誤源（markdown——response_result 內容；顯示與檔案同一源）
-        $response_source = "**無法送出**\n\n" . $error_text . "\n\n> 💡 訊息已記錄，修正以下問題後可重試";
+        $failed_title    = hkai()->i18n()->get("message.failed.title");
+        $failed_hint     = hkai()->i18n()->get("message.failed.hint");
+        $response_source = "**" . $failed_title . "**\n\n" . $error_text . "\n\n> 💡 " . $failed_hint;
 
         // 記錄：使用者問題 + 回應（response_result——錯誤源）
         $message_id = (int)sc_ai_chats()->message()->repo_update()->insert_db_message_failed($project_id, $existing_chat_row["chat_id"], $content, $response_source);

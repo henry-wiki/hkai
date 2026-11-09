@@ -13,8 +13,9 @@ trait build_provider_file_content
     // 回傳：["ok" => true, "new_file_path" => ...] ／ ["ok" => false, "error" => ...]
     private function build_provider_file_content($provider_models,$provider_dirty_models=[])
     {
-        // 暫存檔路徑（正式檔去 .php + _new_<uniqid>.php——同目錄；每次獨一名）
-        $new_file_path = preg_replace("/\.php$/", "_new_" . uniqid() . ".php", provider()->get_provider_file_path());
+        // 暫存檔路徑（直接落 model_store——正式檔去 .php + _new_<uniqid>.php；每次獨一名）
+        $provider_file_path = provider()->get_provider_file_path();
+        $new_file_path = preg_replace("/\.php$/", "_new_" . uniqid() . ".php", $provider_file_path);
         
         // 組頂層結構（provider_key → generated_at → model）
         $file_structure                 = [];

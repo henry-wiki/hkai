@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import cast
 
 from ..context import job_executor, message_store
-from ..runtime import lifecycle, sc_logger
+from bootstrap import sc_logger
+from ..runtime import lifecycle
 from . import roster
 
 

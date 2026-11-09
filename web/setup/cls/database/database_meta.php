@@ -3,7 +3,7 @@
 namespace sc\setup\database;
 
 // == setup database meta：資料庫管理資料（單元——class；呼叫形 \sc\setup\setup()->database_meta()）
-// == 職責：寫／讀 meta 表的管理 key（結構簽名、來源、安裝時間）——版本號唔放呢度（用 database_migrations 記錄）
+// == 職責：寫／讀 meta 表的管理 key（來源、安裝時間）——版本號唔放呢度（用 database_migrations 記錄）
 // == 上游：database 格新建庫（db_ready）、舊庫匯入（importer）
 // == 下游：meta 表（key/value）
 
@@ -32,10 +32,7 @@ class database_meta_Class
     // 寫入管理資料（冪等 upsert；$origin＝default／import）
     public function write_install_meta($pdo_connection, $origin, $imported_from)
     {
-        $schema_signature = $this->build_schema_signature();
-
         $meta_values = [];
-        $meta_values["schema_signature"] = $schema_signature;
         $meta_values["db_origin"]        = $origin;
         $meta_values["db_imported_from"] = $imported_from;
         $meta_values["db_installed_at"]  = date("Y-m-d H:i:s");
@@ -51,21 +48,6 @@ class database_meta_Class
         $table_names = $pdo_connection->query("SELECT name FROM sqlite_master WHERE type = 'table'")->fetchAll(\PDO::FETCH_COLUMN);
 
         return in_array("meta", $table_names, true);
-    }
-
-    // 結構簽名＝schema 檔內容 sha256（改結構即變）
-    private function build_schema_signature()
-    {
-        $schema_file = sc_get_config("storage.schema_file");
-
-        $schema_file = realpath($schema_file);
-
-        // 判定：搵唔到 schema 檔 → 空簽名
-        if ($schema_file === false) {
-            return "";
-        }
-
-        return hash_file("sha256", $schema_file);
     }
 
     // 單一 key 寫入（有就更新，冇就插入）

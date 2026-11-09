@@ -25,15 +25,18 @@ function sc_env()
 */
 function sc_get_env($key, $default = null)
 {
-    $repository = sc_env();
-    
-    return $repository->get($key, $default);
+    return sc_env()->get_env($key, $default);
 }
 
-// 寫入 env 單鍵（填值——缺先加·已有唔覆蓋·冇行接尾；寫 .env 檔）
+/**
+* 設定 env 值（只寫記憶體——本 request 有效；唔落檔）
+*
+* @param string $key .env 鍵
+* @param string $value 設定值
+* @return void
+*/
 function sc_set_env($key, $value)
 {
-    $repository = sc_env();
-    
-    $repository->set($key, $value);
+    sc_env()->set_env($key, $value);
 }
+

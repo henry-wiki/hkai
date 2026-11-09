@@ -110,7 +110,7 @@ def write_json_atomic(path: Path | str, data: Mapping[str, object], encoding: st
 
         # 記 error log（logger 問題唔可以蓋過原本錯誤）
         try:
-            from ..runtime import sc_logger
+            from bootstrap import sc_logger
 
             sc_logger.log("write_json_atomic failed: " + str(target_path) + " (" + str(exc) + ")")
         except Exception:

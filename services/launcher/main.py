@@ -35,10 +35,8 @@ from typing import cast
 
 import psutil
 
+from bootstrap import sc_logger
 from .context import HEARTBEAT_DIR, SERVICES_DIR
-
-# 清場目標 daemon 模組名（cmdline 命中即當本系統程序）
-_DAEMON_PROGRAM_NAMES = ["goose_daemon.main", "bridge.main"]
 
 # 開 --bg 前要清場嘅目標（只有長駐 daemon；工具類——如 image_extractor——唔清場）
 _SWEEP_DAEMON_KEYWORDS = ["bridge", "goose_daemon"]
@@ -80,8 +78,8 @@ def run_blocking(command: list[str]) -> int:
     return subprocess.call(command, cwd=str(SERVICES_DIR))
 
 
-def is_our_daemon_process(process_info: dict[str, object]) -> bool:
-    """判定：python 執行檔＋cmdline 含「-m <daemon>」＋cwd＝本 services 目錄（同一實例）。"""
+def is_target_daemon_process(process_info: dict[str, object], daemon_program_name: str) -> bool:
+    """判定：python 執行檔＋cmdline 含「-m <目標模組>」＋cwd＝本 services 目錄（同一實例）。"""
     raw_cmdline = process_info.get("cmdline")
     process_cmdline = cast(list[str], raw_cmdline) if isinstance(raw_cmdline, list) else []
 
@@ -101,11 +99,9 @@ def is_our_daemon_process(process_info: dict[str, object]) -> bool:
 
     cmdline_text = " ".join(process_cmdline)
 
-    # 逐個目標模組名（cmdline 以 -m <模組> 啟動才算——避免誤中其他提及字樣）
-    for daemon_program_name in _DAEMON_PROGRAM_NAMES:
-        # 判定：cmdline 含「-m <模組名>」→ 係
-        if ("-m " + daemon_program_name) in cmdline_text:
-            return True
+    # 判定：cmdline 以「-m <目標模組>」啟動 → 係（其他 daemon 一律唔掂）
+    if ("-m " + daemon_program_name) in cmdline_text:
+        return True
 
     return False
 
@@ -125,9 +121,10 @@ def terminate_process(process: psutil.Process) -> None:
         print("launcher: cannot stop stale pid " + str(process_pid), file=sys.stderr)
 
 
-def sweep_orphan_processes() -> None:
-    """殺舊 daemon（同名＋同 services 目錄；唔殺自己）。"""
+def sweep_orphan_processes(daemon_keyword: str) -> None:
+    """殺同名舊 daemon（同一 services 目錄；唔殺自己／唔殺其他 daemon）。"""
     self_pid = os.getpid()
+    daemon_program_name = daemon_keyword + ".main"
 
     for process in psutil.process_iter(["pid", "cmdline", "cwd"]):
         # 判定：程序喺迭代途中消失／無權限 → 跳（唔好拖死整個 launcher）
@@ -140,8 +137,8 @@ def sweep_orphan_processes() -> None:
         if process_info.get("pid") == self_pid:
             continue
 
-        # 判定：唔係本系統 daemon → 跳
-        if is_our_daemon_process(process_info) is False:
+        # 判定：唔係同名 daemon → 跳（bridge 唔會因起 goose 而被殺）
+        if is_target_daemon_process(process_info, daemon_program_name) is False:
             continue
 
         terminate_process(process)
@@ -170,14 +167,15 @@ def remove_dead_heartbeat_files() -> None:
             continue
 
 
-def clear_stale_processes() -> None:
-    """spawn 前清場（舊 daemon → 死心跳檔）。"""
-    sweep_orphan_processes()
+def clear_stale_processes(daemon_keyword: str) -> None:
+    """spawn 前清場（同名舊 daemon → 死心跳檔）。"""
+    sweep_orphan_processes(daemon_keyword)
     remove_dead_heartbeat_files()
 
 
 def main() -> int:
     """CLI 入口：python -u -m launcher.main <daemon> [--bg] [--runtime <path>]。"""
+    sc_logger.setup("launcher")
     # 判定：冇目標 daemon 關鍵字（非 0 退出——PHP 側據此判失敗）
     if len(sys.argv) < 2:
         print("usage: python -u -m launcher.main <daemon> [--bg] [--runtime <path>]", file=sys.stderr)
@@ -230,7 +228,7 @@ def main() -> int:
     if is_background:
         # 判定：目標係長駐 daemon → 先清場（工具類唔清——避免誤殺正在運行嘅 daemon）
         if daemon_keyword in _SWEEP_DAEMON_KEYWORDS:
-            clear_stale_processes()
+            clear_stale_processes(daemon_keyword)
 
         spawn_detached(command)
         return 0

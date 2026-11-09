@@ -2,6 +2,9 @@
 // == hkai/index.php：路由入口（controller 動作——執行時 $this = controller instance） ==
 // == 職責：取 route → 交 page builder 組裝整頁（唯一出口；資料載入全在 builder／前端 AJAX，此層零業務） ==
 
+// 初始化自檢（每次載入必跑一輪——可重算值過時即修正；例外只記 log，不阻塞頁面）
+hkai()->preflight();
+
 // 頁面入口：確保本機伺服器已啟動（人手停旗標／已活／port 都交 ensure_server 判斷；失敗只寫 log）
 hkai()->process()->server()->ensure_server();
 

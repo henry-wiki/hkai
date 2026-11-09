@@ -25,15 +25,15 @@ trait render_project_sidebar
             $output_lines[] = "<div class='sc_panel_header'>";
                 $output_lines[] = "<div class='sc_panel_header__label'>";
                     $output_lines[] = "<div class='sc_panel_header__kicker'>" . hkai()->i18n()->get("sidebar.workspace") . "</div>";
-                    $output_lines[] = "<a class='sc_panel_header__title' href='/'>專案 <span>" . hkai()->i18n()->get("sidebar.projects") . "</span></a>";
+                    $output_lines[] = "<a class='sc_panel_header__title' href='/'>" . hkai()->i18n()->get("project.sidebar.title") . " <span>" . hkai()->i18n()->get("sidebar.projects") . "</span></a>";
                 $output_lines[] = "</div>";
                 $output_lines[] = "<div class='sc_panel_header__actions'>";
-                    $output_lines[] = "<button class='sc_icon_btn' data-btn='modal_open_add' title='新增專案'>+</button>";
+                    $output_lines[] = "<button class='sc_icon_btn' data-btn='modal_open_add' title='" . hkai()->i18n()->get("project.sidebar.add") . "'>+</button>";
                 $output_lines[] = "</div>";
             $output_lines[] = "</div>";
             $output_lines[] = "<div class='sc_project_list' data-loaded='0'></div>";
             // 拖拉調寬把手（貼右邊界——sc_sidebar.js 綁定拖曳；200–300px；中段 grip＝拖曳舒適位）
-            $output_lines[] = "<div class='sc_sidebar__resize_line' data-resize='projects' title='拖拉調整專案欄寬度'>";
+            $output_lines[] = "<div class='sc_sidebar__resize_line' data-resize='projects' title='" . hkai()->i18n()->get("project.sidebar.resize") . "'>";
                 $output_lines[] = "<span class='sc_sidebar__resize_grip' aria-hidden='true'></span>";
             $output_lines[] = "</div>";
             // 欄底 status bar（sc_ai_status_bar plugin 產生——project region；嵌喺 panel 內，唔係 fixed footer）

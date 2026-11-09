@@ -238,6 +238,24 @@ class message_log_class:
         self._update_poll_list(response_thinking_path)
 
     # response result 純文字 append（content——帶 response index）
+    def append_error_detail(self, text: str) -> None:
+        """錯誤原文（provider 回應）逐段寫入 msg_error_detail.txt（唔當正常回覆）。"""
+        if not text:
+            return
+        error_detail_path = message_store().get_message_dir() / "msg_error_detail.txt"
+        with error_detail_path.open("a", encoding="utf-8", newline="") as output_file:
+            _ = output_file.write(text)
+
+    def get_error_detail_text(self) -> str:
+        """讀錯誤原文（冇檔 → 空字串）。"""
+        error_detail_path = message_store().get_message_dir() / "msg_error_detail.txt"
+
+        # 判定：檔唔存在 → 空
+        if error_detail_path.exists() is False:
+            return ""
+
+        return error_detail_path.read_text(encoding="utf-8")
+
     def append_response_result(self, response_index: int, text: str) -> None:
         if not self._stream_log_enabled:
             return
@@ -460,10 +478,13 @@ class message_log_class:
     def abort_all_poll_files(self) -> None:
         self._close_all_poll_files("aborted")
 
-    # 收尾轉態（只轉仍 poll 嘅檔——已收嘅唔郁）
+    # 收尾轉態（只轉仍 poll 嘅檔——已收嘅唔郁）＋補工具 done 行
     def _close_all_poll_files(self, poll_status: str) -> None:
         with self._write_lock:
             self._close_all_poll_files_locked(poll_status)
+
+        # 工具收尾：已 start 未 done 嘅補 done 行（唔喺鎖內——append 自己會取鎖）
+        self._close_open_tool_calls(poll_status)
 
     # 收尾轉態本體（持鎖內）
     def _close_all_poll_files_locked(self, poll_status: str) -> None:
@@ -502,6 +523,75 @@ class message_log_class:
             poll_list_entry["finished_at"] = current_time
 
         self._write_poll_list(poll_list)
+
+    # 未完成工具補 done（暫停／失敗時落真終態——免畫面永遠「執行中」）
+    # 上游：_close_all_poll_files（complete／abort 收尾）；下游：_close_open_tool_calls_in_file
+    def _close_open_tool_calls(self, poll_status: str) -> None:
+        message_dir = message_store().get_message_dir()
+
+        # 工具狀態跟訊息終態：completed → completed；其餘（failed／cancelled）→ aborted
+        tool_status = "aborted"
+
+        # 判定：訊息正常完成 → 工具標 completed
+        if poll_status == "completed":
+            tool_status = "completed"
+
+        # 逐輪工具檔：補未完成嘅 tool call
+        for tools_path in sorted(message_dir.glob("msg_response.*.tools.jsonl")):
+            self._close_open_tool_calls_in_file(tools_path, tool_status)
+
+    # 單輪工具檔：已 start 未 done 嘅 tool_call_id 補一行 done
+    # 上游：_close_open_tool_calls；下游：append_tool_call（append 一行＋更新 poll_list 長度）
+    def _close_open_tool_calls_in_file(self, tools_path: Path, tool_status: str) -> None:
+        tools_family, response_index, tools_type = _parse_poll_file_identity(tools_path.name)
+
+        # 判定：檔名唔合（唔係 response 工具檔）→ 唔郁
+        if tools_family != "response":
+            return
+
+        # 判定：唔係 tools 類 → 唔郁
+        if tools_type != "tools":
+            return
+
+        entry_list = _read_jsonl_entries(tools_path)
+
+        started_tool_seq: "dict[str, int]" = {}
+        finished_tool_ids: "set[str]" = set()
+
+        # 逐行：記 start 序號、記 done 收尾
+        for entry_item in entry_list:
+            tool_call_id = str(entry_item.get("tool_call_id", ""))
+            tool_phase = str(entry_item.get("phase", ""))
+
+            # 判定：start 行 → 記序號（setdefault＝同一 id 只記第一次）
+            if tool_phase == "start":
+                tool_seq_text = str(entry_item.get("seq", 0) or 0)
+                tool_seq = int(tool_seq_text)
+                started_tool_seq.setdefault(tool_call_id, tool_seq)
+
+            # 判定：done → 標記已收尾
+            if tool_phase == "done":
+                finished_tool_ids.add(tool_call_id)
+
+        current_time = timer_class.get_datetime()
+
+        # 逐個已 start 嘅工具：未收尾就補 done 行
+        for tool_call_id, tool_seq in started_tool_seq.items():
+            # 判定：已收尾 → 唔補
+            if tool_call_id in finished_tool_ids:
+                continue
+
+            tool_record: dict[str, object] = {}
+            tool_record["seq"] = tool_seq
+            tool_record["tool_call_id"] = tool_call_id
+            tool_record["phase"] = "done"
+            tool_record["tool"] = ""
+            tool_record["input_full"] = ""
+            tool_record["output_full"] = ""
+            tool_record["status"] = tool_status
+            tool_record["datetime"] = current_time
+
+            self.append_tool_call(response_index, tool_record)
 
     # read log（讀取全文——不存在 = 空字串）
     def read(self) -> str:

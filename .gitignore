@@ -1,0 +1,23 @@
+# staging 部署產物：只服務 Git 篩選（唔影響 MSIX 打包）
+# 母本：dev\.deploy\github-assets\staging\.gitignore
+
+# ==== 原則：根層以點開頭（.xxx）一律唔推；逐個放行 ====
+/.*
+!/.htaccess
+!/.env
+!/.build
+!/.gitignore
+
+# ==== 產品二進位／執行期（build 產物，1.4GB）：只保留資料夾，裏面內容唔推 ====
+/execute/*
+!/execute/.gitkeep
+
+# ==== 執行期資料：內容唔推，只保留空目錄 ====
+/data/*
+!/data/.gitkeep
+
+# ==== 日誌／暫存 ====
+*.log
+/_tmp/
+
+# ==== 其餘一律推（web/ services/ assets/ index.php url_rewrite.php VERSION README* CHANGELOGS* LICENSE PRIVACY THIRD_PARTY_LICENSES） ====

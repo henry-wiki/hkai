@@ -143,7 +143,7 @@ sc_ai_benchmark()->main()->initial([
                 "bench_source_name" => "Artificial Analysis",
                 "fetch_url"         => "https://artificialanalysis.ai/api/v2/data/llms/models",
                 "fetch_method"      => "get",
-                "api_key"           => sc_get_env("BENCHMARK_SRC_AA_API_KEY", ""),
+                "api_key"           => sc_api_keys()->get("BENCHMARK_SRC_AA_API_KEY", ""),
             ],
             "navigation" => [
                 [
@@ -189,7 +189,7 @@ sc_ai_benchmark()->main()->initial([
                 "fetch_url"         => "https://api.llm-stats.com/stats/v1/models",
                 "fetch_method"      => "get",
                 "fetch_shape"       => "models",
-                "api_key"           => sc_get_env("BENCHMARK_SRC_LLM_STATS_API_KEY", ""),
+                "api_key"           => sc_api_keys()->get("BENCHMARK_SRC_LLM_STATS_API_KEY", ""),
                 "fetch_paging"      => [
                     "length_key"     => "limit",
                     "page_length"    => 200,

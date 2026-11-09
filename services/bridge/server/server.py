@@ -3,7 +3,7 @@
 server.py — HTTP 伺服器 singleton（FastAPI + uvicorn）。
 
 職責：
-- initialize()：載入固定 runtime.json（data/runtime.json）
+- initialize()：運行前載入（.env → 資料根 → runtime.json——交 bootstrap/load.py）
 - start()：啟動 uvicorn（阻塞；bind 預檢＋失敗記錄）
 - _lifespan(app)：FastAPI lifespan context（就緒即起心跳；關閉即停）
 - _register_routes(app)：掛載所有 router
@@ -22,12 +22,13 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 
+from bootstrap import config
+from bootstrap.load import load
+from bootstrap import sc_logger
 from ..runtime import (
     heartbeat,
     lifecycle,
     process,
-    sc_config,
-    sc_logger,
 )
 from ..utils import sc_http
 
@@ -59,13 +60,13 @@ class server_class:
         self._initialized = True
 
     def initialize(self) -> None:
-        """載入固定 runtime.json（由 main.py 呼叫）。"""
-        sc_config.init_config()
+        """運行前載入（.env → 資料根 → runtime.json；由 main.py 呼叫）。"""
+        load()
 
     def start(self) -> None:
         """啟動 uvicorn（阻塞直到伺服器停止）。"""
-        server_host = str(sc_config.get_config("server_settings", "host") or "")
-        server_port = int(str(sc_config.get_config("server_settings", "port") or ""))
+        server_host = str(config.get_config("server_settings", "host") or "")
+        server_port = int(str(config.get_config("server_settings", "port") or ""))
 
         sc_logger.log(f"server starting (host={server_host} port={server_port})")
 

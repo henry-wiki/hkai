@@ -19,7 +19,7 @@ import time
 from typing import TypedDict
 
 from .. import context
-from ..runtime import sc_logger
+from bootstrap import sc_logger
 from ..utils import io
 from . import lifecycle, process
 

@@ -18,8 +18,8 @@ class _sc_sidebar {
             "projects": {
                 data_attr: "data-projects-collapsed",
                 button_selector: "[data-action='toggle_projects_sidebar']",
-                close_title: "收合專案欄",
-                open_title: "展開專案欄",
+                close_title: registry().sc_i18n().get("sidebar.collapse_projects"),
+                open_title: registry().sc_i18n().get("sidebar.expand_projects"),
                 sidebar_selector: ".sc_sidebar--projects",
                 min_width: 200,
                 max_width: 300,
@@ -28,8 +28,8 @@ class _sc_sidebar {
             "chats": {
                 data_attr: "data-chats-collapsed",
                 button_selector: "[data-action='toggle_chats_sidebar']",
-                close_title: "向右收起對話欄",
-                open_title: "展開對話欄",
+                close_title: registry().sc_i18n().get("sidebar.collapse_chats"),
+                open_title: registry().sc_i18n().get("sidebar.expand_chats"),
                 sidebar_selector: ".sc_sidebar--chats",
                 min_width: 200,
                 max_width: 300,
@@ -108,12 +108,12 @@ class _sc_sidebar {
 
     // 兩欄一齊掣提示同步（rail 最頂——兩欄全收＝「展開」提示；有欄開＝「收合」提示）
     apply_all_sidebars_control_state() {
-        let toggle_title  = "收合全部欄";
+        let toggle_title  = registry().sc_i18n().get("sidebar.collapse_all");
         let aria_expanded = "true";
 
         // 判定：兩欄全收 → 下一步係開 → 「展開」提示
         if (this.is_all_sidebars_collapsed() === true) {
-            toggle_title  = "展開全部欄";
+            toggle_title  = registry().sc_i18n().get("sidebar.expand_all");
             aria_expanded = "false";
         }
 

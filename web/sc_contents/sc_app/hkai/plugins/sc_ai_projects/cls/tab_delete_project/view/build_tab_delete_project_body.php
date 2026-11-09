@@ -25,23 +25,28 @@ trait build_tab_delete_project_body
 
         // 對話列字眼（三態——順序：冇對話 → 有已歸檔 → 全部未歸檔）
         if ($chat_count === 0) {
-            $chat_summary_text = "目前沒有對話。";
+            $chat_summary_text = hkai()->i18n()->get("project.delete.chat_summary_empty");
         } elseif ($archived_chat_count > 0) {
-            $chat_summary_text = "共 " . $chat_count . " 個——其中 " . $archived_chat_count . " 個已歸檔。";
+            $chat_summary_text = hkai()->i18n()->get("project.delete.chat_summary_archived");
+            $chat_summary_text = str_replace("{chat_count}", $chat_count, $chat_summary_text);
+            $chat_summary_text = str_replace("{archived_chat_count}", $archived_chat_count, $chat_summary_text);
         } else {
-            $chat_summary_text = "共 " . $chat_count . " 個——全部未歸檔。";
+            $chat_summary_text = hkai()->i18n()->get("project.delete.chat_summary_all");
+            $chat_summary_text = str_replace("{chat_count}", $chat_count, $chat_summary_text);
         }
 
-        $message_summary_text = "共 " . $message_count . " 條訊息。";
+        $message_summary_text = hkai()->i18n()->get("project.delete.message_summary");
+        $message_summary_text = str_replace("{message_count}", $message_count, $message_summary_text);
 
-        $description_text = "刪除後無法復原——「" . $project_name_encoded . "」連同以上所有資料會一併刪除。";
+        $description_text = hkai()->i18n()->get("project.delete.description");
+        $description_text = str_replace("{project_name}", $project_name_encoded, $description_text);
 
         $delete_button_attr   = [];
         $delete_button_attr[] = "type='button'";
         $delete_button_attr[] = "class='project_modal_btn danger btn_item'";
         $delete_button_attr[] = "data-btn='project_delete'";
         $delete_button_attr[] = "data-project_name='{$project_name_encoded}'";
-        $delete_button_attr[] = "data-confirm_msg='確定刪除專案 [[project_name]] 嗎？所有對話與資料會一併刪除，無法復原。'";
+        $delete_button_attr[] = "data-confirm_msg='" . hkai()->i18n()->get("project.delete.confirm_msg") . "'";
         $delete_button_attr   = implode(" ", $delete_button_attr);
 
         $outputLines   = [];
@@ -50,13 +55,13 @@ trait build_tab_delete_project_body
 
             // 區塊：刪除專案（標題形同表單 tab 嘅區塊——通用 builder）
             $outputLines[] = "<div class='project-section'>";
-            $outputLines[] = sc_ai_projects()->tab_general_form()->build_section_heading("刪除專案", "危險操作——執行前請確認。");
+            $outputLines[] = sc_ai_projects()->tab_general_form()->build_section_heading(hkai()->i18n()->get("project.delete.section_title"), hkai()->i18n()->get("project.delete.section_desc"));
 
                 // 現況列：對話（總數＋已歸檔數）
                 $outputLines[] = "<div class='modal-form__row form_row'>";
                 $outputLines[] = "<div class='modal-form__icon'><i class='fa-solid fa-comments'></i></div>";
                 $outputLines[] = "<div class='modal-form__info'>";
-                $outputLines[] = "<div class='modal-form__label'>對話紀錄</div>";
+                $outputLines[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("project.delete.chats_label") . "</div>";
                 $outputLines[] = "<div class='modal-form__desc'>" . $chat_summary_text . "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "</div>";
@@ -65,7 +70,7 @@ trait build_tab_delete_project_body
                 $outputLines[] = "<div class='modal-form__row form_row'>";
                 $outputLines[] = "<div class='modal-form__icon'><i class='fa-solid fa-message'></i></div>";
                 $outputLines[] = "<div class='modal-form__info'>";
-                $outputLines[] = "<div class='modal-form__label'>訊息紀錄</div>";
+                $outputLines[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("project.delete.messages_label") . "</div>";
                 $outputLines[] = "<div class='modal-form__desc'>" . $message_summary_text . "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "</div>";
@@ -74,12 +79,12 @@ trait build_tab_delete_project_body
                 $outputLines[] = "<div class='modal-form__row form_row'>";
                 $outputLines[] = "<div class='modal-form__icon modal-form__icon--error'><i class='fa-solid fa-trash'></i></div>";
                 $outputLines[] = "<div class='modal-form__info'>";
-                $outputLines[] = "<div class='modal-form__label'>確認刪除</div>";
+                $outputLines[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("project.delete.confirm_label") . "</div>";
                 $outputLines[] = "<div class='modal-form__desc'>" . $description_text . "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='modal-form__content'>";
                 $outputLines[] = "<div class='sc_btn_wrapper'>";
-                $outputLines[] = "<button {$delete_button_attr}>刪除這個專案</button>";
+                $outputLines[] = "<button {$delete_button_attr}>" . hkai()->i18n()->get("project.delete.button") . "</button>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "</div>";

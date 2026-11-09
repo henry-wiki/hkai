@@ -13,7 +13,8 @@ trait build_bench_source_file_content
     private function build_bench_source_file_content($bench_source_file, $entry_row_list)
     {
         // 暫存檔路徑（正式檔去 .php + _new_<uniqid>.php——同目錄；每次獨一名）
-        $new_file_path = preg_replace("/\.php$/", "_new_" . uniqid() . ".php", $bench_source_file);
+        $override_file_path = sc_data_override_path("benchmark", $bench_source_file);
+        $new_file_path = preg_replace("/\.php$/", "_new_" . uniqid() . ".php", $override_file_path);
         // 檔名（餵檔頭註解用）
         $file_basename = basename($bench_source_file);
 

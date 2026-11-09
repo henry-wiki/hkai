@@ -2,19 +2,19 @@
 """cleanup.py — 心跳清道夫（自行掃描 → 核對 create_time → 殺 → 清檔 → 寫 log）。
 
 上游：PHP `launcher()->exec(["cleanup"])`（stop_server 發現 bridge 已死時——只傳一個命令，唔傳 pid）
-下游：data/process_status/*.json（心跳檔）＋ psutil（核對建立時間／殺程序）＋ data/logs/launcher.log
+下游：data/process_status/*.json（心跳檔）＋ psutil（核對建立時間／殺程序）＋ bootstrap/sc_logger（記錄）
 """
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false, reportExplicitAny=false, reportAny=false
 
 import json
-import time
 from pathlib import Path
 from typing import Any, cast
 
 import psutil
 
-from ..context import HEARTBEAT_DIR, LAUNCHER_LOG_FILE, LOG_DIR
+from bootstrap import sc_logger
+from ..context import HEARTBEAT_DIR
 
 # create_time 容差（毫秒——Windows 開機時間精度誤差）
 CREATE_TIME_TOLERANCE_MS = 1000
@@ -143,16 +143,15 @@ class cleanup_class:
             return False
 
     def write_log(self, log_level: str, message_text: str) -> None:
-        """append 一行 log（data/logs/launcher.log——失敗唔影響主流程）。"""
-        log_line = time.strftime("%Y-%m-%d %H:%M:%S") + " [" + log_level + "] cleanup: " + message_text + "\n"
+        """記錄一行（統一 sc_logger → data/logs/launcher.{audit,error}.log）。"""
+        log_message = "cleanup: " + message_text
 
-        try:
-            LOG_DIR.mkdir(parents=True, exist_ok=True)
-
-            with LAUNCHER_LOG_FILE.open("a", encoding="utf-8") as log_file:
-                _ = log_file.write(log_line)
-        except OSError:
+        # 判定：ERROR 級 → error.log（同時 audit）
+        if log_level == "ERROR":
+            sc_logger.error(log_message)
             return
+
+        sc_logger.log(log_message)
 
     def get_process_image_name(self, process_pid: int) -> str:
         """取程序映像名（讀唔到 → 空字串）。"""

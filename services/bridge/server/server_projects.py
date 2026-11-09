@@ -18,7 +18,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from ..runtime import sc_logger
+from bootstrap import sc_logger
 
 router = APIRouter()
 

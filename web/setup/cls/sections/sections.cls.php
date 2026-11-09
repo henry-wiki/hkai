@@ -263,17 +263,11 @@ class sections_Class
             elseif ($check_item_code === "basic__os_version") {
                 return prerequisite\basic()->os_version();
             }
-            elseif ($check_item_code === "basic__mod_rewrite") {
-                return prerequisite\basic()->mod_rewrite();
-            }
             elseif ($check_item_code === "basic__memory_limit") {
                 return prerequisite\basic()->memory_limit();
             }
             elseif ($check_item_code === "basic__max_execution_time") {
                 return prerequisite\basic()->max_execution_time();
-            }
-            elseif ($check_item_code === "basic__fcgid_max_request_len") {
-                return prerequisite\basic()->fcgid_max_request_len();
             }
             elseif ($check_item_code === "php_extension__pdo_sqlite") {
                 return prerequisite\php_extension()->pdo_sqlite();
@@ -346,9 +340,6 @@ class sections_Class
             }
             elseif ($check_item_code === "environment__goose_executable") {
                 return prerequisite\executor()->goose_executable();
-            }
-            elseif ($check_item_code === "environment__env_writable") {
-                return prerequisite\permission()->env_writable();
             }
             elseif ($check_item_code === "environment__services_dir") {
                 return prerequisite\permission()->services_dir();

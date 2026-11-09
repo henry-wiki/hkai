@@ -28,7 +28,7 @@ class bridge_log_Class
     public function read_server_log_after_offset($log_byte_offset = 0, $log_line_limit = 500)
     {
         $python_script_dir = sc_get_config("services");
-        $audit_log_file    = dirname($python_script_dir) . "/data/logs/bridge.audit.log";
+        $audit_log_file    = sc_data_path()->get_data_sub_dir("logs/bridge.audit.log");
 
         $read_result = [];
         $read_result["mode"]   = "full";

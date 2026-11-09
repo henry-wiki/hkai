@@ -59,7 +59,7 @@ class _project_edit {
 
         loading.stop_loading(j_save_button);
         project_list_fetch_instance.project_list_fetch();
-        toastr.success("已儲存");
+        toastr.success(registry().sc_i18n().get("project.form.saved"));
     }
 
     // 本機側失敗程序：按鈕復原＋標準表單錯誤套用（modal 保持開啟）＋toast 提示
@@ -73,7 +73,7 @@ class _project_edit {
 
         loading.stop_loading(j_save_button);
         shared.sc_web_utils().apply_form_errors(j_modal, result.errors);
-        toastr.error(result.error || "儲存失敗，請檢查欄位");
+        toastr.error(result.error || registry().sc_i18n().get("project.form.save_failed"));
     }
 
 }

@@ -1,36 +1,29 @@
 # Changelog
 
-## 0.2.0 — 2026-11-04
+## 0.3.0 — 2026-11-06
 
-0.2.0 is an architectural release, not a feature patch. The message pipeline was rebuilt around a single Python bridge with two server-sent-event channels (state and workspace); the agent layer was reduced to Goose over ACP; the record gained tool-call history; and the product became self-contained — bundled Apache/PHP, locally vendored front-end libraries, and an embedded i18n dictionary. The aider engine, the health module and all CDN dependencies were removed.
+0.3.0 makes the runtime self-contained and the install folder read-only: Python 3.13 and the OCR stack ship inside the product, every writable file (database, settings, provider keys, logs, version marker) lives under one data root, and the whole interface is fully localised (Traditional Chinese and English).
 
 ### Added
 
-- **Stream-based state layer**: `state_stream` and `workspace_stream` SSE endpoints, with a new `sc_state_watch` domain that projects server snapshots into a store, a three-level DOM mirror and single-writer CSS state. Replaces per-module polling loops.
-- **Tool-call record**: `msg_response.N.tools.jsonl` is parsed into the database and rendered as a `seg--tool` section, one item per command, each with its own copy button for the raw command.
-- **Draft stage for prompts**: `data/messages/draft/{project}/{chat}` with a single multipart upload (13 images), a `preparing → promote` extraction chain, and a new `image_extractor` service running in its own working directory.
-- **Bridge service** (`services/bridge`): lifecycle ledger with heartbeat, presence/stream connection registry, and per-message attachment streaming over `/bridge_sse_for_message`.
-- **Portable shell**: `execute/HKAI.exe` starts a bundled Apache 2.4.54 + PHP-CGI 8.4.26 (mod_fcgid), configured through `bin/custom/conf/00-paths.conf`; no system PHP or virtual host needed.
-- **Offline front end**: jQuery, Bootstrap, Font Awesome, marked, DOMPurify, highlight.js, Mermaid, SweetAlert2, CodeMirror and toastr are vendored under `web/sc_contents/sc_resources/vendor`.
-- **Embedded i18n**: the dictionary is rendered into the page by PHP, eliminating the request that previously raced the first paint; 71 hard-coded UI strings were converted to keys.
-- **Setup wizard**: independent `web/setup` supporting fresh install and upgrade (staged copy, database import), with an fcgid upload-limit check.
-- **Diagnostics**: scoped `sc_console` logging and a process viewer driven by heartbeat files.
+- Bundled Python 3.13 runtime (`execute/python313`) with pip and the service dependencies (FastAPI, Uvicorn, pydantic, psutil, python-dotenv).
+- Bundled OCR stack: OpenCV, NumPy, Pillow and RapidOCR, so image text extraction works without a system Python.
+- Runtime configuration is written to `<data>/config/httpd-runtime.conf` instead of the application folder.
+- Provider API keys are stored in `<data>/config/api_keys.json` — one read/write entry used by both the settings page and the engine, and always shown masked (`**************` plus the last 4 characters) in the interface.
+- Full interface localisation: every user-facing string in PHP and JavaScript is resolved from the language dictionary; Traditional Chinese and English ship with the same key set.
+- The setup wizard now shows the install location, the version/BUILD stamp and the target file of every install step.
 
 ### Changed
 
-- **Server lifecycle**: a single entry point (`start_server`); the health stream only observes; a manual stop is recorded in `data/bridge/server_stopped_by_user` so the server is not restarted automatically.
-- **Queue semantics**: one running message per chat, with automatic relay to the next queued prompt when the previous one finishes.
-- **Worker management**: `goose_daemon` split into manager and worker layers; dispatch now checks the worker heartbeat, so a job is never handed to a worker that is already idling out.
-- **Message polling**: `message_poll` is reduced to a single completion fetch; live content arrives over the per-message SSE stream.
-- **Git status**: moved from the state stream to the workspace stream.
-- **Prompt parsing**: unified through `resolve_project_slug`, `resolve_chat_sid` and `is_valid_chat_sid`.
-- **Database**: schema advanced to `dbv-1.1`; upgrading renames the previous database (including `-wal`/`-shm`) to a timestamped backup before a new one is created.
-- **Environment detection**: performed in-process, removing the `%SystemDrive%` ghost folder; `.env` remains the only place for machine-specific paths.
+- Data root resolution: `HKAI_DATA_DIR` → site `data/` (when an existing database is present) → `%LOCALAPPDATA%\seacorner\hkai\data`.
+- Apache logs and PID file now live in `<data>/logs/` instead of `execute/bin/apache-*/logs/`.
+- The launcher and runtime checks prefer the bundled Python; `.env` `python_executable` still overrides it.
+- Local AppData detection falls back through environment variables and the running account, so FastCGI workers resolve the same path as the launcher.
+- The `.env` shipped with the release contains only relative machine paths and is never written by the application; all mutable state moved into the data root (database marker `<data>/localdb/DB.VERSION`, settings `<data>/config/settings.json`, keys `<data>/config/api_keys.json`, logs, playground).
+- Every path in the product now resolves through the same data-root entry point, so a read-only install folder cannot silently degrade into a second, divergent data location.
 
 ### Removed
 
-- **aider engine**: `services/aider_daemon`, `aider_entry`, the litellm hooks, `externals/aider`, and the `aider_pylibs_dir` key.
-- **`sc_ai_health`** plugin and the `/health` endpoint.
-- **`sc_ai_setup`** plugin — setup now lives in `web/setup`.
-- **`server_status`** endpoint and the settings-page startup polling.
-- **Front-end CDN dependencies** (jsDelivr, cdnjs) and the `php -S` development server mode.
+- The requirement to install Python 3.13 manually.
+- Writes into the application folder at runtime (read-only installs are now supported).
+- The `.env.example` template — the release ships a ready `.env`, and the wizard no longer creates or migrates environment files.

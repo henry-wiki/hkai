@@ -32,7 +32,7 @@ trait project_add
 
         // 判定：路徑已有專案 → 拒絕建立（欄位錯誤——前端 apply_form_errors 定位 project_path）
         if ($conflicting_project_row !== null) {
-            return sc_response()->json(["ok" => false, "errors" => ["project_path" => "此路徑已有專案「" . $conflicting_project_row["project_name"] . "」使用"]], 400);
+            return sc_response()->json(["ok" => false, "errors" => ["project_path" => hkai()->i18n()->get("project.form.path_in_use") . str_replace("{project_name}", $conflicting_project_row["project_name"], hkai()->i18n()->get("project.form.path_in_use"))]], 400);
         }
 
         // 解析欄位（已驗證——可直接取值）

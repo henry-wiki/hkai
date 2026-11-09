@@ -37,7 +37,7 @@ def _safe_log(message: str) -> None:
     """記 log（logger 問題絕不影響生死流程）。"""
     # 判定：logger 失敗 → 靜靜略過（生死流程唔可以因記錄失敗而中斷）
     try:
-        from . import sc_logger
+        from bootstrap import sc_logger
 
         sc_logger.log(message)
     except Exception:  # noqa: BLE001, S110

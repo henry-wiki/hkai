@@ -12,7 +12,7 @@ trait build_tab_rule_body
         // 守衛：新建語境（無專案列）→ 無路徑可讀，回提示殼（同 setup／git 域模式）
         $is_new_project = empty($project_row);
         if ($is_new_project) {
-            return $this->build_notice_pane("請先儲存專案資料，再檢視規則。");
+            return $this->build_notice_pane(hkai()->i18n()->get("project.rule.not_saved"));
         }
 
         // 準確值：規則檔＝專案根 AGENTS.md（只收 project_path）
@@ -35,7 +35,7 @@ trait build_tab_rule_body
         $outputLines[] = "<div class='modal_pane on' data-pane='rule'>";
             $outputLines[] = "<div class='pane_body instructions-editor' data-edit_mode='0' data-rule_update_time='" . sc_html_encode($rule_update_time) . "'>";
                 $outputLines[] = "<div class='instructions-editor__toolbar'>";
-                    $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='toggle_edit_mode' title='編輯／檢視切換'>";
+                    $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='toggle_edit_mode' title='" . hkai()->i18n()->get("project.rule.toggle_edit") . "'>";
                         $outputLines[] = "<svg class='instructions-editor__icon_edit' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'>";
                             $outputLines[] = "<path d='M12 20h9'/>";
                             $outputLines[] = "<path d='M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'/>";
@@ -46,13 +46,13 @@ trait build_tab_rule_body
                         $outputLines[] = "</svg>";
                     $outputLines[] = "</button>";
                     $outputLines[] = "<div class='instructions-editor__toolbar-group'>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_1' title='標題第一層'>H1</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_2' title='標題第二層'>H2</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_3' title='標題第三層'>H3</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_ordered_list' title='有序列表（1. 2. 3.）'>1. 2. 3.</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_bullet_list' title='無序列表'>•</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--bold' data-btn='insert_bold' title='粗體'>B</button>";
-                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--italic' data-btn='insert_italic' title='斜體'>I</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_1' title='" . hkai()->i18n()->get("project.rule.heading_1") . "'>H1</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_2' title='" . hkai()->i18n()->get("project.rule.heading_2") . "'>H2</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_heading_3' title='" . hkai()->i18n()->get("project.rule.heading_3") . "'>H3</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_ordered_list' title='" . hkai()->i18n()->get("project.rule.ordered_list") . "'>1. 2. 3.</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_bullet_list' title='" . hkai()->i18n()->get("project.rule.bullet_list") . "'>•</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--bold' data-btn='insert_bold' title='" . hkai()->i18n()->get("project.rule.bold") . "'>B</button>";
+                        $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn instructions-editor__toolbar-btn--italic' data-btn='insert_italic' title='" . hkai()->i18n()->get("project.rule.italic") . "'>I</button>";
                         $outputLines[] = "<button type='button' class='instructions-editor__toolbar-btn' data-btn='insert_code_block' title='" . hkai()->i18n()->get("rule.code_block") . "'>```</button>";
                     $outputLines[] = "</div>";
                 $outputLines[] = "</div>";

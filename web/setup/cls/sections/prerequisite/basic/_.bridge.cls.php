@@ -54,18 +54,6 @@ class prerequisite_basic_Class
     }
 
     /**
-     * Apache 重寫模組（basic 單元——單例·按需 require 單元檔）
-     *
-     * @return \sc\setup\sections\prerequisite\basic__mod_rewrite_Class
-     */
-    public function mod_rewrite()
-    {
-        require_once __DIR__ . "/basic__mod_rewrite.php";
-
-        return \sc\setup\sections\prerequisite\basic__mod_rewrite_Class::getInstance();
-    }
-
-    /**
      * 記憶體上限（basic 單元——單例·按需 require 單元檔）
      *
      * @return \sc\setup\sections\prerequisite\basic__memory_limit_Class
@@ -89,15 +77,4 @@ class prerequisite_basic_Class
         return \sc\setup\sections\prerequisite\basic__max_execution_time_Class::getInstance();
     }
 
-    /**
-     * FastCGI 上傳請求上限（basic 單元——單例·按需 require 單元檔）
-     *
-     * @return \sc\setup\sections\prerequisite\basic__fcgid_max_request_len_Class
-     */
-    public function fcgid_max_request_len()
-    {
-        require_once __DIR__ . "/basic__fcgid_max_request_len.php";
-
-        return \sc\setup\sections\prerequisite\basic__fcgid_max_request_len_Class::getInstance();
-    }
 }

@@ -11,23 +11,17 @@
 
 from pathlib import Path
 
+# 共用路徑（計算收歸 bootstrap/path.py——本檔唔重複推導）
+from bootstrap.path import REPO_ROOT as ROOT_DIR, SERVICES_DIR
+from bootstrap.path_resolve.get_data_dir import get_data_dir
+
 # 套件根（services/launcher/）
 BASE_DIR = Path(__file__).resolve().parent
 
-# services 目錄（launcher 上一層——daemon spawn cwd）
-SERVICES_DIR = BASE_DIR.parent
-
-# 站台根（services 上一層）
-ROOT_DIR = SERVICES_DIR.parent
-
-# 站台資料目錄
-DATA_DIR = ROOT_DIR / "data"
+# 站台資料目錄（由 path.get_data_dir() 取——Path 型方便拼接）
+DATA_DIR = Path(get_data_dir())
 
 # 心跳目錄（{program}.{pid}.json——清道夫掃描目標）
 HEARTBEAT_DIR = DATA_DIR / "process_status"
 
-# 日誌目錄／launcher 日誌（清道夫操作記錄）
-LOG_DIR = DATA_DIR / "logs"
-LAUNCHER_LOG_FILE = LOG_DIR / "launcher.log"
-
-__all__ = ["BASE_DIR", "DATA_DIR", "HEARTBEAT_DIR", "LAUNCHER_LOG_FILE", "LOG_DIR", "ROOT_DIR", "SERVICES_DIR"]
+__all__ = ["BASE_DIR", "DATA_DIR", "HEARTBEAT_DIR", "ROOT_DIR", "SERVICES_DIR"]

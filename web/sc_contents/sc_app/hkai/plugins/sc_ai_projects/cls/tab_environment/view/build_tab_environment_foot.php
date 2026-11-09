@@ -11,7 +11,7 @@ trait build_tab_environment_foot
     {
         $update_wrapper   = [];
         $update_wrapper[] = "<div class='sc_btn_wrapper'>";
-        $update_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='update_tab_environment'>更新</button>";
+        $update_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='update_tab_environment'>" . hkai()->i18n()->get("common.update") . "</button>";
         $update_wrapper[] = "</div>";
 
         return implode("\r\n", $update_wrapper);

@@ -12,6 +12,13 @@ trait get_provider_model_data
     {
         $provider_file = provider()->get_provider_file_path();
 
+        // 判定：data override 存在 → 用 override（唯讀安裝嘅更新）
+        $override_file_path = sc_data_override_path("providers", $provider_file);
+
+        if (file_exists($override_file_path) === true) {
+            $provider_file = $override_file_path;
+        }
+
         // provider 檔可能尚未產生（未跑 reset 前）——不存在 → null（require 不存在檔 = fatal）
         if (!file_exists($provider_file)) {
             return null;

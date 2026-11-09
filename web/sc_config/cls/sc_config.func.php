@@ -19,43 +19,70 @@ function sc_config()
 /**
 * 讀取配置（sc_get_config('web_root')／sc_get_config('contents.dir')）
 *
-* @param string $key 點分隔巢狀 key
+* @param string $config_chain 點分隔巢狀 key
 * @param mixed $default 無值回傳
 * @return mixed
 */
-function sc_get_config($key, $default = null)
+function sc_get_config($config_chain, $default = null)
 {
-    $repository = sc_config();
-    
-    return $repository->get($key, $default);
+    return sc_config()->get_config($config_chain, $default);
 }
 
 /**
-* 讀取全部配置（大陣列原形——唔使 key）
+* 寫入 config 單鍵（運行時覆寫——如資料庫路徑注入）
 *
-* @return array
+* @param string $config_chain 點分隔巢狀 key
+* @param mixed $value 值
+* @return bool 成功 true／空 chain false
 */
-function sc_get_configs()
+function sc_set_config($config_chain, $value)
 {
-    $repository = sc_config();
-    
-    return $repository->get_all();
-}
-
-// 寫入 config 單鍵（運行時覆寫——如語言/時區切換）
-function sc_set_config($key, $value)
-{
-    $repository = sc_config();
-    
-    $repository->set($key, $value);
+    return sc_config()->set_config($config_chain, $value);
 }
 
 /**
-* 設定配置（大陣列一次過——load.php 交入嘅最新全站配置；重複者逐個覆蓋值檔）
+* 設定配置（大陣列一次過——新 key 加入、重複 key 覆蓋（merge））
 *
-* @param array $config 配置陣列（return 陣列形）
+* @param array $configs 配置陣列（return 陣列形）
+* @return bool 成功 true／非陣列 false
 */
-function sc_set_configs($config)
+function sc_set_configs($configs)
 {
-    sc_config_Class::set_latest_config($config);
+    return sc_config()->merge_configs($configs);
+}
+
+
+/**
+* 讀用戶設定（settings 樹——group.name 或單層 key）
+*
+* @param string $setting_chain 點分隔設定 key
+* @param mixed $default 無值回傳
+* @return mixed
+*/
+function sc_get_setting($setting_chain, $default = null)
+{
+    return sc_config()->get_setting($setting_chain, $default);
+}
+
+/**
+* 寫用戶設定單鍵（group.name——寫入 <data>/config/settings.json）
+*
+* @param string $setting_chain 點分隔設定 key（必須兩段）
+* @param mixed $value 值
+* @return bool 成功 true／格式錯 false
+*/
+function sc_set_setting($setting_chain, $value)
+{
+    return sc_config()->set_setting($setting_chain, $value);
+}
+
+/**
+* 合併用戶設定（大陣列一次過——新 key 加入、重複 key 覆蓋；寫 settings.json）
+*
+* @param array $settings 設定陣列（group → key 兩層）
+* @return bool 成功 true／非陣列 false
+*/
+function sc_set_settings($settings)
+{
+    return sc_config()->merge_settings($settings);
 }

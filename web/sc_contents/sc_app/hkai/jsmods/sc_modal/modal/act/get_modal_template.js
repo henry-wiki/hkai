@@ -24,7 +24,7 @@ class _get_modal_template {
         const j_modal_head_content = jQuery("<div class='modal__header-content'></div>").appendTo(j_modal_head);
         const j_modal_title = jQuery("<div class='modal__title'></div>").appendTo(j_modal_head_content);
         const j_modal_subtitle = jQuery("<div class='modal__subtitle'></div>").appendTo(j_modal_head_content);
-        const j_modal_close = jQuery("<button class='modal__close' title='關閉'>✕</button>").appendTo(j_modal_head);
+        const j_modal_close = jQuery("<button class='modal__close' title='" + registry().sc_i18n().get("common.close") + "'>✕</button>").appendTo(j_modal_head);
 
         return j_modal;
     }

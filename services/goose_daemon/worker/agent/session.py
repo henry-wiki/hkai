@@ -277,7 +277,17 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
         if stream_state["stream_opened_logged"] is False:
             stream_state["stream_opened_logged"] = True
             _ = message_log().append_info_log(EVENT_REPLY_STREAM_OPENED, "goose reply stream opened")
-        _ = message_log().append_response_result(stream_state["response_index"], str(update_payload.get("text", "")))
+        reply_text = str(update_payload.get("text", ""))
+
+        from .. import error_text as _error_text
+
+        # 判定：已進入錯誤模式，或呢一段似錯誤 → 寫入 error detail（唔當正常回覆）
+        if stream_state.get("error_mode") is True or _error_text.looks_like_error(reply_text) is True:
+            stream_state["error_mode"] = True
+            _ = message_log().append_error_detail(reply_text)
+            return
+
+        _ = message_log().append_response_result(stream_state["response_index"], reply_text)
         return
 
     # 工具活動（TOOL_INVOKED 事件——trace；同一工具同狀態只記一次）

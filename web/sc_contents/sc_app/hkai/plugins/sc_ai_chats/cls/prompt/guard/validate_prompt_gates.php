@@ -33,8 +33,8 @@ trait validate_prompt_gates
                 "ok"      => false,
                 "code"    => "E_SERVER_DOWN",
                 "title"   => hkai()->i18n()->get("error.E_SERVER_DOWN.title"),
-                "message" => "無法連接本機伺服器，訊息未送出。",
-                "hint"    => "請先啟動伺服器（Settings → Server →「啟用」）再重新發送。",
+                "message" => hkai()->i18n()->get("prompt.error.server_offline"),
+                "hint"    => hkai()->i18n()->get("prompt.error.server_start_hint"),
             ];
             $context["error_status"] = 503;
             return $context;

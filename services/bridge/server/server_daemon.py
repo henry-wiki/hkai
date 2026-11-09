@@ -14,7 +14,7 @@ from typing import Any
 from fastapi import APIRouter
 
 from ..agent_daemon import daemon_wake
-from ..runtime import sc_logger
+from bootstrap import sc_logger
 
 router = APIRouter()
 

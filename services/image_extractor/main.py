@@ -8,7 +8,7 @@ main.py — image_extractor CLI 入口（工作目錄＝紙箱）。
     python -m image_extractor.main status <box_dir>   印出整體＋逐張狀態（JSON）
 
 上游：bridge（POST /image_extract/start｜stop 之後 spawn 本 CLI）
-下游：extractor、box_store、runtime（pidfile／sc_logger）
+下游：extractor、box_store、runtime（pidfile／event_log）、bootstrap/sc_logger（執行日誌）
 """
 
 import json
@@ -21,7 +21,8 @@ from typing import cast
 
 from . import box_store
 from .extractor import extractor_class
-from .runtime import pidfile, sc_logger
+from bootstrap import sc_logger
+from .runtime import event_log, pidfile
 
 USAGE_TEXT = "usage: python -m image_extractor.main <run|stop|status> <box_dir>"
 
@@ -40,6 +41,7 @@ def enter_runtime_junk_dir() -> None:
 
 def main(argv: list[str]) -> int:
     """CLI 分派；回 exit code。"""
+    sc_logger.setup("image_extractor")
     # 判定：參數不足 → 印用法
     if len(argv) < 3:
         print(USAGE_TEXT, file=sys.stderr)
@@ -74,7 +76,7 @@ def _run(box_dir: Path) -> int:
 
     # 判定：已有活主人 → 唔重複做
     if pidfile.claim_pid(box_dir, self_pid) is False:
-        sc_logger.log("BUSY", "box already claimed: " + str(box_dir))
+        event_log.log_event("BUSY", "box already claimed: " + str(box_dir))
 
         return 0
 
@@ -83,7 +85,7 @@ def _run(box_dir: Path) -> int:
     def handle_signal(signal_number: int, frame: FrameType | None) -> None:
         """收到終止訊號 → 交還認領後即刻離開。"""
         _ = frame
-        sc_logger.log("SIGNAL", "received signal " + str(signal_number))
+        event_log.log_event("SIGNAL", "received signal " + str(signal_number))
         pidfile.release_pid(box_dir, self_pid)
         os._exit(0)
 
@@ -95,7 +97,7 @@ def _run(box_dir: Path) -> int:
     finally:
         pidfile.release_pid(box_dir, self_pid)
 
-    sc_logger.log("JOB_FINISHED", "success=" + str(success_count), {"box_dir": str(box_dir)})
+    event_log.log_event("JOB_FINISHED", "success=" + str(success_count), {"box_dir": str(box_dir)})
 
     return 0
 
@@ -106,7 +108,7 @@ def _stop(box_dir: Path) -> int:
     killed = pidfile.terminate_tree(pid)
     pidfile.remove_pid(box_dir)
 
-    sc_logger.log("STOP", "killed=" + str(killed), {"pid": pid, "box_dir": str(box_dir)})
+    event_log.log_event("STOP", "killed=" + str(killed), {"pid": pid, "box_dir": str(box_dir)})
 
     print(json.dumps({"ok": True, "killed": killed, "pid": pid}, ensure_ascii=False))
 

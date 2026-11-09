@@ -5,8 +5,9 @@ bridge 套件——HTTP server + daemon 管理。
     main.py                       入口：純啟動清單（~15 行）
 
     runtime/                       基礎設施
-    ├── sc_logger.py               執行日誌（error／audit）
-    └── sc_config.py               全域 JSON 設定讀取
+    └── （日誌統一在 bootstrap/sc_logger.py）
+
+    （.env／runtime.json／資料根：services/bootstrap/——PHP sc_config 域對應）
 
     server/                        HTTP 伺服器
     ├── server.py                  FastAPI app + lifespan + uvicorn 啟動（singleton）
@@ -27,8 +28,8 @@ BASE_DIR = Path(__file__).resolve().parent
 # runtime 目錄（log 等運行時資料）
 RUNTIME_DIR = BASE_DIR / "runtime"
 
-# 站台根（web／services 所在——BASE_DIR＝services/bridge/，向上兩層）
-ROOT_DIR = BASE_DIR.parent.parent
+# 站台根＋資料根（計算收歸 bootstrap/path.py——本檔唔重複推導）
+from bootstrap.path import REPO_ROOT as ROOT_DIR
+from bootstrap.path_resolve.get_data_dir import get_data_dir
 
-# 站台資料目錄（站台根 data/——所有執行產物集中喺呢度）
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = Path(get_data_dir())

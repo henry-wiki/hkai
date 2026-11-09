@@ -16,7 +16,7 @@ trait build_tab_environment_foot_note
         }
 
         // 準確值：環境檔＝storage/hkai/environment/env.{slug}.md（app storage——唔寫專案根）
-        $storage_dir     = sc_get_config("storage.app_dir");
+        $storage_dir     = sc_get_data_dir();
         $env_file        = $storage_dir . "/environment/env." . $project_row["project_slug"] . ".md";
 
         // 顯示路徑（統一 "/"——G:/ 樣）

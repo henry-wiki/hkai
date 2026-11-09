@@ -43,14 +43,14 @@ goose_daemon 套件——goose agent接駁版（單一職責模組；共用層�
         timer.py              時間格式
     runtime/                   共用層（daemon／worker／agent）
         identity.py           程序身份常數（名／標籤單一來源）
-        sc_logger.py          日誌（setup／log／write_early_error_log）
+        （日誌統一在 bootstrap/sc_logger.py）
         process.py            程序身份＋台帳 record_spawn()
         heartbeat.py          daemon 心跳
         heartbeat_worker.py   worker 心跳（母親監視＋abort）
         heartbeat_agent.py   agent子程序心跳（worker 代寫）
         lifecycle.py          生死契約（exit／exit_children／exit_self／exit_child）
-        sc_config.py          runtime.json 讀取
-        sc_env.py             .env 讀取＋API key 注入
+        config.py          runtime.json 讀取
+        env.py             .env 讀取＋API key 注入
         build_file.py         BUILD 監看
         single_instance.py    單一實例檢查
 """
@@ -63,8 +63,8 @@ BASE_DIR = Path(__file__).resolve().parent
 # runtime 目錄（log 等運行時資料）
 RUNTIME_DIR = BASE_DIR / "runtime"
 
-# 站台根（BASE_DIR＝services/goose_daemon/，向上兩層）
-ROOT_DIR = BASE_DIR.parent.parent
+# 站台根＋資料根（計算收歸 bootstrap/path.py——本檔唔重複推導）
+from bootstrap.path import REPO_ROOT as ROOT_DIR
+from bootstrap.path_resolve.get_data_dir import get_data_dir
 
-# 站台資料目錄（站台根 data/——所有執行產物集中喺呢度）
-DATA_DIR = ROOT_DIR / "data"
+DATA_DIR = Path(get_data_dir())

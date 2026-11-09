@@ -23,7 +23,9 @@ from typing import Any
 from fastapi import APIRouter
 
 from ..context import DATA_DIR
-from ..runtime import lifecycle, process, sc_config, sc_logger
+from bootstrap import config
+from bootstrap import sc_logger
+from ..runtime import lifecycle, process
 
 router = APIRouter()
 
@@ -211,7 +213,7 @@ def kill(payload: dict[str, Any]) -> dict[str, Any]:
         target_image_name = ""
 
     kill_source_text = str(payload.get("source", "")) + ";children=" + str(len(child_pids_for_log))
-    write_kill_journal(sc_config.get_configs(), "bridge:/process/kill/", kill_pid, target_image_name, kill_source_text)
+    write_kill_journal(config.get_configs(), "bridge:/process/kill/", kill_pid, target_image_name, kill_source_text)
 
     # 先殺子（child_pids 由 PHP 依台帳血緣排好——deepest-first），再殺父
     killed_children = []

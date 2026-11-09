@@ -2,7 +2,7 @@
 
 namespace sc\setup\sections\setting;
 
-// == HKAI setup 檢查單元：provider__deepseek.php（設定格「DeepSeek API key」——單項自足；永遠通過〔選填輸入位〕；安裝時把打過嘅值寫 .env）
+// == HKAI setup 檢查單元：provider__deepseek.php（設定格「DeepSeek API key」——單項自足；永遠通過〔選填輸入位〕；安裝時把打過嘅值寫 data/config/api_keys.json）
 // == 職責：呢一項嘅全部——setup_check()＝UI 格式（永 pass＋輸入位）；setup_install()＝安裝段讀寫
 // == 接入：setting 域門——provider()->deepseek()（按需 require 本檔；檢查表＋sections 域派發用）
 // == 載入：顯式（無 autoloader）——provider 域門按需 require 本檔
@@ -56,12 +56,12 @@ class provider__deepseek_Class
 
         // 判定：狀態檔未有值 → 用暫存 .env（搬遷複本）預填
         if ($deepseek_recorded_value === "") {
-            $deepseek_recorded_value = setup()->staging()->get_env_value($source_dir, "DEEPSEEK_API_KEY");
+            $deepseek_recorded_value = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
         }
 
         // 判定：暫存仍冇 → 用本機 .env 現值
         if ($deepseek_recorded_value === "") {
-            $deepseek_recorded_value = sc_env()->get("DEEPSEEK_API_KEY", "");
+            $deepseek_recorded_value = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
         }
 
         $check_result["input"] = [
@@ -73,7 +73,7 @@ class provider__deepseek_Class
         return $check_result;
     }
 
-    // 安裝（用戶打過嘅 key 解密後寫入 .env——缺先加·已有唔覆蓋；未打＝跳過）
+    // 安裝（用戶打過嘅 key 解密後寫入 data/config/api_keys.json——缺先加·已有唔覆蓋；未打＝跳過）
     public function setup_install()
     {
         // 有效值（同畫面顯示一致：狀態檔 → staging → 本機 .env）
@@ -85,8 +85,8 @@ class provider__deepseek_Class
             return ["ok" => true, "result" => "skipped", "detail" => setup()->i18n()->get("install.detail.key_not_filled_skipped")];
         }
 
-        // 寫 .env（sc_set_env——缺先加·已有唔覆蓋）
-        sc_set_env("DEEPSEEK_API_KEY", $deepseek_recorded_value);
+        // 寫 data/config/api_keys.json（缺先加·已有唔覆蓋）
+        sc_api_keys()->set("DEEPSEEK_API_KEY", $deepseek_recorded_value);
 
         return ["ok" => true, "result" => "written", "detail" => setup()->i18n()->get("install.detail.written")];
     }

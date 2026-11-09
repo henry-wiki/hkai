@@ -10,12 +10,15 @@ trait get_git_change_text
     private function get_git_change_text($git_status)
     {
         $git_changes = $git_status["changes"];
-        $change_text = "乾淨（無未提交變更）";
+        $change_text = hkai()->i18n()->get("git.change.clean");
 
         // 判定：有變更 → 組詳細文字
         if ($git_changes["total"] > 0) {
-            $change_text = $git_changes["total"] . " 個檔案（staged " . $git_changes["staged"]
-                . "／unstaged " . $git_changes["unstaged"] . "／untracked " . $git_changes["untracked"] . "）";
+            $change_text = hkai()->i18n()->get("git.change.files");
+            $change_text = str_replace("{total}", $git_changes["total"], $change_text);
+            $change_text = str_replace("{staged}", $git_changes["staged"], $change_text);
+            $change_text = str_replace("{unstaged}", $git_changes["unstaged"], $change_text);
+            $change_text = str_replace("{untracked}", $git_changes["untracked"], $change_text);
 
             // 判定：有追蹤檔改動 → 附 +/− 行數
             if ($git_status["diff"] !== null) {
@@ -24,7 +27,7 @@ trait get_git_change_text
 
             // 判定：有衝突 → 標示
             if ($git_changes["conflicts"] > 0) {
-                $change_text .= "；⚠ 衝突 " . $git_changes["conflicts"];
+                $change_text .= str_replace("{conflicts}", $git_changes["conflicts"], hkai()->i18n()->get("git.change.conflicts"));
             }
         }
 

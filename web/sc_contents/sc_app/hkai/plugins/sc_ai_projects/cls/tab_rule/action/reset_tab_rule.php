@@ -55,7 +55,7 @@ trait reset_tab_rule
     // 備份規則檔入 storage/hkai/bak（檔名＝{slug}_AGENTS_{Ymd_His}.md；順手清一日前舊份）
     private function backup_rule_file($project_slug, $rule_file)
     {
-        $storage_dir     = sc_get_config("storage.app_dir");
+        $storage_dir     = sc_get_data_dir();
         $bak_dir         = $storage_dir . "/bak";
 
         // 判定：bak 目錄不存在 → 遞迴建立

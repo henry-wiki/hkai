@@ -17,7 +17,8 @@ import time
 from pathlib import Path
 
 from .. import context
-from ..runtime import identity, lifecycle, sc_logger
+from bootstrap import sc_logger
+from ..runtime import identity, lifecycle
 from . import job_scheduler, roster
 
 # 先禮等待預設（秒——runtime.json `manager_exit_wait_sec` 可覆寫）

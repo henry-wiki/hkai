@@ -11,10 +11,9 @@ import os
 import sys
 import time
 
-from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
+from bootstrap.path import SERVICES_DIR
 
-# services 目錄（bridge 嘅上一層——由本檔位置推導，唔靠啟動者）
-SERVICES_DIR = BASE_DIR.parent
+from . import BASE_DIR, DATA_DIR, ROOT_DIR, RUNTIME_DIR
 
 # 固定工作目錄（唔信任 PHP／任何啟動者——一律以本檔位置為準）
 os.chdir(SERVICES_DIR)

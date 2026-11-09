@@ -12,40 +12,17 @@ ini_set('display_errors', 1);
 ini_set('precision', 12);
 ini_set('serialize_precision', 12);
 
-// ---------- FastCGI 路徑正規化（單一入口——Apache 交 //./G:/… 裝置前綴） ----------
-// 原因：Apache SetHandler 用 proxy:fcgi://…//./ → SCRIPT_FILENAME／DOCUMENT_ROOT 帶 //./；
-//       PHP 由此派生嘅路徑（含子程序 chdir）會壞。喺最早一步洗乾淨，之後全站唔會再見。
-$sc_server_path_keys = ["SCRIPT_FILENAME", "PATH_TRANSLATED", "DOCUMENT_ROOT", "ORIG_SCRIPT_FILENAME"];
-
-foreach ($sc_server_path_keys as $sc_server_path_key) {
-    // 判定：冇呢個 key → 跳過
-    if (!isset($_SERVER[$sc_server_path_key])) {
-        continue;
-    }
-
-    $sc_server_path_value = str_replace("\\", "/", $_SERVER[$sc_server_path_key]);
-
-    // 判定：帶 //./ 前綴（裝置形）→ 剝走
-    if (strpos($sc_server_path_value, "//./") === 0) {
-        $sc_server_path_value = substr($sc_server_path_value, 4);
-    }
-
-    // 判定：帶 //?/ 前綴（UNC 裝置形）→ 剝走
-    if (strpos($sc_server_path_value, "//?/") === 0) {
-        $sc_server_path_value = substr($sc_server_path_value, 4);
-    }
-
-    $_SERVER[$sc_server_path_key] = $sc_server_path_value;
-}
 
 // ---------- 根事實（唯一原始計算——define 一次；其餘全部由它派生） ----------
-$sc_web_root = str_replace("\\", "/", rtrim(dirname(__DIR__, 1), "/"));
+define("SC_WEB_ROOT"    , sc_normalize_path(rtrim(dirname(__DIR__, 1), "/")));
+define("SC_REPO_ROOT"   , dirname(SC_WEB_ROOT));
 
-// Apache FastCGI 帶 //./ 裝置前綴（//./G:/…）→ 剝走（否則 chdir／子程序 cwd 會壞）
-if (strpos($sc_web_root, "//./") === 0) {
-    $sc_web_root = substr($sc_web_root, 4);
-}
+// .env 位置（單一、簡單：站台根 .env）
+define("SC_ENV_FILE"    , SC_REPO_ROOT . "/.env");
 
-define("SC_WEB_ROOT", $sc_web_root);
-define("SC_REPO_ROOT", dirname(SC_WEB_ROOT));
-define("SC_ENV_FILE", SC_REPO_ROOT . "/.env");
+// ---------- 執行環境初始化（sc_env——路徑洗淨） ----------
+sc_env()->init_running_environment();
+// ---------- .env 載入（SC_ENV_FILE 已定義——一次讀晒全部值） ----------
+sc_env()->load();
+// 初始化：解析資料根＋匯出 DATA_DIR
+sc_data_path()->init();

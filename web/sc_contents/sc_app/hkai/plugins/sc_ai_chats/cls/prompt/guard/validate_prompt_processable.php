@@ -18,7 +18,7 @@ trait validate_prompt_processable
 
         // 供應商必填 + 必須有效
         if ($provider_id === "") {
-            $errors["provider_id"] = ["message" => "請選擇模型供應商（provider）", "code" => "E_VALIDATION_RECOVERABLE"];
+            $errors["provider_id"] = ["message" => hkai()->i18n()->get("prompt.error.provider_missing"), "code" => "E_VALIDATION_RECOVERABLE"];
         } else {
             // provider 包（可用清單先驗——唔在清單唔叫；空 rows 走原有錯誤分支）
             $available_providers = sc_ai_providers()->main()->get_available_providers();
@@ -28,17 +28,17 @@ trait validate_prompt_processable
                 $provider_model_rows = $provider_instance->repo()->get_models();
             }
             if (empty($provider_model_rows)) {
-                $errors["provider_id"] = ["message" => "無效的模型供應商：" . $provider_id, "code" => "E_VALIDATION_RECOVERABLE"];
+                $errors["provider_id"] = ["message" => hkai()->i18n()->get("prompt.error.provider_invalid") . $provider_id, "code" => "E_VALIDATION_RECOVERABLE"];
             }
 
             // 模型必填 + 必須屬於該供應商
             if ($model_id === "") {
-                $errors["model_id"] = ["message" => "請選擇模型（model）", "code" => "E_VALIDATION_RECOVERABLE"];
+                $errors["model_id"] = ["message" => hkai()->i18n()->get("prompt.error.model_missing"), "code" => "E_VALIDATION_RECOVERABLE"];
             } elseif (
                 !empty($provider_model_rows)
                 && !isset($provider_model_rows[$model_id])
             ) {
-                $errors["model_id"] = ["message" => "無效的模型：" . $model_id . "（供應商：" . $provider_id . "）", "code" => "E_VALIDATION_RECOVERABLE"];
+                $errors["model_id"] = ["message" => hkai()->i18n()->get("prompt.error.model_invalid") . $model_id . hkai()->i18n()->get("prompt.error.provider_suffix") . $provider_id . "）", "code" => "E_VALIDATION_RECOVERABLE"];
             }
 
             // 上下文長度必備（model store context_length——存在、數字、> 0；缺＝資料唔齊，同無效 model 同級）
@@ -55,25 +55,48 @@ trait validate_prompt_processable
                     !is_numeric($context_length)
                     || $context_length <= 0
                 ) {
-                    $errors["model_id"] = ["message" => "模型缺少有效上下文長度（context_length）：" . $model_id, "code" => "E_VALIDATION_RECOVERABLE"];
+                    $errors["model_id"] = ["message" => hkai()->i18n()->get("prompt.error.context_length") . $model_id, "code" => "E_VALIDATION_RECOVERABLE"];
                 }
             }
 
-            // 推理等級若提供，必須在 model 支援清單內
+            // 推理等級（model 支援推理時必填；唔支援推理嘅 model 唔需要）
+            $is_model_known = false;
+
+            // 判定：model 有喺 provider 清單 → 可查能力
             if (
-                $reasoning_effort !== null
-                && $model_id !== ""
+                $model_id !== ""
                 && !empty($provider_model_rows)
                 && isset($provider_model_rows[$model_id])
             ) {
+                $is_model_known = true;
+            }
+
+            $supported_efforts = [];
+
+            // 判定：model 已知 → 查支援等級
+            if ($is_model_known === true) {
                 $model_item = sc_ai_providers()->repo()->get_model_item($provider_id, $model_id);
                 $supported_efforts = isset($model_item["reasoning_supported_efforts"]) ? $model_item["reasoning_supported_efforts"] : [];
-                if (
-                    !empty($supported_efforts)
-                    && !in_array($reasoning_effort, $supported_efforts)
-                ) {
-                    $errors["reasoning_effort"] = ["message" => "無效的推理等級：" . $reasoning_effort, "code" => "E_VALIDATION_RECOVERABLE"];
-                }
+            }
+
+            $is_effort_missing = ($reasoning_effort === null || $reasoning_effort === "");
+            $has_supported_efforts = (empty($supported_efforts) === false);
+
+            // 判定：支援推理但冇揀等級 → 必填錯誤
+            if (
+                $has_supported_efforts === true
+                && $is_effort_missing === true
+            ) {
+                $errors["reasoning_effort"] = ["message" => hkai()->i18n()->get("prompt.error.effort_required"), "code" => "E_VALIDATION_RECOVERABLE"];
+            }
+
+            // 判定：有揀但唔在支援清單內 → 無效錯誤
+            if (
+                $has_supported_efforts === true
+                && $is_effort_missing === false
+                && !in_array($reasoning_effort, $supported_efforts)
+            ) {
+                $errors["reasoning_effort"] = ["message" => hkai()->i18n()->get("prompt.error.effort_invalid") . $reasoning_effort, "code" => "E_VALIDATION_RECOVERABLE"];
             }
         }
 

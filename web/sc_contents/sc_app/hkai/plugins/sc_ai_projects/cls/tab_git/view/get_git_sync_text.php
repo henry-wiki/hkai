@@ -9,7 +9,7 @@ trait get_git_sync_text
 {
     private function get_git_sync_text($git_status)
     {
-        $sync_text = "（未設定 upstream）";
+        $sync_text = hkai()->i18n()->get("git.sync.none");
 
         // 判定：有 upstream → 顯示開叉
         if ($git_status["upstream"] !== "") {

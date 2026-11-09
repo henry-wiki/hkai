@@ -6,7 +6,7 @@ namespace sc\setup\database;
 // == 職責：讀目前版本（最後一行）、追加版本、檔案缺失判定
 // == 格式：每行一個版本，例 dbv-1.0 / dbv-1.2；最後一行＝目前版本
 // == 上游：database 格新建庫（db_ready）、舊庫匯入（importer）、搬遷掃描（migration_source）
-// == 下游：根目錄 DB.VERSION（storage.database_version_file）
+// == 下游：<data>/localdb/DB.VERSION（storage.database_version_file）
 
 class database_version_Class
 {

@@ -30,8 +30,8 @@ class _apply_model {
             // popup（確認——未揀 model，是否仍要繼續套用）
             const close_reason = await shared.sc_alert().show({
                 message      : "Continue to apply without a model?",
-                confirm_text : "確定",
-                cancel_text  : "取消",
+                confirm_text : registry().sc_i18n().get("common.confirm"),
+                cancel_text  : registry().sc_i18n().get("common.cancel"),
             });
 
             // 判定：未確認（取消／關閉）→ return false（中止——不寫 hidden fields、不關 modal、不發 fetch）

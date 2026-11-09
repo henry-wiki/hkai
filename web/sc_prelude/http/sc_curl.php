@@ -66,7 +66,7 @@ function sc_curl($url, $args = array())
 			
 			// -------------------------------------------------------------------------------
 			// 2. 同目錄下的 cacert.pem
-            $local_cert = update_ca_certificate();
+            $local_cert = get_ca_certificate_path();
 			
 			
             if (file_exists($local_cert)) {

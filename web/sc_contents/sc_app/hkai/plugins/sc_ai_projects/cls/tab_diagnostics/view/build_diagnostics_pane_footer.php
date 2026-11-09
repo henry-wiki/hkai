@@ -11,7 +11,7 @@ trait build_diagnostics_pane_footer
     public function build_diagnostics_pane_footer()
     {
         // 重新整理鈕（本 pane 專用——每 tab 獨立：只重載當前 section）
-        $foot_left_html        = "<button class='project_modal_btn btn_item' data-btn='diagnostics_refresh'>重新整理</button>";
+        $foot_left_html        = "<button class='project_modal_btn btn_item' data-btn='diagnostics_refresh'>" . hkai()->i18n()->get("common.refresh") . "</button>";
         $diagnostics_foot_html = $this->build_tab_diagnostics_foot();
 
         $outputLines   = [];

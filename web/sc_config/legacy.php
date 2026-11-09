@@ -21,7 +21,7 @@ if (!defined("SC_DOCUMENT_ROOT")) {
     define("SC_DIR_RESOURCES"       , sc_get_config("contents.resources"));
     define("SC_DIR_PROJECTS"        , sc_get_config("contents.projects"));
 
-    define("SC_TMP_DIR"             , sc_get_config("runtime.tmp"));
-    define("SC_LOG_DIR"             , sc_get_config("runtime.log"));
+    define("SC_TMP_DIR"             , sc_data_path()->get_data_sub_dir("_tmp"));
+    define("SC_LOG_DIR"             , sc_data_path()->get_data_sub_dir("logs"));
     define("SC_DIR_STORAGE"         , sc_get_config("storage.root_dir"));
 }

@@ -27,7 +27,7 @@ class environment__storage_dirs_Class
     // 測試（唯一真實檢查動作——data 目錄存在兼可寫？〔含真寫入探測〕回原果）
     public function setup_test()
     {
-        $app_dir = sc_get_config("storage.app_dir");
+        $app_dir = sc_get_data_dir();
 
         // 判定：目錄唔存在 → 原果 fail（唔會代建）
         if (!is_dir($app_dir)) {

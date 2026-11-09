@@ -271,7 +271,7 @@ class sc_controller_Class
     public function get_storage_dir()
     {
         // 設定有指定 app storage → 直接用（例：data——放 web root 外）
-        $app_dir = sc_get_config("storage.app_dir");
+        $app_dir = sc_get_data_dir();
 
         // 判定：有指定 → 回設定值
         if ($app_dir !== "") {

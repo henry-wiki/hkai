@@ -9,7 +9,7 @@ namespace sc\app\hkai\plugins\sc_stream\snapshot\cleanup;
 
 trait cleanup
 {
-    // 孤兒門檻（秒——非終態但任何檔案都冇更新，當 worker 死咗）
+    // 孤兒門檻（秒——非終態＋任何檔案停滯＋主人（msg_claim worker_pid）已死，當孤兒）
     private const ABANDONED_JOB_SECONDS = 180;
 
     public function sweep_expired_view_files()
@@ -231,9 +231,10 @@ trait cleanup
         return sc_ai_chats()->queue()->dispatch_agent_item($poll_item, $box_dir);
     }
     // 單條收尾（終態才做；失敗計次，5 次後跳過——防無限重試）
-    // 孤兒判斷：非終態＋（preparing／connecting／replying）＋任何檔案 N 秒冇更新 → 當死咗
+    // 孤兒判斷：非終態＋（preparing／connecting／replying）＋任何檔案 N 秒冇更新＋主人已死 → 當孤兒
+    // 主人對照：msg_claim.worker_pid 現查＋process_status/worker.{pid}.json 心跳（兩者皆在＝仲運行，唔殺）
     // 上游：finalize_terminal_job_file（sweep 逐個 job）
-    // 下游：filemtime
+    // 下游：filemtime／is_job_owner_alive
     private function is_abandoned_job($job_dir, $job_status)
     {
         // 判定：排隊中（未開工）→ 唔算孤兒（可以排好耐）
@@ -271,12 +272,48 @@ trait cleanup
             }
         }
 
-        // 判定：完全冇檔 → 當孤兒
+        // 判定：完全冇活動檔 → 交主人對照（冇檔但主人仲生＝起步中，唔殺）
         if ($latest_mtime < 1) {
-            return true;
+            return $this->is_job_owner_alive($job_dir) === false;
         }
 
-        return (time() - $latest_mtime) > self::ABANDONED_JOB_SECONDS;
+        $idle_seconds = time() - $latest_mtime;
+
+        // 判定：活動檔未停滯夠鐘 → 唔算孤兒
+        if ($idle_seconds <= self::ABANDONED_JOB_SECONDS) {
+            return false;
+        }
+
+        // 停滯夠鐘：主人仲生＝等真終態（唔殺）；主人已死＝真孤兒
+        return $this->is_job_owner_alive($job_dir) === false;
+    }
+
+    // 主人仲生唔生（msg_claim.worker_pid 現查＋心跳檔認名——重用 poll 域 is_msg_worker_alive）
+    // 上游：is_abandoned_job；下游：hkai()->process()->is_process_alive／process_status 心跳檔
+    private function is_job_owner_alive($job_dir)
+    {
+        $claim_file = $job_dir . "/msg_claim.json";
+
+        // 判定：無 claim 檔 → 冇主人可對照 → 當死
+        if (is_file($claim_file) === false) {
+            return false;
+        }
+
+        $claim_data = json_decode((string)file_get_contents($claim_file), true);
+
+        // 判定：claim 壞檔 → 冇主人可對照 → 當死
+        if (is_array($claim_data) === false) {
+            return false;
+        }
+
+        $worker_pid = (int)($claim_data["worker_pid"] ?? 0);
+
+        // 判定：worker pid 無效 → 當死
+        if ($worker_pid < 1) {
+            return false;
+        }
+
+        return sc_ai_chats()->poll()->is_msg_worker_alive($worker_pid);
     }
 
     private function finalize_terminal_job_file($meta_file_path)

@@ -36,19 +36,70 @@ class runtime_Class
     // runtime 設定檢查（必要設定缺失／不可用 → 寫 runtime log；不中斷流程）
     public function check()
     {
-        $python_executable = sc_get_env("python_executable", "");
-        $storage_dir       = sc_get_config("storage.app_dir");
+        // Python 解析：.env（相對站根）→ 產品自帶 execute/python → engine（dev／build）→ 系統 where python
+        $python_executable   = "";
+        $python_env_setting  = sc_get_env("python_executable", "");
+        $repo_root_text      = sc_normalize_path(sc_get_config("repo_root"));
 
-        // ① python_executable 未設定
-        if ($python_executable === "") {
-            hkai()->runtime()->logger()->error("runtime check: python_executable not set");
+        // 判定：.env 有設定 → 相對路徑以站根為基準
+        if ($python_env_setting !== "") {
+            $python_env_path = $python_env_setting;
+
+            // 判定：相對路徑（唔係 C:/ 或 / 開頭）→ 接上站根
+            if (preg_match('/^[A-Za-z]:[\/\/]|^\//', $python_env_path) !== 1) {
+                $python_env_path = $repo_root_text . "/" . $python_env_path;
+            }
+
+            $python_env_path = sc_normalize_path($python_env_path);
+
+            // 判定：檔案存在 → 採用
+            if (file_exists($python_env_path) === true) {
+                $python_executable = $python_env_path;
+            }
         }
 
-        // ① python_executable 已設定 → 檢查檔案存在
-        if ($python_executable !== "") {
-            if (!file_exists($python_executable)) {
-                hkai()->runtime()->logger()->error("runtime check: python_executable not found: " . $python_executable);
+        // 判定：仍未找到 → 產品候選（execute/python → engine）
+        if ($python_executable === "") {
+            $python_candidate_list   = [];
+            $python_candidate_list[] = dirname(sc_get_config("services")) . "/execute/python313/python.exe";
+        $python_candidate_list[] = dirname(sc_get_config("services")) . "/execute/python/python.exe";
+            $python_candidate_list[] = dirname(sc_get_config("services"), 2) . "/../engine/python313/python.exe";
+            $python_candidate_list[] = dirname(sc_get_config("services"), 3) . "/../engine/python313/python.exe";
+
+            // 逐個候選檢查
+            foreach ($python_candidate_list as $python_candidate_item) {
+                $python_candidate_normalized = sc_normalize_path($python_candidate_item);
+
+                // 判定：檔案存在 → 採用
+                if (file_exists($python_candidate_normalized) === true) {
+                    $python_executable = $python_candidate_normalized;
+                    break;
+                }
             }
+        }
+
+        // 判定：仍未找到 → 用系統 where python
+        if ($python_executable === "") {
+            $where_output_lines = [];
+            $where_exit_code    = 0;
+            @exec("where python 2>nul", $where_output_lines, $where_exit_code);
+
+            // 判定：有輸出且第一行係檔案 → 採用
+            if (count($where_output_lines) > 0) {
+                $where_python_path = trim($where_output_lines[0]);
+
+                // 判定：檔案存在 → 採用
+                if ($where_python_path !== "" && file_exists($where_python_path) === true) {
+                    $python_executable = sc_normalize_path($where_python_path);
+                }
+            }
+        }
+
+        $storage_dir       = sc_get_data_dir();
+
+        // ① python 找不到（.env／execute python／engine python／系統 where 全部失敗）
+        if ($python_executable === "") {
+            hkai()->runtime()->logger()->error("runtime check: no python found");
         }
 
         // ② storage 目錄不可寫

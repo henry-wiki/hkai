@@ -22,7 +22,7 @@ from pathlib import Path
 import psutil
 
 from ..context import PROCESS_FILE_LIST, PROGRAM_LABEL, PROGRAM_NAME, get_datetime
-from . import sc_logger
+from bootstrap import sc_logger
 
 # 本程序 pid（init 時記錄）
 _self_pid = 0

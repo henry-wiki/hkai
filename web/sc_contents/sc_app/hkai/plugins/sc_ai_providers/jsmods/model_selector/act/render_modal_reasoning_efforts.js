@@ -37,7 +37,7 @@ class _render_modal_reasoning_efforts {
         // 無 efforts → 不適用（用戶無需選／不能選）
         if (reasoning_supported_efforts.length === 0) {
             const empty_element = jQuery("<span class='model_selector_efforts_empty'></span>");
-            empty_element.text("不適用（此 model 不支援 reasoning effort）");
+            empty_element.text(registry().sc_i18n().get("prompt.effort.not_applicable"));
             j_model_selector_efforts.append(empty_element);
 
             return;

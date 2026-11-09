@@ -12,17 +12,15 @@ context.py — image_extractor 路徑常數（單一來源；全部由本檔位�
 
 from pathlib import Path
 
+# 共用路徑（計算收歸 bootstrap/path.py——本檔唔重複推導）
+from bootstrap.path import REPO_ROOT as ROOT_DIR, SERVICES_DIR
+from bootstrap.path_resolve.get_data_dir import get_data_dir
+
 # 套件根（services/image_extractor/）
 BASE_DIR = Path(__file__).resolve().parent
 
-# services 目錄（bridge／daemon 所在——BASE_DIR 上一層）
-SERVICES_DIR = BASE_DIR.parent
-
-# 站台根（web／services 所在）
-ROOT_DIR = SERVICES_DIR.parent
-
-# 站台資料目錄（所有執行產物集中喺呢度）
-DATA_DIR = ROOT_DIR / "data"
+# 站台資料目錄（由 path.get_data_dir() 取——Path 型方便拼接）
+DATA_DIR = Path(get_data_dir())
 
 
 # 訊息根目錄（紙箱附件住 <box>/attachments/——抽取只准讀呢個樹之下）
@@ -31,7 +29,6 @@ MESSAGES_DIR = DATA_DIR / "messages"
 # log（同其他套件同一個 logs 目錄）
 LOG_DIR = DATA_DIR / "logs"
 LOG_FILE = LOG_DIR / "image_extractor.log"
-LOG_MAX_BYTES = 5 * 1024 * 1024
 
 # OCR 前縮圖長邊上限（實測 4000px→2000px：9.19s→3.44s，結果相若）
 OCR_MAX_SIDE_PX = 2000

@@ -26,7 +26,10 @@ from ..context import (
     message_status,
     message_store,
 )
-from ..runtime import process, sc_env, sc_logger
+from .. import context as daemon_context
+from bootstrap import env
+from bootstrap import sc_logger
+from ..runtime import process
 from .message_events import (
     EVENT_COMPLETED,
     EVENT_FAILED,
@@ -63,7 +66,7 @@ class job_executor_class:
         回 False＝唔使做單：①已終態（completed／failed／cancelled）；②stdout 已存在（之前開過工）；③msg_conf 嘅 content 空。
         """
         # 金鑰即時重讀（.env 為唯一真相——更新／清空下一條問題即生效）
-        sc_env.load_api_keys()
+        env.load_api_keys()
 
         message_store().load(msg_conf_path)
 
@@ -164,15 +167,98 @@ class job_executor_class:
         if current_state == "replying":
             # 判定：answer 檔有字＝回覆完成
             if self._has_response_result():
-                _ = self.transition_status(EVENT_COMPLETED, "Completed")
-            # answer 空 → 失敗
+                # 判定：回覆含 provider 錯誤 → 標 failed（訊息用我哋嘅顯示字）
+                error_found, error_display_text = self._normalize_error_results()
+
+                if error_found is True:
+                    _ = self.transition_status(EVENT_FAILED, error_display_text)
+                else:
+                    _ = self.transition_status(EVENT_COMPLETED, "Completed")
+            # answer 空 → 先睇有冇錯誤原文（錯誤回覆唔會寫 result）
             else:
-                _ = self.transition_status(EVENT_FAILURE_RECORDED, "Stream completed but result is empty")
+                error_found, error_display_text = self._normalize_error_results()
+
+                # 判定：有錯誤原文 → 用我哋嘅顯示字標 failed
+                if error_found is True:
+                    _ = self.transition_status(EVENT_FAILED, error_display_text)
+                else:
+                    _ = self.transition_status(EVENT_FAILURE_RECORDED, "Stream completed but result is empty")
         # 判定：未進入回覆階段（connecting／summarizing）→ 失敗（原因已於偵測點記錄）
         else:
             _ = self.transition_status(EVENT_FAILED, "Failed before reply")
 
     # result 檔有無字（收尾判準——語義答案；索引制——任一段有字即完成）
+
+    def _write_failure_result_text(self, raw_text: str) -> None:
+        """失敗時寫一段可見錯誤文字（result 檔；顯示用）。"""
+        from . import error_text as _error_text
+
+        _error_code, display_text, matched = _error_text.classify_error(raw_text)
+
+        # 判定：認唔出錯誤類型 → 原文照顯示（唔假裝成功）
+        if matched is False:
+            display_text = raw_text.strip()
+
+        response_index_list = [item for item in range(0, 1)]
+
+        for response_index in response_index_list:
+            _ = message_log().append_response_result(response_index, display_text)
+
+    def _normalize_error_results(self) -> tuple[bool, str]:
+        """錯誤原文存在 → 寫 msg_error.json（卡資料）＋agent-errors.log；回 True＝有錯誤。"""
+        import datetime
+        import json as _json
+
+        from . import error_text as _error_text
+
+        raw_text = message_log().get_error_detail_text()
+
+        # 判定：冇錯誤原文 → 唔係錯誤
+        if raw_text.strip() == "":
+            return False, ""
+
+        code, display_text, matched = _error_text.classify_error(raw_text)
+        message_title = "回覆失敗"
+
+        # 判定：認唔出 → 用原文做訊息（唔假裝成功）
+        if matched is False:
+            display_text = raw_text.strip()
+
+        error_payload = {
+            "code": code,
+            "title": message_title,
+            "message": display_text,
+            "detail": raw_text,
+            "detected_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # 錯誤文字寫入 result 段（回覆結果——reload 仍顯示；已有字就唔重複寫）
+        existing_result_text = ""
+
+        for response_result_path_item in message_store().get_response_result_paths():
+            existing_result_text += response_result_path_item.read_text(encoding="utf-8")
+
+        # 判定：result 未有錯誤字 → 寫一次
+        # 判定：未寫過錯誤回覆（旗標檔保證只寫一次）
+        error_written_flag = message_store().get_message_dir() / "msg_error_written.flag"
+
+        if error_written_flag.exists() is False and "[E_" not in existing_result_text:
+            error_written_flag.write_text("1", encoding="utf-8")
+            result_display_text = error_payload["message"].replace("\\n", "\n")
+            _ = message_log().append_response_result(0, result_display_text)
+
+
+        _error_text.append_agent_error_log(
+            str(daemon_context.DATA_DIR) + "/logs/agent-errors.log",
+            message_store().get_message_id(),
+            "",
+            message_store().get_model_name(),
+            raw_text,
+            code,
+        )
+
+        return True, error_payload["message"]
+
     def _has_response_result(self) -> bool:
         # 逐個 result 檔（自然序）查
         for response_result_path_item in message_store().get_response_result_paths():
@@ -200,3 +286,5 @@ class job_executor_class:
 
         # 失敗收尾（worker 不在了——錯誤記入該訊息 message_log）
         _ = self.transition_status(EVENT_FAILED, "Warm worker died mid-job")
+        # 失敗時寫入可見錯誤文字（畫面顯示原因；完整原文另存 error log）
+        _ = self._write_failure_result_text("Warm worker died mid-job")

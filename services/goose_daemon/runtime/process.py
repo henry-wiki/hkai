@@ -28,7 +28,7 @@ from typing import cast
 import psutil
 
 from .. import context
-from . import sc_logger
+from bootstrap import sc_logger
 
 # 本程序 pid（init 時記錄）
 _self_pid = 0

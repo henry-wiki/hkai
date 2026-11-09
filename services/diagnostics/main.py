@@ -7,7 +7,7 @@ from typing import Any
 from .files import long_paths_class
 from .git import config_list_class, git_status_class, repo_ghosts_class
 from .project_env import project_env_class
-from .runtime import sc_logger
+from bootstrap import sc_logger
 from .system_env import system_env_class
 
 # git 狀態快取秒數（同一專案 60 秒內唔重複掃描——health 每 13 秒一輪）
@@ -61,7 +61,7 @@ class diagnostics_class:
         return self.system_env.get_system_env()
 
 def main():
-    sc_logger.setup()
+    sc_logger.setup("diagnostics")
     # Example usage:
     # diagnostics = diagnostics_class()
     # print(diagnostics.get_git_status("some/path"))

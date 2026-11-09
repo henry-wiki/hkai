@@ -11,20 +11,15 @@
 
 from pathlib import Path
 
+# 共用路徑（計算收歸 bootstrap/path.py——本檔唔重複推導）
+from bootstrap.path import REPO_ROOT as ROOT_DIR, SERVICES_DIR
+from bootstrap.path_resolve.get_data_dir import get_data_dir
+
 # 套件根（services/diagnostics/）
 BASE_DIR = Path(__file__).resolve().parent
 
-# runtime 目錄（log 等運行時資料）
-RUNTIME_DIR = BASE_DIR / "runtime"
-
-# services 目錄（bridge／daemon 所在——BASE_DIR 上一層）
-SERVICES_DIR = BASE_DIR.parent
-
-# 站台根（web／services 所在）
-ROOT_DIR = SERVICES_DIR.parent
-
-# 站台資料目錄（所有執行產物集中喺呢度）
-DATA_DIR = ROOT_DIR / "data"
+# 站台資料目錄（由 path.get_data_dir() 取——Path 型方便拼接）
+DATA_DIR = Path(get_data_dir())
 
 # AI instructions 目錄／系統環境檔（bridge／daemon 讀）
 INSTRUCTIONS_DIR = DATA_DIR / "instructions"

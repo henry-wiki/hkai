@@ -31,7 +31,10 @@ class python_Class
     // 偵測 Python 執行命令（候選次序：.env 指定 → py -3 → python → python3；搵唔到＝空字串）
     public function detect_python_command()
     {
-        $python_executable = trim(sc_get_env("python_executable", ""));
+        $python_env_setting = trim(sc_get_env("python_executable", ""));
+
+        // 相對路徑以站根為基準（出廠 .env 用相對——同 launcher.php 一致）
+        $python_executable = \sc\setup\setup()->resolve_env_path($python_env_setting);
 
         $candidate_commands = [];
 
@@ -54,7 +57,14 @@ class python_Class
             $output_lines = [];
             $exit_code    = null;
 
-            @exec($candidate_command_item . " --version 2>&1", $output_lines, $exit_code);
+            // 判定：候選係檔案路徑 → 加引號（安裝路徑含空格，唔加會被空格截斷）
+            $candidate_exec_command = $candidate_command_item;
+
+            if (strpos($candidate_command_item, "/") !== false) {
+                $candidate_exec_command = "\"" . $candidate_command_item . "\"";
+            }
+
+            @exec($candidate_exec_command . " --version 2>&1", $output_lines, $exit_code);
 
             // 判定：成功 → 回呢個命令
             if ($exit_code === 0) {
@@ -76,7 +86,14 @@ class python_Class
         $output_lines = [];
         $exit_code    = null;
 
-        @exec($python_command . " -c \"import sys; print(sys.executable)\" 2>&1", $output_lines, $exit_code);
+        // 判定：值係檔案路徑 → 加引號（安裝路徑含空格）
+        $python_exec_command = $python_command;
+
+        if (strpos($python_command, "/") !== false) {
+            $python_exec_command = "\"" . $python_command . "\"";
+        }
+
+        @exec($python_exec_command . " -c \"import sys; print(sys.executable)\" 2>&1", $output_lines, $exit_code);
 
         // 判定：跑唔起 → 原果 fail
         if ($exit_code !== 0) {

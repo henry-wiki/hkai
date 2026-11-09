@@ -3,7 +3,7 @@
 namespace sc\setup\sections\setting;
 
 // == HKAI setup 檢查單元：setting.timezone.php（設定格「時區」——單項自足）
-// == 職責：呢一項嘅全部——setup_check()＝包裝〔來源鏈：記錄 → .env → 瀏覽器（請求頭）→ 空〕；setup_test()＝後端源（.env → 瀏覽器——回原果）
+// == 職責：呢一項嘅全部——setup_check()＝包裝〔來源鏈：記錄 → .env → 瀏覽器（請求頭）→ 空〕；setup_test()＝後端源（設定檔 → 瀏覽器——回原果）
 // == 接入：setting 格檢查表（closure）＋sections 域派發（get_section_unit_instance("settings", "initialization__timezone")）
 // == 載入：顯式（無 autoloader）——setting 域門（setting.func.php::timezone()）按需 require 本檔
 
@@ -27,8 +27,8 @@ class setting_timezone_Class
     // 測試（後端源取得〔.env → 瀏覽器（請求頭）〕；回原果）
     public function setup_test()
     {
-        // f1：.env 取得（APP_TIMEZONE）
-        $timezone_value = trim(sc_get_env("APP_TIMEZONE", ""));
+        // f1：設定檔取得（timezone——data/config/settings.json）
+        $timezone_value = trim((string)sc_get_setting("general.timezone", ""));
 
         // f2：瀏覽器取得（前端隨每個請求帶返嘅時區頭）
         if ($timezone_value === "") {
@@ -49,11 +49,11 @@ class setting_timezone_Class
         return ["ok" => true, "status" => "pass", "hint" => "", "detail" => "", "reading" => $timezone_value];
     }
 
-    // 檢查（包裝層——零檢查碼：叫 setup_test 原果 → UI 格式；來源鏈：記錄 → .env → 瀏覽器 → 空）
+    // 檢查（包裝層——零檢查碼：叫 setup_test 原果 → UI 格式；來源鏈：記錄 → 設定檔 → 瀏覽器 → 空）
     // 安裝步驟資料（標題／行值——值由本單元自決：記錄值／未填＝留空字眼）
     public function get_install_step_data()
     {
-        // 值＝與檢查相同嘅有效值（狀態檔 → 偵測／.env 預設）
+        // 值＝與檢查相同嘅有效值（狀態檔 → 偵測／設定檔預設）
         $install_step_check = $this->setup_check();
         $timezone_recorded_value = (string)($install_step_check["input"]["value"] ?? "");
 
@@ -98,7 +98,7 @@ class setting_timezone_Class
             "options" => $timezone_options,
         ];
 
-        // 判定：有取得（記錄／.env／瀏覽器）→ pass；均不可得（空值）→ warn（等用戶自選）
+        // 判定：有取得（記錄／設定檔／瀏覽器）→ pass；均不可得（空值）→ warn（等用戶自選）
         if ($timezone_control_value !== "") {
             $check_result["status"] = "pass";
         } else {
@@ -108,17 +108,17 @@ class setting_timezone_Class
         return $check_result;
     }
 
-    // 安裝（未設定＝取時區〔記錄 → .env → 瀏覽器〕填 .env；已有＝保留；取唔到＝跳過——回動作原果）
+    // 安裝（未設定＝取時區〔記錄 → 設定檔 → 瀏覽器〕寫 settings.json；已有＝保留；取唔到＝跳過——回動作原果）
     public function setup_install()
     {
-        $env_timezone = trim(sc_get_env("APP_TIMEZONE", ""));
+        $env_timezone = trim((string)sc_get_setting("general.timezone", ""));
 
-        // 判定：.env 已有值 → 唔覆蓋（保留）
+        // 判定：設定檔已有值 → 唔覆蓋（保留）
         if ($env_timezone !== "") {
             return ["ok" => true, "result" => "kept", "detail" => setup()->i18n()->get("install.detail.kept")];
         }
 
-        // 攞值（來源鏈：記錄 → .env → 瀏覽器——同檢查同一機制）
+        // 攞值（來源鏈：記錄 → 設定檔 → 瀏覽器——同檢查同一機制）
         $timezone_recorded_value = setup()->state()->get_setting_setup_process("settings", "initialization__timezone");
 
         $timezone_value = "";
@@ -128,7 +128,7 @@ class setting_timezone_Class
             $timezone_value = $timezone_recorded_value;
         }
 
-        // 判定：冇記錄 → 走後端源（.env → 瀏覽器）
+        // 判定：冇記錄 → 走後端源（設定檔 → 瀏覽器）
         if ($timezone_value === "") {
             $test_result    = $this->setup_test();
             $timezone_value = $test_result["reading"];
@@ -139,8 +139,12 @@ class setting_timezone_Class
             return ["ok" => true, "result" => "skipped", "detail" => setup()->i18n()->get("install.detail.timezone_skipped")];
         }
 
-        // 寫 .env（sc_set_env——缺先加·已有唔覆蓋）
-        sc_set_env("APP_TIMEZONE", $timezone_value);
+        // 寫設定檔（data/config/settings.json）
+        $settings = array();
+        $settings["general"] = array();
+        $settings["general"]["timezone"] = $timezone_value;
+
+        sc_save_settings($settings);
 
         return ["ok" => true, "result" => "written", "detail" => setup()->i18n()->get("install.detail.written")];
     }

@@ -11,11 +11,11 @@ trait build_tab_environment_body
         // 守衛：新建語境（無專案列）→ 無路徑可查，回提示殼
         $is_new_project = empty($project_row);
         if ($is_new_project) {
-            return $this->build_environment_notice_pane("請先儲存專案資料，再檢視環境資料。");
+            return $this->build_environment_notice_pane(hkai()->i18n()->get("project.env.not_saved"));
         }
 
         // 準確值：環境檔＝storage/hkai/environment/env.{slug}.md（app storage——唔寫專案根）
-        $storage_dir     = sc_get_config("storage.app_dir");
+        $storage_dir     = sc_get_data_dir();
         $env_file        = $storage_dir . "/environment/env." . $project_row["project_slug"] . ".md";
 
         // 檢視純讀——零寫入（生成時機＝建立專案；重新偵測另走「更新」掣）
@@ -23,7 +23,7 @@ trait build_tab_environment_body
 
         // 判定：偵測／寫入失敗（bridge 未運行等）＋無內容 → 提示（撳「更新」重試）
         if (trim($env_content) === "") {
-            return $this->build_environment_notice_pane("環境資料尚未產生（偵測失敗）——請撳「更新」重試。");
+            return $this->build_environment_notice_pane(hkai()->i18n()->get("project.env.not_generated"));
         }
 
         // 轉義一次過（檢視器初始值——交 value 節點帶入）

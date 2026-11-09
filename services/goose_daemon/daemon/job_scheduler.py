@@ -20,7 +20,8 @@ from multiprocessing.queues import Queue
 from pathlib import Path
 
 from .. import context
-from ..runtime import identity, sc_logger
+from bootstrap import sc_logger
+from ..runtime import identity
 from ..worker import runner
 from ..worker.agent import paths
 from . import job_scanner, roster, watchdog

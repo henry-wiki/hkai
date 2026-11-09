@@ -61,7 +61,7 @@ class _project_add {
         loading.stop_loading(j_save_button);
 
         // 建立成功嘅一刻：通知（唔經 URL、唔喺頁面載入時出）
-        toastr.success("專案已建立");
+        toastr.success(registry().sc_i18n().get("project.form.created"));
 
         // 由 modal 觸發 → 關閉 modal（跟 delete 側慣例）
         if (j_modal) {
@@ -95,7 +95,7 @@ class _project_add {
 
         loading.stop_loading(j_save_button);
         shared.sc_web_utils().apply_form_errors(j_modal, result.errors);
-        toastr.error(result.error || "儲存失敗，請檢查欄位");
+        toastr.error(result.error || registry().sc_i18n().get("project.form.save_failed"));
     }
 }
 

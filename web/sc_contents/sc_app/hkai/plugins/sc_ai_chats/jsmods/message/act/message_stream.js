@@ -530,6 +530,11 @@ class _message_stream {
             return;
         }
 
+        // 判定：整段文字重播（ready 快照已有同一全文）→ 跳過（防重複）
+        if (this.seg_texts[response_kind] === append_text) {
+            return;
+        }
+
         // 判定：換輪進行中 → 先暫存（避免寫落上一輪段）
         if (this.turn_switching === true) {
             this.pending_appends.push(payload);

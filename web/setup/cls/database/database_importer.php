@@ -266,8 +266,7 @@ class database_importer_Class
     // 改寫 home 專案路徑（新站 data/playground——舊安裝路徑唔可以照抄）
     private function rewrite_home_project_path($pdo_connection)
     {
-        $site_root        = dirname(SC_WEB_ROOT);
-        $playground_path  = str_replace("\\", "/", $site_root) . "/data/playground";
+        $playground_path  = sc_data_path()->get_data_sub_dir("playground");
 
         $pdo_connection->prepare("UPDATE projects SET project_path = ? WHERE project_slug = 'home'")->execute([$playground_path]);
     }

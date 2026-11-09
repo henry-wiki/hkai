@@ -16,17 +16,19 @@ daemon_wake.py — 現行agent daemon 拉起（wake）。
 import subprocess
 import sys
 import time
+import traceback
 from pathlib import Path
 from typing import cast
 
 from .. import context
-from ..runtime import sc_config, sc_env, sc_logger
+from bootstrap import config, env
+from bootstrap import sc_logger
 from .daemon_registry import is_daemon_alive
 
 
 def _resolve_agent_daemon(agent: str) -> str:
     """agent 名 → daemon 包名（manifest agents 對映表；舊 runtime 值＝daemon 名直接沿用）。"""
-    agents_config = sc_config.get_config("agents")
+    agents_config = config.get_config("agents")
 
     # 判定：對映表係 dict → 查 agent 條目
     if isinstance(agents_config, dict):
@@ -41,7 +43,7 @@ def _resolve_agent_daemon(agent: str) -> str:
                 return agent_daemon
 
     # 舊 runtime.json 兼容（值本身係 daemon 名）→ 直接沿用
-    return str(sc_config.get_config("daemon_engine") or "")
+    return str(config.get_config("daemon_engine") or "")
 
 
 def wake_daemon(agent: str = "") -> dict[str, object]:
@@ -51,7 +53,7 @@ def wake_daemon(agent: str = "") -> dict[str, object]:
     """
     # 判定：payload 無 agent → 用 runtime 現行值（舊呼叫兼容）
     if agent == "":
-        agent = str(sc_config.get_config("agent") or "")
+        agent = str(config.get_config("agent") or "")
 
     agent_daemon = _resolve_agent_daemon(agent)
 
@@ -64,14 +66,30 @@ def wake_daemon(agent: str = "") -> dict[str, object]:
     if is_daemon_alive(agent_daemon):
         return {"ok": True}
 
-    python_executable = str(sc_env.get_env("python_executable") or "")
+    # 套件根目錄（bridge/agent_daemon/daemon_wake.py → services）
+    services_dir = Path(__file__).resolve().parents[2]
+
+    # 站台根（services 上一層——.env 相對路徑以此為基準）
+    site_root = services_dir.parent
+
+    # 判定：.env 讀取失敗（權限／編碼）→ 記錄 + 回報失敗（bridge 其餘功能照跑）
+    try:
+        python_executable = str(env.get_env("python_executable") or "")
+    except Exception:  # noqa: BLE001
+        sc_logger.error("wake_daemon failed: env read error\n" + traceback.format_exc())
+        return {"ok": False, "error": "env read failed"}
+
+    # 判定：相對路徑 → 接上站台根（.env 寫 /execute/... 或 execute/... 都通）
+    if python_executable != "" and Path(python_executable).is_absolute() is False:
+        # 判定：/... 前綴 → 站根基準（剝走單斜線；// 開頭＝UNC 保留）
+        if python_executable.startswith("/") and not python_executable.startswith("//"):
+            python_executable = python_executable.lstrip("/")
+
+        python_executable = str(site_root / python_executable)
 
     # 判定：前置缺失（無法拉起）→ 回報失敗
     if python_executable == "":
         return {"ok": False, "error": "missing python_executable"}
-
-    # 套件根目錄（bridge/agent_daemon/daemon_wake.py → services）
-    services_dir = Path(__file__).resolve().parents[2]
 
     command = [python_executable, "-u", "-m", agent_daemon + ".main"]
 

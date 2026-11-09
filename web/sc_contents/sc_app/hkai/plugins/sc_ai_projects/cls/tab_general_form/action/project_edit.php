@@ -51,7 +51,7 @@ trait project_edit
         if ($conflicting_project_row !== null) {
             // 判定：佔用者唔係自己 → 拒絕儲存
             if ((int)$conflicting_project_row["project_id"] !== (int)$project_id) {
-                return sc_response()->json(["ok" => false, "errors" => ["project_path" => "此路徑已有專案「" . $conflicting_project_row["project_name"] . "」使用"]], 400);
+                return sc_response()->json(["ok" => false, "errors" => ["project_path" => hkai()->i18n()->get("project.form.path_in_use") . str_replace("{project_name}", $conflicting_project_row["project_name"], hkai()->i18n()->get("project.form.path_in_use"))]], 400);
             }
         }
 

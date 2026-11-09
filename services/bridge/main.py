@@ -16,33 +16,32 @@ import os
 import pathlib
 import traceback
 
-# 入工作目錄（副作用檔一律落 services/_runtime_junk——可整夾刪；避免第三方套件喺源碼目錄寫檔）
-_runtime_junk_dir = pathlib.Path(__file__).resolve().parents[1] / "_runtime_junk"
+# 入工作目錄（副作用檔一律落 <data_dir>/_tmp——源碼目錄零寫入）
+from . import DATA_DIR
+
+_runtime_junk_dir = DATA_DIR / "_tmp"
 _runtime_junk_dir.mkdir(parents=True, exist_ok=True)
 os.chdir(_runtime_junk_dir)
 
 # ===== Phase 1：日誌（最頂部——主程序尚未載入，不碰 context）=====
 try:
-    from .runtime import sc_logger
-    sc_logger.setup()
-except BaseException:
-    # 最早期失敗（sc_logger 未接管）→ stdlib 直寫 data/logs/bridge.error.log（路徑由 __file__ 自推——不依賴任何設定）
-    try:
-        import pathlib
-        import traceback
+    from bootstrap import sc_logger
 
-        _error_log_path = pathlib.Path(__file__).resolve().parents[2] / "data" / "logs" / "bridge.error.log"
-        _error_log_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(_error_log_path, "a", encoding="utf-8") as _error_log_handle:
-            _error_log_handle.write(traceback.format_exc())
-    except Exception:  # noqa: BLE001, S110
+    sc_logger.setup("bridge", extra_loggers=("uvicorn", "uvicorn.error", "uvicorn.access"), capture_stdout=True)
+except BaseException:
+    # 最早期失敗（sc_logger 未接管）→ 零依賴 fallback 直寫 data/logs/bridge.error.log
+    try:
+        from bootstrap.sc_logger import write_early_error_log
+
+        write_early_error_log("bridge", traceback.format_exc())
+    except BaseException:  # noqa: BLE001, S110
         pass  # 最後防線：記錄失敗不可蓋過原始錯誤（下方 raise 保留原 traceback）
 
     raise
 
 # ===== Phase 2：主程序（日誌已就緒）=====
 from . import context
-from .runtime import process, sc_env
+from .runtime import process
 
 
 # ==========================================
@@ -50,9 +49,6 @@ from .runtime import process, sc_env
 # ==========================================
 def main() -> None:
     """主程序邏輯：處理參數與啟動 Server"""
-    # .env 讀入（一次；daemon_wake 之後用 sc_env.get_env）——同場補回 Windows 系統變數
-    sc_env.init_env()
-
     # 啟動即記錄自己 pid ＋母親 pid＋建立時間
     process.init()
 

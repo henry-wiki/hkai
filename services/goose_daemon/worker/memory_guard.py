@@ -23,7 +23,8 @@ import psutil
 
 from ..context import job_executor, message_status, message_store
 from ..daemon import daemon_config
-from ..runtime import process, sc_logger
+from bootstrap import sc_logger
+from ..runtime import process
 from .message_events import EVENT_MEMORY_GUARD_ABORT
 
 

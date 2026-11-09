@@ -1458,3 +1458,19 @@
     cursor: pointer;
     user-select: none;
 }
+
+/* ===== GFM alert 卡片（純文字 > [!CAUTION] … 由 sc_markdown 轉換） ===== */
+.md_alert {
+    border-left: 4px solid #d1242f;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background: rgba(209, 36, 47, 0.08);
+}
+.md_alert--note { border-left-color: #0969da; background: rgba(9, 105, 218, 0.08); }
+.md_alert--tip { border-left-color: #1a7f37; background: rgba(26, 127, 55, 0.08); }
+.md_alert--important { border-left-color: #8250df; background: rgba(130, 80, 223, 0.08); }
+.md_alert--warning { border-left-color: #bf8700; background: rgba(191, 135, 0, 0.08); }
+.md_alert--caution { border-left-color: #d1242f; background: rgba(209, 36, 47, 0.08); }
+.md_alert p { margin: 0; }
+.md_alert p + p { margin-top: 6px; }

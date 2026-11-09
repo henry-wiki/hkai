@@ -15,28 +15,23 @@ trait get_prompt_required_fields
 
         $content_field = [];
         $content_field["key"]     = "prompt_text";
-        $content_field["message"] = "請填寫訊息內容";
+        $content_field["message"] = hkai()->i18n()->get("prompt.error.no_content");
         $required_fields[] = $content_field;
 
         $provider_field = [];
         $provider_field["key"]     = "provider_id";
-        $provider_field["message"] = "請選擇供應商";
+        $provider_field["message"] = hkai()->i18n()->get("prompt.error.provider_required");
         $required_fields[] = $provider_field;
 
         $model_field = [];
         $model_field["key"]     = "model_id";
-        $model_field["message"] = "請選擇模型";
+        $model_field["message"] = hkai()->i18n()->get("prompt.error.model_required");
         $required_fields[] = $model_field;
 
         $chat_mode_field = [];
         $chat_mode_field["key"]     = "chat_mode";
-        $chat_mode_field["message"] = "請選擇對話模式";
+        $chat_mode_field["message"] = hkai()->i18n()->get("prompt.error.mode_required");
         $required_fields[] = $chat_mode_field;
-
-        $effort_field = [];
-        $effort_field["key"]     = "reasoning_effort";
-        $effort_field["message"] = "請選擇推理等級";
-        $required_fields[] = $effort_field;
 
         return $required_fields;
     }

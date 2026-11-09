@@ -18,14 +18,14 @@ trait build_tab_general_form_body
 
         // 欄位選項（逐行賦值——一眼知道每個欄位的設定）
         $options_project_name = [];
-        $options_project_name["placeholder"] = "例如 ecommerce-api";
-        $options_project_name["subtitle"] = "如果不填，會自動以該專案路徑的資料夾名稱作為專案名稱";
+        $options_project_name["placeholder"] = hkai()->i18n()->get("project.form.name_placeholder");
+        $options_project_name["subtitle"] = hkai()->i18n()->get("project.form.name_subtitle");
         $project_name_subtitle = $options_project_name["subtitle"];
 
         $options_project_path = [];
         $options_project_path["required"]    = true;
         $options_project_path["placeholder"] = "/home/user/projects/my-app";
-        $options_project_path["subtitle"]    = "本機的專案的完整途徑";
+        $options_project_path["subtitle"]    = hkai()->i18n()->get("project.form.path_subtitle");
         $project_path_subtitle = $options_project_path["subtitle"];
 
         // 判定：歸檔專案 → 兩個欄位都唯讀
@@ -40,13 +40,13 @@ trait build_tab_general_form_body
 
             // 區塊 1：專案資料
             $outputLines[] = "<div class='project-section'>";
-            $outputLines[] = $this->build_section_heading("專案資料", "用來識別此專案的基本資料。");
+            $outputLines[] = $this->build_section_heading(hkai()->i18n()->get("project.form.section_basic"), hkai()->i18n()->get("project.form.section_basic_desc"));
 
                 // 專案名稱（選填——不填自動以路徑資料夾名）
                 $outputLines[] = "<div class='modal-form__row form_row'>";
                 $outputLines[] = "<div class='modal-form__icon'></div>";
                 $outputLines[] = "<div class='modal-form__info'>";
-                $outputLines[] = "<div class='modal-form__label'>專案名稱</div>";
+                $outputLines[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("project.form.name_label") . "</div>";
                 $outputLines[] = "<div class='modal-form__desc'>" . $project_name_subtitle . "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='modal-form__content'>";
@@ -59,7 +59,7 @@ trait build_tab_general_form_body
                 $outputLines[] = "<div class='modal-form__row form_row'>";
                 $outputLines[] = "<div class='modal-form__icon'></div>";
                 $outputLines[] = "<div class='modal-form__info'>";
-                $outputLines[] = "<div class='modal-form__label'>專案路徑<span class='form_required'>*</span></div>";
+                $outputLines[] = "<div class='modal-form__label'>" . hkai()->i18n()->get("project.form.path_label") . "<span class='form_required'>*</span></div>";
                 $outputLines[] = "<div class='modal-form__desc'>" . $project_path_subtitle . "</div>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='modal-form__content'>";
@@ -72,7 +72,7 @@ trait build_tab_general_form_body
 
             // 區塊 2：補充資料
             $outputLines[] = "<div class='project-section'>";
-            $outputLines[] = $this->build_section_heading("補充資料", "選填──供你或團隊參考。");
+            $outputLines[] = $this->build_section_heading(hkai()->i18n()->get("project.form.section_extra"), hkai()->i18n()->get("project.form.section_extra_desc"));
             // 歸檔專案（僅編輯──帶確認訊息）
             $outputLines[] = $this->build_remove_row($project_row);
             $outputLines[] = "</div>";

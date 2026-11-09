@@ -9,7 +9,7 @@ trait get_git_remote_text
 {
     private function get_git_remote_text($git_status)
     {
-        $remote_text = "（未設定 origin）";
+        $remote_text = hkai()->i18n()->get("git.remote.none");
 
         // 判定：有 origin → 顯示（遮蔽憑證）
         if ($git_status["remote_origin"] !== "") {

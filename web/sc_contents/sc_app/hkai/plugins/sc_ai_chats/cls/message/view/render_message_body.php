@@ -16,7 +16,7 @@ trait render_message_body
             // topnav（導覽鈕／路徑列／右上工具鈕；行為由 jsmods/sc_topnav/sc_topnav.js 綁定）
             $outputLines[] = "<div class='sc_topbar'>";
                 // 對話欄收合掣（topbar 最左——永遠揾到；icon 兩態由 body[data-chats-collapsed] 純 CSS 閘；行為由 sc_sidebar.js 綁定）
-                $outputLines[] = "<button class='sc_topbar__nav_btn' data-action='toggle_chats_sidebar' title='向右收起對話欄' aria-expanded='true'>";
+                $outputLines[] = "<button class='sc_topbar__nav_btn' data-action='toggle_chats_sidebar' title='" . hkai()->i18n()->get("message.topbar.collapse_chats") . "' aria-expanded='true'>";
                     $outputLines[] = "<svg class='sc_topbar__icon_close' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'>";
                         $outputLines[] = "<rect x='3.5' y='4' width='17' height='16' rx='2'/>";
                         $outputLines[] = "<path d='M15 4v16'/>";
@@ -28,34 +28,34 @@ trait render_message_body
                         $outputLines[] = "<path d='M15 9l-3 3 3 3'/>";
                     $outputLines[] = "</svg>";
                 $outputLines[] = "</button>";
-                $outputLines[] = "<button class='sc_topbar__nav_btn' data-action='nav_refresh' title='重新整理'>⟳</button>";
+                $outputLines[] = "<button class='sc_topbar__nav_btn' data-action='nav_refresh' title='" . hkai()->i18n()->get("common.refresh") . "'>⟳</button>";
                 // 專案路徑列（空殼——路徑由前端動態載入；未填＝placeholder 顯；bdi＝隔離路徑 LTR 內容——配合 CSS direction:rtl 令長路徑顯尾、開頭省略號）
                 $outputLines[] = "<div class='sc_topbar__path' data-placeholder='" . hkai()->i18n()->get("message.project_path") . "'>";
                     $outputLines[] = "<bdi></bdi>";
                     // 複製路徑掣（列右側——目標由按鈕聲明 data-copy-target；撳＝複製條列顯示嘅專案路徑）
-                    $outputLines[] = "<button class='sc_topbar__path_copy' data-copy-target='.sc_topbar__path bdi' title='複製專案路徑'><i class='fa-regular fa-copy'></i></button>";
+                    $outputLines[] = "<button class='sc_topbar__path_copy' data-copy-target='.sc_topbar__path bdi' title='" . hkai()->i18n()->get("message.topbar.copy_project_path") . "'><i class='fa-regular fa-copy'></i></button>";
                 $outputLines[] = "</div>";
                 // 右上工具按鈕（margin-left:auto 推至最右——照 reference3 topnav（模型／成員／分享／通知／帳戶）——未接功能：自帶 data-cmd='coming_soon'（撳＝提示即將推出））
                 $outputLines[] = "<div class='sc_topbar__actions'>";
                     // 模型顯示（MODEL 細標＋型號名——名由後續鏈填；空＝淨顯標籤）
-                    $outputLines[] = "<button class='sc_topbar__model' data-cmd='coming_soon' title='目前模型與對話設定'><small>" . hkai()->i18n()->get("message.model_label") . "</small><bdi></bdi></button>";
+                    $outputLines[] = "<button class='sc_topbar__model' data-cmd='coming_soon' title='" . hkai()->i18n()->get("message.topbar.model_settings") . "'><small>" . hkai()->i18n()->get("message.model_label") . "</small><bdi></bdi></button>";
                     // 協作成員（預留——成員 stack；現時＝你＋AI）
-                    $outputLines[] = "<button class='sc_topbar__people' data-cmd='coming_soon' title='協作成員'>";
+                    $outputLines[] = "<button class='sc_topbar__people' data-cmd='coming_soon' title='" . hkai()->i18n()->get("message.topbar.members") . "'>";
                         $outputLines[] = "<span class='sc_topbar__people_stack'>";
-                            $outputLines[] = "<span>你</span>";
+                            $outputLines[] = "<span>" . hkai()->i18n()->get("common.you") . "</span>";
                             $outputLines[] = "<span>AI</span>";
                         $outputLines[] = "</span>";
                     $outputLines[] = "</button>";
                     // 分享（預留——未接功能）
-                    $outputLines[] = "<button class='sc_topbar__share' data-cmd='coming_soon' title='分享'>";
+                    $outputLines[] = "<button class='sc_topbar__share' data-cmd='coming_soon' title='" . hkai()->i18n()->get("common.share") . "'>";
                         $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>";
                             $outputLines[] = "<path d='M15 8.5 12 5l3-3.5M12 5h3.5A4.5 4.5 0 0 1 20 9.5v1'/>";
                             $outputLines[] = "<path d='M19.5 12.5v5A2.5 2.5 0 0 1 17 20H6.5A2.5 2.5 0 0 1 4 17.5v-7A2.5 2.5 0 0 1 6.5 8H9'/>";
                         $outputLines[] = "</svg>";
-                        $outputLines[] = "<span>分享</span>";
+                        $outputLines[] = "<span>" . hkai()->i18n()->get("common.share") . "</span>";
                     $outputLines[] = "</button>";
                     // 通知（預留——未接功能；紅點＝未讀指示）
-                    $outputLines[] = "<button class='sc_topbar__notify' data-cmd='coming_soon' title='通知'>";
+                    $outputLines[] = "<button class='sc_topbar__notify' data-cmd='coming_soon' title='" . hkai()->i18n()->get("common.notifications") . "'>";
                         $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>";
                             $outputLines[] = "<path d='M18 10a6 6 0 1 0-12 0c0 7-2.5 7-2.5 8.5h17C20.5 17 18 17 18 10ZM9.5 21h5'/>";
                         $outputLines[] = "</svg>";
@@ -63,21 +63,21 @@ trait render_message_body
                     $outputLines[] = "</button>";
                     // 帳戶（預留——頭像＋選單；選單開合＝純 CSS：wrapper:focus-within（0 JS、點其他位自動收））
                     $outputLines[] = "<div class='sc_topbar__account_wrap'>";
-                        $outputLines[] = "<button class='sc_topbar__account' data-cmd='coming_soon' title='帳戶選單' aria-haspopup='menu'>";
-                            $outputLines[] = "<span class='sc_topbar__account_avatar'>你</span>";
+                        $outputLines[] = "<button class='sc_topbar__account' data-cmd='coming_soon' title='" . hkai()->i18n()->get("message.topbar.account_menu") . "' aria-haspopup='menu'>";
+                            $outputLines[] = "<span class='sc_topbar__account_avatar'>" . hkai()->i18n()->get("common.you") . "</span>";
                             $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'>";
                                 $outputLines[] = "<path d='m6.5 9 5.5 5.5L17.5 9'/>";
                             $outputLines[] = "</svg>";
                         $outputLines[] = "</button>";
                         // 帳戶選單（預留——純設計骨架；項目未接任何功能）
                         $outputLines[] = "<div class='sc_topbar__account_menu' role='menu'>";
-                            $outputLines[] = "<div class='sc_topbar__account_summary'>你<span>hkai · 本機</span></div>";
+                            $outputLines[] = "<div class='sc_topbar__account_summary'>" . hkai()->i18n()->get("common.you") . "<span>" . hkai()->i18n()->get("message.topbar.local_machine") . "</span></div>";
                             $outputLines[] = "<hr>";
-                            $outputLines[] = "<button type='button' role='menuitem'>帳戶與個人設定</button>";
-                            $outputLines[] = "<button type='button' role='menuitem'>切換工作區</button>";
-                            $outputLines[] = "<button type='button' role='menuitem'>成員與帳單</button>";
+                            $outputLines[] = "<button type='button' role='menuitem'>" . hkai()->i18n()->get("message.topbar.account_settings") . "</button>";
+                            $outputLines[] = "<button type='button' role='menuitem'>" . hkai()->i18n()->get("message.topbar.switch_workspace") . "</button>";
+                            $outputLines[] = "<button type='button' role='menuitem'>" . hkai()->i18n()->get("message.topbar.members_billing") . "</button>";
                             $outputLines[] = "<hr>";
-                            $outputLines[] = "<button type='button' class='danger' role='menuitem'>登出</button>";
+                            $outputLines[] = "<button type='button' class='danger' role='menuitem'>" . hkai()->i18n()->get("common.logout") . "</button>";
                         $outputLines[] = "</div>";
                     $outputLines[] = "</div>";
                 $outputLines[] = "</div>";

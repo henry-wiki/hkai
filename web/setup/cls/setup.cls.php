@@ -279,4 +279,40 @@ class setup_Class
         return false;
     }
 
+    /**
+     * 解析環境路徑（.env 值 → 絕對路徑）
+     *
+     * 上游：python／goose 執行檔檢查單元、python 域偵測
+     * 下游：無（純字串計算——相對路徑以站根為基準，機制同 launcher.php）
+     *
+     * @param string $env_path
+     * @return string
+     */
+    public function resolve_env_path($env_path)
+    {
+        $env_path = trim($env_path);
+
+        // 判定：空值 → 原樣回（呼叫端自行判斷）
+        if ($env_path === "") {
+            return "";
+        }
+
+        $normalized_path = str_replace("\\", "/", $env_path);
+        $normalized_path = preg_replace("#^\\./#", "", $normalized_path);
+
+        // 判定：已係絕對路徑（磁碟機／UNC）→ 原樣回
+        if (preg_match("#^[A-Za-z]:/|^//#", $normalized_path) === 1) {
+            return $normalized_path;
+        }
+
+        // 判定：單斜線開頭 → 站根基準（例：/execute/python313/python.exe）
+        $normalized_path = ltrim($normalized_path, "/");
+
+        $repo_root = str_replace("\\", "/", SC_REPO_ROOT);
+
+        $resolved_path = $repo_root . "/" . $normalized_path;
+
+        return $resolved_path;
+    }
+
 }

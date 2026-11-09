@@ -1,0 +1,128 @@
+{
+  "_readme": [
+    "新增錯誤步驟：① 喺 rules 加一條（name 唯一）② keywords 放關鍵字 ③ http_status 放 HTTP 碼（0＝不限）④ code 放錯誤碼 ⑤ display 放顯示字 ⑥ note 寫一句解釋",
+    "判定次序：由上而下，第一條命中即用",
+    "認唔出任何規則 → 原樣顯示 provider 訊息（唔會假裝成功）"
+  ],
+  "rules": [
+    {
+      "name": "auth_keyword",
+      "keywords": [
+        "authentication required",
+        "invalid api key",
+        "incorrect api key",
+        "unauthorized",
+        "no auth credentials",
+        "api key not valid"
+      ],
+      "http_status": 0,
+      "code": "E_AUTH",
+      "display": "API key 被拒絕，請檢查 key 是否正確",
+      "note": "無 HTTP status 嘅認證錯誤（ACP 例外字串）——刻意唔指定任何供應商",
+      "title": "驗證失敗",
+      "brief": "API key 被拒絕",
+      "detail": "請到「設定 › 供應商」檢查 API key 是否正確（可能貼錯其他供應商嘅 key、key 已失效、或未填）。"
+    },
+    {
+      "name": "model_not_free",
+      "keywords": [
+        "unavailable for free",
+        "not available for free"
+      ],
+      "http_status": 404,
+      "code": "E_MODEL_NO_FREE",
+      "display": "免費版已停用，請改用付費模型",
+      "note": "模型 free 版下架（OpenRouter 404）",
+      "title": "模型不可用",
+      "brief": "免費版已停用",
+      "detail": "供應商回覆 404：此模型已不再提供免費版本。可改用付費版本，或選擇其他模型。"
+    },
+    {
+      "name": "model_not_found",
+      "keywords": [
+        "model"
+      ],
+      "http_status": 404,
+      "code": "E_MODEL_UNAVAILABLE",
+      "display": "模型不存在或已下架",
+      "note": "404 且訊息提到 model（slug 錯／下架）",
+      "title": "模型不可用",
+      "brief": "模型不存在或已下架",
+      "detail": "供應商回覆 404：找不到指定模型。請檢查模型代號是否正確，或改用其他模型。"
+    },
+    {
+      "name": "auth_401",
+      "keywords": [],
+      "http_status": 401,
+      "code": "E_AUTH",
+      "display": "API key 無效或未設定",
+      "note": "未授權",
+      "title": "驗證失敗",
+      "brief": "API key 無效或未設定",
+      "detail": "供應商回覆 401：未獲授權。請檢查 API key 是否正確，以及是否仍然有效。"
+    },
+    {
+      "name": "auth_403",
+      "keywords": [],
+      "http_status": 403,
+      "code": "E_AUTH",
+      "display": "沒有權限使用此模型",
+      "note": "有 key 但無權限",
+      "title": "權限不足",
+      "brief": "沒有權限使用此模型",
+      "detail": "供應商回覆 403：有 key 但無權限。請確認帳戶可用範圍，或改用其他模型。"
+    },
+    {
+      "name": "rate_limit",
+      "keywords": [],
+      "http_status": 429,
+      "code": "E_RATE_LIMIT",
+      "display": "請求太頻繁（限流），請稍後再試",
+      "note": "限流",
+      "title": "請求被限流",
+      "brief": "短時間內請求太頻繁",
+      "detail": "供應商回覆 429：請求超出限額。請稍後再試，或降低發送頻率。"
+    },
+    {
+      "name": "context_limit",
+      "keywords": [
+        "context length",
+        "maximum context"
+      ],
+      "http_status": 400,
+      "code": "E_CONTEXT_LIMIT",
+      "display": "超出模型上下文長度",
+      "note": "prompt 太長",
+      "title": "超出長度上限",
+      "brief": "超出模型上下文長度",
+      "detail": "供應商回覆 400：prompt 太長。請縮短對話，或減少附加內容後再試。"
+    },
+    {
+      "name": "provider_5xx",
+      "keywords": [],
+      "http_status": 500,
+      "code": "E_PROVIDER_ERROR",
+      "display": "供應商伺服器錯誤",
+      "note": "5xx",
+      "title": "供應商錯誤",
+      "brief": "供應商伺服器異常",
+      "detail": "供應商回覆 5xx：對方服務暫時出錯。請稍後再試。"
+    },
+    {
+      "name": "network",
+      "keywords": [
+        "connection refused",
+        "getaddrinfo",
+        "timed out",
+        "timeout"
+      ],
+      "http_status": 0,
+      "code": "E_NETWORK",
+      "display": "連不上供應商",
+      "note": "網絡層失敗",
+      "title": "連線失敗",
+      "brief": "連不上供應商",
+      "detail": "未能建立連線。請檢查網絡或代理設定後再試。"
+    }
+  ]
+}

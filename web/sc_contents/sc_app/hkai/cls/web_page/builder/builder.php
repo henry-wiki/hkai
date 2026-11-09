@@ -157,11 +157,11 @@ class builder_Class
         $brand_logo_src = $controller->get_web_path("/asset/hkai-logo.png");
 
         $outputLines   = [];
-        $outputLines[] = "<nav class='sc_rail' aria-label='主要功能'>";
+        $outputLines[] = "<nav class='sc_rail' aria-label='" . hkai()->i18n()->get("nav.main") . "'>";
             $outputLines[] = "<a class='sc_rail__brand' href='/' title='" . hkai()->i18n()->get("common.back_to_workspace") . "'>";
                 $outputLines[] = "<img class='sc_rail__brand_mark' src='{$brand_logo_src}' alt='hkai'/>";
             $outputLines[] = "</a>";
-            $outputLines[] = "<button class='sc_rail__btn' type='button' data-action='toggle_all_sidebars' title='收合全部欄' aria-expanded='true'>";
+            $outputLines[] = "<button class='sc_rail__btn' type='button' data-action='toggle_all_sidebars' title='" . hkai()->i18n()->get("nav.collapse_all") . "' aria-expanded='true'>";
                 $outputLines[] = "<svg class='sc_rail__icon_close' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'>";
                     $outputLines[] = "<rect x='3.5' y='4' width='17' height='16' rx='2'/>";
                     $outputLines[] = "<path d='M9 4v16'/>";
@@ -174,7 +174,7 @@ class builder_Class
                 $outputLines[] = "</svg>";
             $outputLines[] = "</button>";
             $outputLines[] = "<div class='sc_rail__rule'></div>";
-            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--projects' type='button' data-action='toggle_projects_sidebar' title='專案'>";
+            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--projects' type='button' data-action='toggle_projects_sidebar' title='" . hkai()->i18n()->get("nav.projects") . "'>";
                 $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'>";
                     $outputLines[] = "<rect x='4' y='4' width='6' height='6' rx='1'/>";
                     $outputLines[] = "<rect x='14' y='4' width='6' height='6' rx='1'/>";
@@ -182,23 +182,23 @@ class builder_Class
                     $outputLines[] = "<rect x='14' y='14' width='6' height='6' rx='1'/>";
                 $outputLines[] = "</svg>";
             $outputLines[] = "</button>";
-            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--chats' type='button' data-action='toggle_chats_sidebar' title='對話'>";
+            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--chats' type='button' data-action='toggle_chats_sidebar' title='" . hkai()->i18n()->get("nav.chats") . "'>";
                 $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linejoin='round'>";
                     $outputLines[] = "<path d='M5.7 18.8 4.2 20l.5-3.1A7.6 7.6 0 1 1 19.4 12a7.5 7.5 0 0 1-13.7 4.8Z'/>";
                     $outputLines[] = "<path d='M8 12h.01M12 12h.01M16 12h.01' stroke-width='2.3' stroke-linecap='round'/>";
                 $outputLines[] = "</svg>";
             $outputLines[] = "</button>";
-            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--ranking' type='button' title='排行榜'>";
+            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--ranking' type='button' title='" . hkai()->i18n()->get("nav.ranking") . "'>";
                 $outputLines[] = "<i class='fa-solid fa-ranking-star'></i>";
             $outputLines[] = "</button>";
-            $outputLines[] = "<button class='sc_rail__btn' type='button' data-btn='modal_open_dbviewer' data-src='/dbviewer/' title='資料庫'>";
+            $outputLines[] = "<button class='sc_rail__btn' type='button' data-btn='modal_open_dbviewer' data-src='/dbviewer/' title='" . hkai()->i18n()->get("nav.db") . "'>";
                 $outputLines[] = "<i class='fa-solid fa-database'></i>";
             $outputLines[] = "</button>";
             $outputLines[] = "<div class='sc_rail__spacer'></div>";
-            $outputLines[] = "<button class='sc_rail__btn' type='button' data-btn='modal_open_settings' title='設定'>";
+            $outputLines[] = "<button class='sc_rail__btn' type='button' data-btn='modal_open_settings' title='" . hkai()->i18n()->get("nav.settings") . "'>";
                 $outputLines[] = "<i class='fa-solid fa-gear'></i>";
             $outputLines[] = "</button>";
-            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--help' type='button' title='關於 HKAI' data-btn='modal_open_settings' data-tab='about'>?</button>";
+            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--help' type='button' title='" . hkai()->i18n()->get("nav.about") . "' data-btn='modal_open_settings' data-tab='about'>?</button>";
         $outputLines[] = "</nav>";
 
         return implode("\r\n", $outputLines);

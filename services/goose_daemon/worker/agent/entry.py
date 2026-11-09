@@ -91,7 +91,7 @@ from ...context import (
     conversation_sync,
     message_store,
 )
-from ...runtime import sc_logger
+from bootstrap import sc_logger
 from . import session, paths, exceptions, prepare, preflight
 
 

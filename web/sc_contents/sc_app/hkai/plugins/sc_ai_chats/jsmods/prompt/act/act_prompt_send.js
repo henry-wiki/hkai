@@ -21,7 +21,7 @@ class _act_prompt_send {
 
         // 判定：有附件仍在上傳中 → 警告＋中止（唔清輸入、唔送）
         if (prompt_attach_instance.has_uploading()) {
-            registry().shared().sc_alert().warning("圖片仍在上傳中", "請等圖片上傳完成再送出。");
+            registry().shared().sc_alert().warning(registry().sc_i18n().get("prompt.attach.uploading_title"), registry().sc_i18n().get("prompt.attach.uploading_desc"));
 
             return;
         }

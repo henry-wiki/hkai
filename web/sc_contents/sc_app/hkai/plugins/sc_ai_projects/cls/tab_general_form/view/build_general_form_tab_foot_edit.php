@@ -22,7 +22,7 @@ trait build_general_form_tab_foot_edit
         // 取消鈕（各 tab 皆有——關閉視窗 affordance）
         $cancel_wrapper   = [];
         $cancel_wrapper[] = "<div class='sc_btn_wrapper'>";
-        $cancel_wrapper[] = "<button class='project_modal_btn btn_item' data-btn='project_cancel'>取消</button>";
+        $cancel_wrapper[] = "<button class='project_modal_btn btn_item' data-btn='project_cancel'>" . hkai()->i18n()->get("common.cancel") . "</button>";
         $cancel_wrapper[] = "</div>";
         $button_lines[]   = implode("\r\n", $cancel_wrapper);
 
@@ -31,9 +31,9 @@ trait build_general_form_tab_foot_edit
         $save_wrapper[] = "<div class='sc_btn_wrapper'>";
         // 判定：Home 專案 → 停用儲存（title 說明原因）
         if ($is_home_project === true) {
-            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit' disabled title='" . hkai()->i18n()->get("project.home_locked") . "'>儲存</button>";
+            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit' disabled title='" . hkai()->i18n()->get("project.home_locked") . "'>" . hkai()->i18n()->get("common.save") . "</button>";
         } else {
-            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit'>儲存</button>";
+            $save_wrapper[] = "<button class='project_modal_btn primary btn_item' data-btn='project_edit'>" . hkai()->i18n()->get("common.save") . "</button>";
         }
         $save_wrapper[] = "</div>";
         $button_lines[] = implode("\r\n", $save_wrapper);

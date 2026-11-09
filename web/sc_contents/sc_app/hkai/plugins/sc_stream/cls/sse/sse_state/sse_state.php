@@ -47,6 +47,9 @@ class sse_state_Class
         // 連接身份（本頁一格；冇合法 view_id → 唔登記）
         $sse_owner_file = sc_stream()->sse_owner()->open($view_id, "state_stream");
 
+        // 開線／重連即清本頁已見基準——下一 tick 全量補（防換線窗口漏事件後永遠唔補）
+        sc_stream()->snapshot()->state()->reset_view_snapshot_states($view_id);
+
         $stream_start   = time();
         $last_ping_time = time();
 

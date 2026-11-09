@@ -99,7 +99,7 @@ trait render_project_item
         $edit_btn_attr = [];
         $edit_btn_attr[] = "class='sc_project_card__menu_btn'";
         $edit_btn_attr[] = "data-btn='modal_open_edit'";
-        $edit_btn_attr[] = "title='編輯'";
+        $edit_btn_attr[] = "title='" . hkai()->i18n()->get("project.item.edit") . "'";
         $edit_btn_attr = implode(" ", $edit_btn_attr);
 
         $content = [];

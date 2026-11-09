@@ -21,17 +21,17 @@ trait build_remove_row
         if ($project_status === "archived") {
             $restore_lines   = [];
             $restore_lines[] = "<div class='sc_btn_wrapper'>";
-                $restore_lines[] = "<button type='button' class='project_modal_btn success btn_item' data-btn='project_restore' data-confirm_msg='確定還原專案 [[project_name]] 嗎？還原後會回到專案清單。'><i class='fa-solid fa-box-open'></i> 還原這個專案</button>";
+                $restore_lines[] = "<button type='button' class='project_modal_btn success btn_item' data-btn='project_restore' data-confirm_msg='" . hkai()->i18n()->get("project.actions.restore_confirm") . "'><i class='fa-solid fa-box-open'></i>" . hkai()->i18n()->get("project.actions.restore_button") . "</button>";
             $restore_lines[] = "</div>";
 
-            $row_html = $this->build_form_row("還原專案", "還原後專案會回到正常清單。", implode("\r\n", $restore_lines));
+            $row_html = $this->build_form_row(hkai()->i18n()->get("project.actions.restore_title"), hkai()->i18n()->get("project.actions.restore_desc"), implode("\r\n", $restore_lines));
         } else {
             $archive_lines   = [];
             $archive_lines[] = "<div class='sc_btn_wrapper'>";
-                $archive_lines[] = "<button type='button' class='project_modal_btn btn_item' data-btn='project_archive' data-confirm_msg='確定要歸檔專案 [[project_name]] 嗎？歸檔後會從專案清單隱藏，所有資料保留。'><i class='fa-solid fa-box-archive'></i> 歸檔這個專案</button>";
+                $archive_lines[] = "<button type='button' class='project_modal_btn btn_item' data-btn='project_archive' data-confirm_msg='" . hkai()->i18n()->get("project.actions.archive_confirm") . "'><i class='fa-solid fa-box-archive'></i>" . hkai()->i18n()->get("project.actions.archive_button") . "</button>";
             $archive_lines[] = "</div>";
 
-            $row_html = $this->build_form_row("歸檔專案", "歸檔後唔會刪除任何資料。", implode("\r\n", $archive_lines));
+            $row_html = $this->build_form_row(hkai()->i18n()->get("project.actions.archive_title"), hkai()->i18n()->get("project.actions.archive_desc"), implode("\r\n", $archive_lines));
         }
 
         return $row_html;

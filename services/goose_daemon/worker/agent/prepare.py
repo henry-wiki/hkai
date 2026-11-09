@@ -6,7 +6,7 @@ agent啟動前準備（單一職責：每次發問前備妥 goose 子程序環�
 
 上游：entry.execute_job（每張工單呼叫 prepare_goose_env 一次）
 下游：paths（路徑／自訂 provider 表）、chat_mode（UI 模對映）、
-      message_store（msg_conf 值）、runtime/sc_config（daemon 設定）、runtime/sc_logger
+      message_store（msg_conf 值）、runtime/sc_config（daemon 設定）、bootstrap/sc_logger
 
 產出：
     goose_env（GOOSE_PATH_ROOT／GOOSE_CONTEXT_LIMIT／GOOSE_MODE）
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 from ...context import DATA_DIR, message_store
-from ...runtime import sc_logger
+from bootstrap import sc_logger
 from . import paths
 from .chat_mode import get_chat_mode
 
@@ -37,6 +37,18 @@ def prepare_goose_env(goose_env: dict[str, str]) -> None:
 
     # goose 資料根（每專案一個資料夾——session／config／state 全歸該專案；專案間零干涉）
     goose_env["GOOSE_PATH_ROOT"] = str(paths.resolve_path_root(project_path))
+
+    # 內建 node：加入子程序 PATH（npx／node 用內建版；冇就用系統）
+    node_dir_text = paths.resolve_node_dir()
+
+    if node_dir_text != "":
+        goose_env["PATH"] = node_dir_text + os.pathsep + goose_env.get("PATH", "")
+
+    # 內建 Playwright：瀏覽器路徑（goose 開瀏覽器時用）
+    playwright_dir_text = paths.resolve_playwright_dir()
+
+    if playwright_dir_text != "":
+        goose_env["PLAYWRIGHT_BROWSERS_PATH"] = playwright_dir_text + "/browsers"
 
     # 系統指示（hkai——發問前注入：寫 goose 原生 Global Hints 檔；缺必要檔＝掟錯，外層記失敗）
     write_goose_hints_file(goose_env["GOOSE_PATH_ROOT"])

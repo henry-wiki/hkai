@@ -381,8 +381,8 @@ class _evt_prompt_attach {
 
                     const shared = registry().shared();
                     shared.sc_alert().warning(
-                        "圖片過大",
-                        "長邊超過 " + thisObject.settings.max_source_side_px + " px，已略過：" + file_item.name
+                        registry().sc_i18n().get("prompt.attach.too_large_title"),
+                        registry().sc_i18n().get("prompt.attach.too_large_desc") + thisObject.settings.max_source_side_px + registry().sc_i18n().get("prompt.attach.too_large_mid") + file_item.name
                     );
 
                     resolve(null);
@@ -474,7 +474,7 @@ class _evt_prompt_attach {
             // 判定：已達張數上限 → 警告並停
             if (this.attachments.length >= this.settings.max_images) {
                 const shared = registry().shared();
-                shared.sc_alert().warning("附件數量上限", "每條訊息最多 " + this.settings.max_images + " 張圖片");
+                shared.sc_alert().warning(registry().sc_i18n().get("prompt.attach.limit_title"), registry().sc_i18n().get("prompt.attach.limit_desc") + this.settings.max_images + registry().sc_i18n().get("prompt.attach.limit_unit"));
                 break;
             }
 
@@ -623,7 +623,7 @@ class _evt_prompt_attach {
         // 判定：失敗 → 警告（檔案可能仍存在）
         if (delete_result === null || delete_result.ok !== true) {
             const shared = registry().shared();
-            shared.sc_alert().warning("刪除失敗", "草稿檔案未能刪除，請重試");
+            shared.sc_alert().warning(registry().sc_i18n().get("prompt.attach.delete_failed_title"), registry().sc_i18n().get("prompt.attach.delete_failed_desc"));
             return;
         }
 

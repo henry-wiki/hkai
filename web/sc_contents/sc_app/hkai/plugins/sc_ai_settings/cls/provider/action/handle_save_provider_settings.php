@@ -22,7 +22,7 @@ trait handle_save_provider_settings
         }
 
         $env_key       = $provider_item["env_key"];
-        $current_value = sc_get_env($env_key, "");
+        $current_value = sc_api_keys()->get($env_key, "");
 
         // 值正規化（剝外層引號——用戶可能連引號一齊貼上）
         $api_token = $this->normalize_token($api_token);
@@ -41,13 +41,18 @@ trait handle_save_provider_settings
             $errors["api_token"] = hkai()->i18n()->get("settings.provider.token_multiline_error");
         }
 
+        // 判定：長度不合（所有 provider 一律 > 20 字；空白＝清除，唔驗）→ 欄位錯誤
+        if (isset($errors["api_token"]) === false && $api_token !== "" && strlen($api_token) <= 20) {
+            $errors["api_token"] = hkai()->i18n()->get("settings.provider.token_too_short");
+        }
+
         // 判定：有錯 → 400＋errors
         if (!empty($errors)) {
             return sc_response()->json(["ok" => false, "errors" => $errors], 400);
         }
 
-        // 寫入 .env（sc_env 原子覆蓋——$api_token 為空＝以空值寫入＝清除）
-        sc_env()->replace($env_key, $api_token);
+        // 寫入 api_keys.json（原子覆蓋——$api_token 為空＝以空值寫入＝清除）
+        sc_api_keys()->set($env_key, $api_token);
 
         return sc_response()->json(["ok" => true]);
     }

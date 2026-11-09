@@ -58,7 +58,7 @@ return [
     |
     */
 
-    'files' => rtrim(sc_get_config('runtime.tmp'), '/') . '/sessions',
+    'files' => sc_data_path()->get_data_sub_dir('_tmp') . '/sessions',
 
     /*
     |--------------------------------------------------------------------------

@@ -45,7 +45,7 @@ class repo_ghosts_class:
 
         # 有清到先記一行（零噪音——乾淨路徑零足跡）
         if cleaned > 0:
-            from ..runtime import sc_logger
+            from bootstrap import sc_logger
             sc_logger.log("repo ghosts cleaned: " + str(cleaned) + " (" + project_path + ")")
 
         return {"ok": True, "cleaned": cleaned}

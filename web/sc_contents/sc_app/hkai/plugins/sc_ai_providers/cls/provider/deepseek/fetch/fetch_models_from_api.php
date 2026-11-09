@@ -11,7 +11,7 @@ trait fetch_models_from_api
     private function fetch_models_from_api()
     {
         // API key（DeepSeek /models 需要 Bearer token——.env 即時讀取）
-        $deepseek_api_key = sc_get_env("DEEPSEEK_API_KEY", "");
+        $deepseek_api_key = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
 
         // 判定：冇 key → 唔發請求（回錯誤明細）
         if ($deepseek_api_key === "") {

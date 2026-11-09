@@ -106,7 +106,7 @@ def exception_kill() -> None:
     """例外退出（atexit）：記 log → 停心跳（stop 內會刪狀態檔）。"""
     # 記 log（非 os._exit 收工——留痕）
     try:
-        from . import sc_logger
+        from bootstrap import sc_logger
 
         sc_logger.log("exit: unexpected interpreter exit (exception_kill)")
     except Exception:  # noqa: BLE001, S110

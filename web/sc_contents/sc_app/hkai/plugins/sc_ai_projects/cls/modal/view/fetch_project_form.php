@@ -67,7 +67,7 @@ trait fetch_project_form
         $active_tab_id = $tab["tab_id"];
         
         // 外框 footer 左側內容（預設＝共用重新整理鈕；規則／環境 tab＝各自註記字眼——規則頁重新整理移入右側）
-        $foot_left_html = "<button class='project_modal_btn btn_item' data-btn='project_refresh'>重新整理</button>";
+        $foot_left_html = "<button class='project_modal_btn btn_item' data-btn='project_refresh'>" . hkai()->i18n()->get("common.refresh") . "</button>";
 
         // modal 外框內容（head／tabs／foot——head／foot 由當前 tab 的 view 獨立砌）
         $html = [];
@@ -135,7 +135,7 @@ trait fetch_project_form
         
         $html["head"]       = $head_html;
         // 外框 footer 左側內容（預設＝共用重新整理鈕；規則／環境 tab＝各自註記字眼——規則頁重新整理移入右側）
-        $foot_left_html = "<button class='project_modal_btn btn_item' data-btn='project_refresh'>重新整理</button>";
+        $foot_left_html = "<button class='project_modal_btn btn_item' data-btn='project_refresh'>" . hkai()->i18n()->get("common.refresh") . "</button>";
 
         // 判定：規則 tab → 左側換成更新狀態字眼（規則頁專屬安排）
         if ($active_tab_id === "rule") {

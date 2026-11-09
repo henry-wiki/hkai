@@ -5,6 +5,8 @@ paths.py — goose agent私有 context（路徑＋常數；agent專屬，唔放�
 職責：
 - resolve_path_root()                      goose 資料根（每專案一個資料夾——GOOSE_PATH_ROOT）
 - resolve_executable()                     goose 執行檔（.env goose_executable；缺＝PATH 搜尋）
+- resolve_node_dir()                        node 目錄（.env node_dir；缺＝execute/node → engine/node22）
+- resolve_playwright_dir()                  Playwright 目錄（.env playwright_dir；缺＝execute/playwright-* → engine/playwright-*）
 - verify_executable()                      真跑 --version 驗證執行檔（損壞／權限／架構錯）
 - PROVIDER_TABLE                           model_name 前綴 → {kind, api_key_env}（唯一白名單；加 provider＝加一行）
 - CUSTOM_PROVIDER_TABLE                    goose 原生唔識嘅 provider 細節（寫 custom_providers/<前綴>.json）
@@ -20,13 +22,13 @@ from pathlib import Path
 
 from ...context import LOCALDB_DIR, message_store
 from ...db import db_context
-from ...runtime import sc_env
+from bootstrap import env
 
 # 權限決定輪詢間隔（秒——ACP 權限等待每 tick 檢查一次決定檔）
 PERMISSION_DECISION_POLL_INTERVAL_SEC = 0.4
 
 # 【重要】下面兩個表嘅 api_key_env 係「環境變數名」（例：OPENROUTER_API_KEY），唔係 API key 本身。
-# 真 key 只放 .env，由 sc_env.load_api_keys() 注入程序環境；代碼內永遠唔寫 key 值。
+# 真 key 只放 .env，由 env.load_api_keys() 注入程序環境；代碼內永遠唔寫 key 值。
 
 # 自訂 provider 表（model_name 前綴 → goose 原生唔識嘅 provider——每次發問寫
 # <GOOSE_PATH_ROOT>/config/custom_providers/<前綴>.json；新增 provider＝加一筆）
@@ -102,8 +104,17 @@ def resolve_sessions_db_file(project_path: str) -> Path:
 
 
 def resolve_executable() -> str:
-    """goose 執行檔：.env goose_executable（sc_env 唯讀）；缺／檔唔存在＝PATH 搜尋。"""
-    goose_executable = str(sc_env.get_env("goose_executable") or "")
+    """goose 執行檔：只認 .env goose_executable（sc_env 唯讀）；缺／檔唔存在＝PATH 搜尋。"""
+    site_root        = Path(__file__).resolve().parents[4]
+    goose_executable = str(env.get_env("goose_executable") or "")
+
+    # 判定：相對路徑 → 以站根為基準
+    if goose_executable != "" and Path(goose_executable).is_absolute() is False:
+        # 判定：/... 前綴 → 站根基準（剝走單斜線；// 開頭＝UNC 保留）
+        if goose_executable.startswith("/") and not goose_executable.startswith("//"):
+            goose_executable = goose_executable.lstrip("/")
+
+        goose_executable = str(site_root / goose_executable)
 
     # 判定：.env 有值且檔案存在 → 用之
     if goose_executable != "" and Path(goose_executable).is_file() is True:
@@ -111,6 +122,72 @@ def resolve_executable() -> str:
 
     # 退回 PATH 搜尋（shutil.which——跨平台）
     return shutil.which("goose") or ""
+
+
+def resolve_node_dir() -> str:
+    """node 目錄：.env node_dir（優先）→ execute/node（產品）→ engine/node22（dev／build）→ ""（系統 PATH）。"""
+    site_root = Path(__file__).resolve().parents[4]
+    configured_dir = str(env.get_env("node_dir") or "")
+
+    # 判定：.env 有指定 → 相對路徑以站根為基準；有 node.exe 即採用
+    if configured_dir != "":
+        if Path(configured_dir).is_absolute() is False:
+            # 判定：/... 前綴 → 站根基準（剝走單斜線；// 開頭＝UNC 保留）
+            if configured_dir.startswith("/") and not configured_dir.startswith("//"):
+                configured_dir = configured_dir.lstrip("/")
+
+            configured_dir = str(site_root / configured_dir)
+
+        if (Path(configured_dir) / "node.exe").is_file() is True:
+            return configured_dir
+
+    candidate_list = [
+        site_root / "execute" / "node",
+        site_root.parent.parent / "engine" / "node22",
+    ]
+
+    # 逐個候選檢查
+    for candidate_item in candidate_list:
+        if (candidate_item / "node.exe").is_file() is True:
+            return str(candidate_item)
+
+    return ""
+
+
+def resolve_playwright_dir() -> str:
+    """Playwright 目錄：.env playwright_dir（優先）→ execute/playwright-*（產品）→ engine/playwright-*（dev／build）→ ""。"""
+    site_root = Path(__file__).resolve().parents[4]
+    configured_dir = str(env.get_env("playwright_dir") or "")
+
+    # 判定：.env 有指定 → 相對路徑以站根為基準；有 playwright 套件即採用
+    if configured_dir != "":
+        if Path(configured_dir).is_absolute() is False:
+            # 判定：/... 前綴 → 站根基準（剝走單斜線；// 開頭＝UNC 保留）
+            if configured_dir.startswith("/") and not configured_dir.startswith("//"):
+                configured_dir = configured_dir.lstrip("/")
+
+            configured_dir = str(site_root / configured_dir)
+
+        if (Path(configured_dir) / "node_modules" / "playwright").is_dir() is True:
+            return configured_dir
+
+    candidate_root_list = [
+        site_root / "execute",
+        site_root.parent.parent / "engine",
+    ]
+
+    # 逐個根目錄搜 playwright-*（版本號目錄）
+    for candidate_root in candidate_root_list:
+        # 判定：根目錄不存在 → 下一個
+        if candidate_root.is_dir() is False:
+            continue
+
+        for candidate_dir in sorted(candidate_root.glob("playwright-*"), reverse=True):
+            # 判定：有 Playwright 套件＋瀏覽器 → 採用
+            if (candidate_dir / "node_modules" / "playwright").is_dir() is True:
+                return str(candidate_dir)
+
+    return ""
 
 
 def verify_executable() -> tuple[bool, str]:

@@ -29,8 +29,8 @@ class sc_session_middleware_Class
     {
         // driver/save_path 從 settings 讀（預設 file + SC_TMP_DIR/sessions）
         $sessionConfig = array(
-            "driver"    => sc_settings()->get("session_driver", "file"),
-            "save_path" => sc_settings()->get("session_save_path", SC_TMP_DIR . "/sessions"),
+            "driver"    => sc_get_setting("session_driver", "file"),
+            "save_path" => sc_get_setting("session_save_path", SC_TMP_DIR . "/sessions"),
         );
         
         // file driver → 設定儲存路徑（sc_session_file 為 PHP session handler）

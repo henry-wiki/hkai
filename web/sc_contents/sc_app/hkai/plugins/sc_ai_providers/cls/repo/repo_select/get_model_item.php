@@ -11,19 +11,19 @@ trait get_model_item
     // 從可用 provider 聲明 provider_file（絕對路徑）讀取指定 model 的完整 metadata（daemon_config 驗證 reasoning_effort 用）
     public function get_model_item($provider_id, $model_id)
     {
-        // 可用 provider 聲明（provider_id → provider_file 絕對路徑）
-        $available_providers = sc_ai_providers()->main()->get_available_providers();
-        // 未 declared（唔喺可用聲明）→ 無此 provider
-        if (!isset($available_providers[$provider_id])) {
+        // provider 例項（解析入口——同 get_models 同一條來源）
+        $provider_instance = sc_ai_providers()->repo()->get_provider_instance($provider_id);
+
+        // 判定：provider 未實作／未宣告 → 無此 provider
+        if ($provider_instance === null) {
             return null;
         }
-        $provider_item = $available_providers[$provider_id];
-        $provider_file = $provider_item["provider_file"];
-        if (!file_exists($provider_file)) {
-            return null;
-        }
-        $data = require $provider_file;
-        if (!is_array($data) || !isset($data["model"])) {
+
+        // provider 檔資料（走 provider repo 嘅解析——store → data override fallback；同 get_models 一致）
+        $data = $provider_instance->repo()->get_provider_model_data();
+
+        // 判定：provider 檔未產生／格式不合法 → null
+        if ($data === null) {
             return null;
         }
         // model item 存在於任一 tier（free / paid_with_coding_index / ...）

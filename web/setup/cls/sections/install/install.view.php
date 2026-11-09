@@ -48,6 +48,29 @@ trait install_view
 
             $section_lines[] = "<p class='check_intro'>" . $section_intro_text . "</p>";
 
+            // 安裝摘要（資料根＋版本——一眼知裝去邊、用邊個版本）
+            $install_data_dir = sc_get_data_dir();
+            $install_version  = setup()->get_version();
+            $install_build_id = $install_section->get_build_id();
+
+            $install_version_text = $install_version;
+
+            // 判定：有建置編號 → 版本後附 BUILD
+            if ($install_build_id !== "") {
+                $install_version_text = $install_version_text . " · BUILD " . $install_build_id;
+            }
+
+            $section_lines[] = "<div class='install_meta'>";
+            $section_lines[] = "<div class='install_meta_row'>";
+            $section_lines[] = "<span class='install_meta_label'>" . setup()->i18n()->get("section.install.data_dir") . "</span>";
+            $section_lines[] = "<span class='install_meta_value'>" . htmlspecialchars($install_data_dir, ENT_QUOTES) . "</span>";
+            $section_lines[] = "</div>";
+            $section_lines[] = "<div class='install_meta_row'>";
+            $section_lines[] = "<span class='install_meta_label'>" . setup()->i18n()->get("section.install.version") . "</span>";
+            $section_lines[] = "<span class='install_meta_value'>" . htmlspecialchars($install_version_text, ENT_QUOTES) . "</span>";
+            $section_lines[] = "</div>";
+            $section_lines[] = "</div>";
+
             $install_steps = $install_section->get_install_steps();
 
             // 逐個安裝步驟（清單＝單一來源——次序＝執行次序）
@@ -118,6 +141,7 @@ trait install_view
         $check_item_code = $install_step["check_item_code"];
         $step_label      = $install_step["label"];
         $step_value = $install_step["value"];
+        $step_target = $install_step["target"];
 
         $step_status = $step_state["status"];
         $step_detail = $step_state["detail"];
@@ -143,6 +167,7 @@ trait install_view
         $install_section_id_attr = htmlspecialchars($install_step["section_id"], ENT_QUOTES);
         $step_label_html  = htmlspecialchars($step_label, ENT_QUOTES);
         $step_value_html  = htmlspecialchars($step_value, ENT_QUOTES);
+        $step_target_html = htmlspecialchars($step_target, ENT_QUOTES);
         $step_detail_html = htmlspecialchars($step_detail, ENT_QUOTES);
 
         // 判定：有狀態 class → 附上（空＝純 check_item）
@@ -169,6 +194,11 @@ trait install_view
         // 判定：有值顯示 → 出（現值／遮罩／留空字眼——動作步空＝唔出）
         if ($step_value_html !== "") {
             $output_lines[] = "<div class='cvalue'>" . $step_value_html . "</div>";
+        }
+
+        // 判定：有寫入目標 → 出（寫去邊個檔）
+        if ($step_target_html !== "") {
+            $output_lines[] = "<div class='ctarget'>" . $step_target_html . "</div>";
         }
 
         // 判定：有詳情先出（空＝唔出·防空白行）

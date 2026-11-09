@@ -17,7 +17,7 @@ class server_Class
     private const HEARTBEAT_FRESH_SEC = 3;
 
     // 啟動確認上限（秒——等心跳檔出現；Python 冷啟約 2–3 秒＋裕度）
-    private const START_WAIT_SEC = 15;
+    private const START_WAIT_SEC = 6;
 
     // 交 bridge 停止嘅 HTTP 回應上限（秒——bridge 殺完子孫即回，呢個只係保險上限）
     private const STOP_REQUEST_TIMEOUT_SEC = 10;
@@ -39,6 +39,9 @@ class server_Class
     // 確保已啟動（已活＝ok；未活才拉起——呼叫端唔需要自己判斷狀態）
     public function ensure_server()
     {
+        // 每次開啟頁面都以本次來源重寫 origin 白名單（整份覆寫——舊埠／舊主機清走）
+        $this->host()->write_origin_whitelist();
+
         // 判定：心跳新鮮（只睇 mtime）→ 已活，唔使完整查
         if (hkai()->process()->is_bridge_alive() === true) {
             return ["ok" => true, "started" => false];
@@ -74,7 +77,7 @@ class server_Class
         if ($server_status_result["is_alive"]) {
             $logger->warn("start_server: already running — skip");
 
-            return ["ok" => false, "error_kind" => "failed", "error" => "伺服器已經啟動"];
+            return ["ok" => false, "error_kind" => "failed", "error" => hkai()->i18n()->get("server.already_running")];
         }
 
         $address_result = $this->host()->resolve_server_address($server_host, $server_port);
@@ -91,8 +94,8 @@ class server_Class
 
         $logger->info("start_server: resolved " . $server_host . ":" . $server_port);
 
-        // 記錄本次來源 origin（白名單——SSE CORS；去重附加）
-        $this->host()->append_origin_whitelist();
+        // 以本次來源重寫 origin 白名單（SSE CORS——整份覆寫）
+        $this->host()->write_origin_whitelist();
 
         // 寫入本次要起嘅 host／port（python 唯一設定來源——拉起前先寫，bridge 開機即讀）
         $server_info = [];
@@ -111,7 +114,11 @@ class server_Class
 
         // 判定：launcher 送出失敗
         if ($launcher_result["ok"] !== true) {
-            $logger->error("start_server: launcher failed — " . ($launcher_result["error"] ?? "unknown"));
+            // 診斷：連 exit code 同輸出尾幾行一齊記（否則只知「unknown」）
+            $launcher_output_lines = $launcher_result["output"] ?? [];
+            $launcher_output_tail = implode(" / ", array_slice($launcher_output_lines, -5));
+
+            $logger->error("start_server: launcher failed — " . ($launcher_result["error"] ?? "unknown") . " | exit=" . ($launcher_result["exit_code"] ?? "-") . " | out=" . $launcher_output_tail);
 
             return ["ok" => false, "error_kind" => "failed", "error" => "server command failed"];
         }
@@ -121,9 +128,9 @@ class server_Class
 
         // 判定：逾時冇新心跳 → failed
         if ($is_bridge_started === false) {
-            $logger->error("start_server: heartbeat timeout (15s) — " . $server_host . ":" . $server_port);
+            $logger->error("start_server: heartbeat timeout (" . self::START_WAIT_SEC . "s) — " . $server_host . ":" . $server_port);
 
-            return ["ok" => false, "error_kind" => "failed", "error" => "啟動失敗：未收到 server 就緒回覆。"];
+            return ["ok" => false, "error_kind" => "failed", "error" => hkai()->i18n()->get("server.start_failed")];
         }
 
         // 系統指示檔：prompt 每次覆寫、env 由 bridge JSON 重建（失敗各自記 log，唔影響啟動）

@@ -11,6 +11,13 @@ trait get_bench_source_data
     // bench_source 檔資料（傳入檔路徑；file_exists 防禦 → require → 格式查驗；不合法 → null）
     public function get_bench_source_data($bench_source_file)
     {
+        // 判定：data override 存在 → 用 override（唯讀安裝嘅更新）
+        $override_file_path = sc_data_override_path("benchmark", $bench_source_file);
+
+        if (file_exists($override_file_path) === true) {
+            $bench_source_file = $override_file_path;
+        }
+
         // bench_source 檔可能尚未產生（未跑下載前）——不存在 → null（require 不存在檔 = fatal）
         if (!file_exists($bench_source_file)) {
             return null;

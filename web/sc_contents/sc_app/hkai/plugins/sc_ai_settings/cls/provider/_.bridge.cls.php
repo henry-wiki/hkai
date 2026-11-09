@@ -114,7 +114,8 @@ class provider_Class
                 $provider_id      = $provider_item["id"];
                 $provider_env_key = $provider_item["env_key"];
 
-                $current_value = sc_get_env($provider_env_key, "");
+                // 讀 api_keys.json（唯一來源——同 handle_save_provider_settings 寫入同一處）
+                $current_value = sc_api_keys()->get($provider_env_key, "");
                 $mask_value    = $this->mask_token($current_value);
                 $mask_encoded  = sc_html_encode($mask_value);
 

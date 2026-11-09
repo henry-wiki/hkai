@@ -11,7 +11,7 @@ trait write_project_environment_file
     public function write_project_environment_file($project_row, $is_force_write)
     {
         // 準確值：環境檔＝storage/hkai/environment/env.{slug}.md（app storage——唔寫專案根）
-        $storage_dir     = sc_get_config("storage.app_dir");
+        $storage_dir     = sc_get_data_dir();
         $env_file        = $storage_dir . "/environment/env." . $project_row["project_slug"] . ".md";
 
         // 專案固定事實（runtime facts 用——agent 唔靠猜）

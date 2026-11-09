@@ -122,7 +122,7 @@ function append_editblock_display(display_lines, path_text, search_body_lines, r
     // 原文段（SEARCH——空＝唔出）
     if (search_body_lines.length > 0) {
         display_lines.push("");
-        display_lines.push("**原文**");
+        display_lines.push(registry().sc_i18n().get("message.edit.original"));
         display_lines.push(fence_token + language_name);
 
         for (let line_index = 0; line_index < search_body_lines.length; line_index++) {
@@ -134,7 +134,7 @@ function append_editblock_display(display_lines, path_text, search_body_lines, r
 
     // 新文段（REPLACE——空＝「（無）」）
     display_lines.push("");
-    display_lines.push("**新文**");
+    display_lines.push(registry().sc_i18n().get("message.edit.new"));
 
     // 判定：有新內容 → 出代碼框
     if (replace_body_lines.length > 0) {
@@ -146,7 +146,7 @@ function append_editblock_display(display_lines, path_text, search_body_lines, r
 
         display_lines.push(fence_token);
     } else {
-        display_lines.push("（無）");
+        display_lines.push(registry().sc_i18n().get("message.edit.none"));
     }
 }
 

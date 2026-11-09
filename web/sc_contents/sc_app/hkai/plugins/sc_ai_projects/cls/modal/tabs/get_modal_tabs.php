@@ -11,12 +11,12 @@ trait get_modal_tabs
     {
         $modal_tabs = [];
 
-        $modal_tabs[] = ["tab_id" => "general_form",   "label" => "表單 Form",        "is_edit_only" => false, "archived_visibility" => "always"];
+        $modal_tabs[] = ["tab_id" => "general_form",   "label" => hkai()->i18n()->get("project.tab.general_form"),        "is_edit_only" => false, "archived_visibility" => "always"];
         $modal_tabs[] = ["tab_id" => "git",            "label" => "Git",              "is_edit_only" => true,  "archived_visibility" => "normal_only"];
-        $modal_tabs[] = ["tab_id" => "rule",           "label" => "規則 RULE",        "is_edit_only" => true,  "archived_visibility" => "normal_only"];
-        $modal_tabs[] = ["tab_id" => "environment",    "label" => "環境 ENV",         "is_edit_only" => true,  "archived_visibility" => "normal_only"];
-        $modal_tabs[] = ["tab_id" => "diagnostics",    "label" => "診斷 Diagnostics", "is_edit_only" => true,  "archived_visibility" => "normal_only"];
-        $modal_tabs[] = ["tab_id" => "delete_project", "label" => "刪除 DELETE",      "is_edit_only" => true,  "archived_visibility" => "archive_only"];
+        $modal_tabs[] = ["tab_id" => "rule",           "label" => hkai()->i18n()->get("project.tab.rule"),        "is_edit_only" => true,  "archived_visibility" => "normal_only"];
+        $modal_tabs[] = ["tab_id" => "environment",    "label" => hkai()->i18n()->get("project.tab.environment"),         "is_edit_only" => true,  "archived_visibility" => "normal_only"];
+        $modal_tabs[] = ["tab_id" => "diagnostics",    "label" => hkai()->i18n()->get("project.tab.diagnostics"), "is_edit_only" => true,  "archived_visibility" => "normal_only"];
+        $modal_tabs[] = ["tab_id" => "delete_project", "label" => hkai()->i18n()->get("project.tab.delete"),      "is_edit_only" => true,  "archived_visibility" => "archive_only"];
 
         return $modal_tabs;
     }

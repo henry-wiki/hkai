@@ -55,8 +55,8 @@ class server_host_Class
         return ["host" => $server_host, "port" => (int)$server_port];
     }
 
-    // 附加本次請求來源去 origin 白名單（補齊 http/https × apex/www；去重·LOCK_EX）
-    public function append_origin_whitelist()
+    // 以本次請求來源重寫 origin 白名單（整份覆寫——清走舊埠／舊主機；補齊 http/https × apex/www）
+    public function write_origin_whitelist()
     {
         $origin = trim((string)($_SERVER["HTTP_ORIGIN"] ?? ""));
 
@@ -93,33 +93,8 @@ class server_host_Class
             @mkdir(dirname($whitelist_file), 0777, true);
         }
 
-        $existing_origins = [];
-
-        // 判定：白名單已存在 → 讀現有條目
-        if (is_file($whitelist_file)) {
-            foreach (file($whitelist_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $whitelist_line) {
-                $existing_origins[] = trim((string)$whitelist_line);
-            }
-        }
-
-        $new_origin_lines = [];
-
-        // 逐條 variant（已有＝跳；否則排隊寫）
-        foreach ($origin_variants as $origin_variant) {
-            // 判定：已存在 → 跳（去重）
-            if (in_array($origin_variant, $existing_origins, true)) {
-                continue;
-            }
-
-            $new_origin_lines[] = $origin_variant;
-        }
-
-        // 判定：冇新條目 → 唔使寫
-        if (count($new_origin_lines) === 0) {
-            return;
-        }
-
-        @file_put_contents($whitelist_file, implode("\n", $new_origin_lines) . "\n", FILE_APPEND | LOCK_EX);
+        // 整份覆寫（今次來源以外嘅條目全部清走）
+        @file_put_contents($whitelist_file, implode("\r\n", $origin_variants) . "\r\n", LOCK_EX);
     }
 
     // 砌來源變體（domain → http/https × apex/www 四條；IP／localhost／單段名／IPv6 → http/https 兩條）

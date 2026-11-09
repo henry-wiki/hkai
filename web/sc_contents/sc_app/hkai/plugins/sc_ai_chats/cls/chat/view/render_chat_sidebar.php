@@ -44,18 +44,18 @@ trait render_chat_sidebar
             $outputLines[] = "<div class='sc_panel_header'>";
                 $outputLines[] = "<div class='sc_panel_header__label'>";
                     $outputLines[] = "<div class='sc_panel_header__kicker'>" . sc_html_encode($project_name) . "</div>";
-                    $outputLines[] = "<span class='sc_panel_header__title'>對話 <span>" . hkai()->i18n()->get("sidebar.chats") . "</span></span>";
+                    $outputLines[] = "<span class='sc_panel_header__title'>" . hkai()->i18n()->get("chat.sidebar.title") . " <span>" . hkai()->i18n()->get("sidebar.chats") . "</span></span>";
                 $outputLines[] = "</div>";
                 $outputLines[] = "<div class='sc_panel_header__actions'>";
-                    $outputLines[] = "<button class='sc_icon_btn' title='搜尋'>⌕</button>";
-                    $outputLines[] = "<button class='sc_icon_btn' data-btn='chat_add' title='新增對話'>＋</button>";
+                    $outputLines[] = "<button class='sc_icon_btn' title='" . hkai()->i18n()->get("sidebar.search") . "'>⌕</button>";
+                    $outputLines[] = "<button class='sc_icon_btn' data-btn='chat_add' title='" . hkai()->i18n()->get("chat.add") . "'>＋</button>";
                 $outputLines[] = "</div>";
             $outputLines[] = "</div>";
             $outputLines[] = "<div class='sc_chat_list' data-loaded='0'>";
                 $outputLines[] = "";
             $outputLines[] = "</div>";
             // 拖拉調寬把手（貼右邊界——sc_sidebar.js 綁定拖曳；200–300px；中段 grip＝拖曳舒適位）
-            $outputLines[] = "<div class='sc_sidebar__resize_line' data-resize='chats' title='拖拉調整對話欄寬度'>";
+            $outputLines[] = "<div class='sc_sidebar__resize_line' data-resize='chats' title='" . hkai()->i18n()->get("sidebar.resize_chats") . "'>";
                 $outputLines[] = "<span class='sc_sidebar__resize_grip' aria-hidden='true'></span>";
             $outputLines[] = "</div>";
             // 欄底 status bar（sc_ai_status_bar plugin 產生——chat region；嵌喺 panel 內，唔係 fixed footer）

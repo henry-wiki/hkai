@@ -3,7 +3,7 @@
 namespace sc\setup\sections\prerequisite;
 
 // == HKAI setup sections/prerequisite prerequisite.php：prerequisite 格（格本體——view 側＝prerequisite.view.php；檢查項對映＝sections 域 get_section_unit_instance）
-// == 用法：prerequisite_Class::getInstance()->build_section()／basic()->php_version()／php_extension()->curl()／executor()->pip()／permission()->disk_space()——直取（例）
+// == 用法：prerequisite_Class::getInstance()->build_section()／basic()->php_version()／php_extension()->curl()／executor()->pip()——直取（例）
 // == 一項一檔：basic__xxx（basic/ 子目錄）／php_extension__xxx（php_extension/ 子目錄）／environment__xxx（Python 與引擎＝executor/；檔案與權限＝permission/）／initialization__xxx（檔名＝class 前綴——形式一樣，複製改名即得）
 
 // 載入 prerequisite 格內部短名（_.internal.func.php——setup() 向上接駁）
@@ -25,7 +25,7 @@ require_once __DIR__ . "/permission/_.internal.func.php";
 require_once __DIR__ . "/prerequisite.view.php";
 
 // == HKAI setup sections prerequisite：前置檢查格單元（格本體——class；呼叫形 setup()->sections()->prerequisite()）
-// == 職責：本格整件（build_section＝head＋body＋footer——每格獨立決定）；檢查表內置（五組——逐組標題＋徽章＋逐項卡）
+// == 職責：本格整件（build_section＝head＋body＋footer——每格獨立決定）；檢查表內置（四組——逐組標題＋徽章＋逐項卡）
 // == 徽章跟實況（fail／warn 計數）——force_result 只換卡 layout，唔影響徽章
 class prerequisite_Class
 {
@@ -47,7 +47,7 @@ class prerequisite_Class
 
     public function __construct()
     {
-        // 砌檢查組表（五組——組內 items＝一維 code 列；檢查單元由 sections 域 get_section_unit_instance 初始化）
+        // 砌檢查組表（四組——組內 items＝一維 code 列；檢查單元由 sections 域 get_section_unit_instance 初始化）
         $this->check_groups = [];
 
         // A 組：系統與 PHP
@@ -56,10 +56,8 @@ class prerequisite_Class
         $group_system["items"] = [];
         $group_system["items"][] = "basic__php_version";
         $group_system["items"][] = "basic__os_version";
-        $group_system["items"][] = "basic__mod_rewrite";
         $group_system["items"][] = "basic__memory_limit";
         $group_system["items"][] = "basic__max_execution_time";
-        $group_system["items"][] = "basic__fcgid_max_request_len";
         $this->check_groups[] = $group_system;
 
         // B 組：PHP 擴展
@@ -104,16 +102,6 @@ class prerequisite_Class
         $group_python["items"][] = "environment__goose_executable";
         $this->check_groups[] = $group_python;
 
-        // F 組：檔案與權限
-        $group_files = [];
-        $group_files["label"] = setup()->i18n()->get("section.prerequisite.group_files");
-        $group_files["items"] = [];
-        $group_files["items"][] = "environment__env_writable";
-        $group_files["items"][] = "environment__services_dir";
-        $group_files["items"][] = "environment__storage_dirs";
-        $group_files["items"][] = "environment__project_ready";
-        $group_files["items"][] = "environment__disk_space";
-        $this->check_groups[] = $group_files;
     }
 
     // 跑單一檢查項（按 code 初始化對應檢查單元——跑咗回檢查結果；未知＝null）
@@ -164,10 +152,6 @@ class prerequisite_Class
             $state_value["value"] = $value;
         }
         else if($check_item_code === "environment__goose_executable")
-        {
-            $state_value["value"] = $value;
-        }
-        else if($check_item_code === "environment__env_writable")
         {
             $state_value["value"] = $value;
         }

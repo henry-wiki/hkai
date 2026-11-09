@@ -29,7 +29,7 @@ from typing import Any, cast
 from fastapi import APIRouter
 
 from ..context import DATA_DIR, SERVICES_DIR
-from ..runtime import sc_logger
+from bootstrap import sc_logger
 from image_extractor import box_store
 from image_extractor.runtime import pidfile
 

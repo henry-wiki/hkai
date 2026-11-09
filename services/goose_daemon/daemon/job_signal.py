@@ -15,7 +15,7 @@ job_signal.py — 工單完成訊號（worker → daemon 回報）
 import queue
 import time
 
-from ..runtime import sc_logger
+from bootstrap import sc_logger
 from . import roster
 
 

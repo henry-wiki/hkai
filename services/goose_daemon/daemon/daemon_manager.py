@@ -14,14 +14,16 @@ daemon_manager_class 單例——所有「動作(action)」集中於此（生命
 
 import os
 import time
+import traceback
+from pathlib import Path
 
 from ..context import IDLE_EXIT_SEC, PROGRAM_NAME, RUNTIME_CONFIG_FILE
+from bootstrap import config, env
+from bootstrap.load import load
+from bootstrap import sc_logger
 from ..runtime import (
     heartbeat,
     lifecycle,
-    sc_config,
-    sc_env,
-    sc_logger,
     single_instance,
 )
 from . import (
@@ -68,6 +70,19 @@ def _exit_when_idle() -> None:
 
     sc_logger.log(f"idle {idle_sec:.0f}s, exit with children")
     lifecycle.exit("idle timeout", 0)
+
+
+
+
+def _code_stamp() -> float:
+    """回傳程式碼最新 mtime（goose_daemon/ 內全部 *.py）。"""
+    package_dir = Path(__file__).resolve().parents[1]
+    latest_mtime = 0.0
+
+    for path_item in package_dir.rglob("*.py"):
+        latest_mtime = max(latest_mtime, path_item.stat().st_mtime)
+
+    return latest_mtime
 
 
 class daemon_manager_class:
@@ -126,6 +141,9 @@ class daemon_manager_class:
         # 開機＝閒置時鐘起點（記憶體計時，重啟由 0 重新計）
         _reset_idle_timer()
 
+        # 記錄開機時代碼版本（主迴圈比較——有變即退出交棒）
+        self._code_stamp_at_start = _code_stamp()
+
     def load_config(self) -> bool:
         """
         重新解析固定 runtime.json（data/runtime.json）→ 依靜態 SSOT 展開 → merge。
@@ -134,16 +152,16 @@ class daemon_manager_class:
         回傳：True = 成功更新；False = 變更無（mtime 相同——正常，非錯誤）。
         失敗（讀不到 / JSON 壞）→ log + lifecycle.exit（連子程序退出）。
         """
-        # .env 值（機器層——讀成 dict）
-        _ = sc_env.init_env()
+        # 運行前載入（.env → 資料根 → runtime.json）＋ API keys（*_API_KEY 寫入 os.environ——goose 子程序繼承）
+        try:
+            load()
+            env.load_api_keys()
+        # 判定：載入失敗（.env／runtime.json 壞）→ 記錄 + 連子程序退出（唔可以帶空設定繼續跑）
+        except Exception:  # noqa: BLE001
+            sc_logger.error("load_config failed — daemon exiting\n" + traceback.format_exc())
+            lifecycle.exit("load_config failed", 1)
 
-        # API keys（*_API_KEY 寫入 os.environ——goose 子程序繼承）
-        sc_env.load_api_keys()
-
-        # 讀取 runtime.json（唯一來源；sc_config 快取）
-        sc_config.init_config()
-
-        loaded_conf = dict(sc_config.get_configs())
+        loaded_conf = dict(config.get_configs())
 
         # merge 後比對——config 沒變就跳過
         new_conf = {**self._daemon_conf_data, **loaded_conf}
@@ -210,6 +228,14 @@ class daemon_manager_class:
 
     def _tick(self) -> None:
         """主迴圈一拍：刷新配置 → 知情（工單表）→ 派工 → 資源回收／監督 → 閒置檢查。"""
+        # 第零步：程式碼有變 → 自己退出（下次工單由 bridge 用新碼重開）
+        current_code_stamp = _code_stamp()
+
+        # 判定：程式碼比開機時新 → 退出交棒
+        if current_code_stamp > self._code_stamp_at_start:
+            sc_logger.log("code changed (auto reload) — daemon exiting")
+            lifecycle.exit("code changed (auto reload)", 0)
+
         # 第一步：刷新配置（每拍檢查 mtime；變更才重載）
         self.reload_config()
 

@@ -43,7 +43,7 @@ trait redownload_bench_source_models
         foreach ($entry_results as $entry_result) {
             $bench_source_file = $entry_result["bench_source_file"];
 
-            $swap_result = sc_ai_benchmark()->repo()->swap_bench_source_file_with_single_backup($bench_source_file, $new_file_paths[$bench_source_file]);
+            $swap_result = sc_ai_benchmark()->repo()->swap_bench_source_file_with_single_backup(sc_data_override_path("benchmark", $bench_source_file), $new_file_paths[$bench_source_file]);
             if ($swap_result["ok"] !== true) {
                 return ["error" => 3, "error_message" => $swap_result["error"]];
             }

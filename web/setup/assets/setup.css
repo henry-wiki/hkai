@@ -366,6 +366,35 @@ body {
     color: var(--modal_text_mute);
     margin-top: 2px;
 }
+.check_item .ctarget {
+    font-size: 10.5px;
+    color: var(--modal_text_dim);
+    margin-top: 2px;
+    font-family: ui-monospace, Consolas, monospace;
+    overflow-wrap: anywhere;
+}
+
+/* 安裝摘要（資料根／版本——安裝清單上方一行兩項） */
+.install_meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin: 0 0 10px;
+    font-size: 11px;
+}
+.install_meta_row {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+}
+.install_meta_label {
+    color: var(--modal_text_dim);
+}
+.install_meta_value {
+    color: var(--modal_text);
+    font-family: ui-monospace, Consolas, monospace;
+    overflow-wrap: anywhere;
+}
 
 .check_item .cdesc a,
 .check_item .cdesc a:visited {

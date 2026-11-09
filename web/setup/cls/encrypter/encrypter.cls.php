@@ -53,7 +53,7 @@ class encrypter_Class
         return base64_encode($payload);
     }
 
-    // 解密（存放字串 → 明文——寫 .env／顯示前用；解唔到＝回空）
+    // 解密（存放字串 → 明文——寫 data/config／顯示前用；解唔到＝回空）
     public function decrypt_text($stored_text)
     {
         $stored_text = (string)$stored_text;

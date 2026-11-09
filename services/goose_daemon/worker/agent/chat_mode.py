@@ -6,10 +6,10 @@ UI 模 → agent原生模式對映（agent側唯一來源）。
 
 上游：runner.init()（worker 開機建表，runner:92）
       entry（每張工單 get_chat_mode → GOOSE_MODE）／conversation_sync（建 session 寫 goose_mode）
-下游：runtime/sc_config（讀 runtime.json 本agent組）、runtime/sc_logger（未對映記行）
+下游：runtime/sc_config（讀 runtime.json 本agent組）、bootstrap/sc_logger（記錄）
 
 契約：
-    agent組＝sc_config.get_config(PROGRAM_NAME)（現行 goose_daemon）
+    agent組＝config.get_config(PROGRAM_NAME)（現行 goose_daemon）
     chat_mode 條目＝{ "<UI 模名>": {"mode": "<goose 原生模式>", "description": "..."} }
     未對映 → DEFAULT_MODE（goose 自身默認）
 """
@@ -17,7 +17,8 @@ UI 模 → agent原生模式對映（agent側唯一來源）。
 from typing import cast
 
 from ...context import PROGRAM_NAME
-from ...runtime import sc_config, sc_logger
+from bootstrap import config
+from bootstrap import sc_logger
 
 # 未對映時嘅agent默認模式（goose 自身默認）
 DEFAULT_MODE = "auto"
@@ -46,8 +47,8 @@ def get_chat_mode(chat_mode: str) -> str:
 
 
 def _init_chat_chat_mode_map() -> dict[str, str]:
-    """讀本agent組（sc_config.get_config(PROGRAM_NAME)）→ UI 模名 → 原生模式。"""
-    agent_config = sc_config.get_config(PROGRAM_NAME)
+    """讀本agent組（config.get_config(PROGRAM_NAME)）→ UI 模名 → 原生模式。"""
+    agent_config = config.get_config(PROGRAM_NAME)
 
     # 判定：agent組缺／非 dict → 空表（agent自身默認）
     if not isinstance(agent_config, dict):

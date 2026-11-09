@@ -24,7 +24,7 @@ trait validate_prompt_prerequisites
         if ($content === "") {
             // 判定：有附件 → 唔當錯
             if ($has_attachment === false) {
-                $errors["content"] = ["message" => "請填寫訊息內容", "code" => "E_VALIDATION_FATAL"];
+                $errors["content"] = ["message" => hkai()->i18n()->get("prompt.error.no_content"), "code" => "E_VALIDATION_FATAL"];
             }
         }
 
@@ -60,7 +60,7 @@ trait validate_prompt_prerequisites
 
         // 判定：專案查唔到 → 記錄錯誤
         if ($project_row === null) {
-            $errors["project_slug"] = ["message" => "專案不存在：" . $project_slug, "code" => "E_VALIDATION_FATAL"];
+            $errors["project_slug"] = ["message" => hkai()->i18n()->get("prompt.error.project_missing") . $project_slug, "code" => "E_VALIDATION_FATAL"];
         }
 
         // 格式判定（32 hex＝合法 sid；空白＝新對話，未配 sid 都合法）
@@ -69,7 +69,7 @@ trait validate_prompt_prerequisites
 
         // 判定：有值但格式唔合 → 記錄錯誤
         if ($is_chat_sid_blank === false && $is_chat_sid_valid === false) {
-            $errors["chat_sid"] = ["message" => "無效的對話 ID：" . $chat_sid, "code" => "E_VALIDATION_FATAL"];
+            $errors["chat_sid"] = ["message" => hkai()->i18n()->get("prompt.error.chat_invalid") . $chat_sid, "code" => "E_VALIDATION_FATAL"];
         }
 
         // 判定：有錯 → 寫入 context.error（400），工序即刻停

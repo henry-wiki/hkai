@@ -53,65 +53,6 @@ trait get_response_sections
             $response_section_list[] = $poll_list_entry_item;
         }
 
-        // 判定：唔係失敗 → 唔讀失敗記錄（成功／進行中一律無 error 段）
-        if ($message_poll_status !== "failed") {
-            return $response_section_list;
-        }
-
-        // 失敗記錄（msg_log 最後一條 FAILURE_RECORDED＝失敗原因——活動記錄為單一來源）
-        $log_file = sc_ai_chats()->poll()->get_existing_poll_file($message_id, "log");
-
-        // 判定：polling 位置冇（訊息已歸檔）→ 改用歸檔目錄同一個檔名
-        if (!file_exists($log_file)) {
-            $archived_message_dir = sc_ai_chats()->archive()->get_archived_poll_dir($chat_id, $message_id);
-
-            $log_file = $archived_message_dir . "/" . basename($log_file);
-        }
-
-        $log_raw = "";
-        if (file_exists($log_file)) {
-            $log_raw = (string)@file_get_contents($log_file);
-        }
-
-        $error_message = "";
-
-        // 逐行解析（最後一條 FAILURE_RECORDED 為準——壞行跳過唔阻流程）
-        $log_normalized = str_replace(chr(13), "", $log_raw);
-
-        foreach (explode(chr(10), $log_normalized) as $log_line_item) {
-            $trimmed_log_line = trim($log_line_item);
-
-            // 判定：空行 → 跳過
-            if ($trimmed_log_line === "") {
-                continue;
-            }
-
-            $log_event = json_decode($trimmed_log_line, true);
-
-            // 判定：唔係 JSON 物件 → 跳過
-            if (!is_array($log_event)) {
-                continue;
-            }
-
-            // 判定：失敗事件且有 message → 記低（續掃——最後一條為準）
-            if (isset($log_event["level"]) && strtoupper((string)$log_event["level"]) === "ERROR" && isset($log_event["message"])) {
-                $error_message = (string)$log_event["message"];
-            }
-        }
-
-        // 判定：有失敗原因 → 落 error 段（渲染段 id＝error；刷新後仍見）
-        if ($error_message !== "") {
-            $response_section_list[] = [
-                "response_type"        => "error",
-                "response_content"     => $error_message,
-                "response_index"       => 0,
-                "poll_file"            => "",
-                "poll_status"          => "aborted",
-                "poll_content_length"  => strlen($error_message),
-            ];
-        }
-
         return $response_section_list;
     }
-
 }

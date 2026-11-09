@@ -38,16 +38,13 @@ class install_Class
     {
     }
 
-    // 安裝步驟（第⑤層「安裝」——清單＝過程檔記錄項（setup_process.json；已收尾＝讀 setup_done.json 同一份）＋系統必需步（頭＝環境檔；資料庫檔＋表結構〔缺一＝系統運行唔到——唔靠記錄〕；尾＝完成標記））
+    // 安裝步驟（第⑤層「安裝」——清單＝過程檔記錄項（setup_process.json；已收尾＝讀 setup_done.json 同一份）＋系統必需步（資料庫檔＋表結構〔缺一＝系統運行唔到——唔靠記錄〕；尾＝完成標記））
     // 記錄項名＝欄位名＝單元 accessor 名（一 key 走通全鏈——直呼單元）；行值＝單元自決（get_install_step_data——記錄值／解密遮罩／留空字眼）
     public function get_install_steps()
     {
         $install_section = setup()->sections()->install();
 
         $install_steps = [];
-
-        // 頭步：建立環境檔 .env（系統必需步——檔未建立先建立；值一律後補）
-        $install_steps[] = $this->build_install_step("prerequisite", "environment__env_writable");
 
         // 資料庫必需步（建立／確保資料庫——檔＋表結構；唔靠記錄——本格要裝嘅嘢）
         $database_check_item_codes = ["db_ready"];
@@ -110,14 +107,80 @@ class install_Class
             return null;
         }
 
+        // 判定：單元冇安裝步（純檢查項——冇 get_install_step_data）→ null（呼叫端跳）
+        if (method_exists($unit_instance, "get_install_step_data") === false) {
+            return null;
+        }
+
         $unit_step_data = $unit_instance->get_install_step_data();
+
+        $install_step_target = $this->get_install_step_target($install_section_id, $install_check_item_code);
 
         return [
             "section_id"      => $install_section_id,
             "check_item_code" => $install_check_item_code,
             "label"           => $unit_step_data["label"],
             "value"           => $unit_step_data["value"],
+            "target"          => $install_step_target,
         ];
+    }
+
+    /**
+     * 安裝步嘅寫入目標檔（顯示用——路徑由 config 取，零硬編）
+     *
+     * 上游：build_install_step（每步顯示「寫去邊」）
+     * 下游：sc_get_config／sc_api_keys（設定檔路徑）
+     *
+     * @return string
+     */
+    private function get_install_step_target($install_section_id, $install_check_item_code)
+    {
+        $install_target = "";
+        $target_key     = $install_section_id . "|" . $install_check_item_code;
+
+        // 設定類步驟 → 用戶設定檔（data/config/settings.json——語言／時區）
+        $settings_target_keys = [];
+        $settings_target_keys[] = "welcome|language";
+        $settings_target_keys[] = "settings|initialization__timezone";
+
+        // 判定：設定類 → 用戶設定檔路徑
+        if (in_array($target_key, $settings_target_keys, true)) {
+            $install_target = sc_get_config("hkai.public.settings");
+        }
+
+        // 判定：benchmark 項 → 用戶設定檔路徑
+        if (strpos($install_check_item_code, "benchmark__") === 0) {
+            $install_target = sc_get_config("hkai.public.settings");
+        }
+
+        // 判定：API key 項（key_settings__*）→ key 儲存檔
+        if (strpos($install_check_item_code, "key_settings__") === 0) {
+            $install_target = sc_api_keys()->get_config_file();
+        }
+
+        // 判定：完成標記 → 安裝完成檔
+        if ($target_key === "install|install_marker") {
+            $install_target = sc_get_config("setup.setup_done");
+        }
+
+        return $install_target;
+    }
+
+    /**
+     * 建置編號（站根 .build——發布時寫入；冇＝空）
+     *
+     * @return string
+     */
+    public function get_build_id()
+    {
+        $build_file = SC_REPO_ROOT . "/.build";
+
+        // 判定：冇 .build 檔 → 空
+        if (is_file($build_file) === false) {
+            return "";
+        }
+
+        return trim((string)file_get_contents($build_file));
     }
 
 }

@@ -10,7 +10,7 @@ namespace sc\setup\sections\prerequisite;
 require_once __DIR__ . "/_.bridge.cls.php";
 
 /**
- * permission 短名（permission 域本體門——permission 家族單元短名入口；例：permission()->env_writable()->setup_check()）
+ * permission 短名（permission 域本體門——permission 家族單元短名入口；例：permission()->services_dir()->setup_check()）
  *
  * @return \sc\setup\sections\prerequisite\permission\prerequisite_permission_Class
  */

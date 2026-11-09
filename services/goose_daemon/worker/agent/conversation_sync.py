@@ -32,7 +32,7 @@ import time
 import uuid
 
 from ...context import chat_db, goose_db, message_store, timer
-from ...runtime import sc_logger
+from bootstrap import sc_logger
 from . import checkpoint, paths
 
 

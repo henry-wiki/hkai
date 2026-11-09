@@ -1,5 +1,5 @@
 // jsmods/chat/act/detect_project_slug_change.js —— 換專案偵測（本機側動作——act 層；一檔一事）
-// 職責：detect_project_slug_change（前後兩條 URL 嘅專案 slug 有換＝交清單重取＋訊息窗（快照復位）＋prompt 一齊重取；冇換＝return）
+// 職責：detect_project_slug_change（前後兩條 URL 嘅專案 slug 有換＝清單重取＋訊息窗（快照復位）＋prompt 重取；冇換＝return；唔改 URL——URL 由瀏覽器導航決定）
 // 結構同 act 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _detect_project_slug_change {
@@ -19,9 +19,6 @@ class _detect_project_slug_change {
         }
 
         const chat_instance = await registry().sc_ai_chats().chat();
-
-        // 換專案＝未揀對話：清走舊 chat_sid（URL 只留專案段——右邊交空狀態）
-        sc_url.shallow_replace_url("/" + curr_project_slug + "/");
 
         // 清單重取（專案換＝左側清單換項目）
         const chat_list_fetch_instance = await chat_instance.act().chat_list_fetch();

@@ -20,7 +20,7 @@ trait upload_attachment
 
         // 判定：缺檔名／類型／內容 → 拒絕
         if ($original_filename === "" || $mime_type === "" || $data_base64 === "") {
-            return sc_response()->json(["ok" => false, "error" => "附件資料不完整"], 400);
+            return sc_response()->json(["ok" => false, "error" => hkai()->i18n()->get("prompt.error.attach_incomplete")], 400);
         }
 
         // ===== 專案列（查唔到一律 fallback Home——同 prompt_send 同一條路）=====
@@ -40,7 +40,7 @@ trait upload_attachment
 
         // 判定：base64 解碼失敗 → 拒絕
         if ($binary_data === false) {
-            return sc_response()->json(["ok" => false, "error" => "附件資料格式錯誤"], 400);
+            return sc_response()->json(["ok" => false, "error" => hkai()->i18n()->get("prompt.error.attach_format")], 400);
         }
 
         $attachment_row = sc_ai_chats()->attachment()->store_uploaded_image($project_row, $original_filename, $mime_type, $binary_data);
@@ -51,7 +51,7 @@ trait upload_attachment
 
             return sc_response()->json([
                 "ok"    => false,
-                "error" => "只支援 PNG／JPG／GIF／WEBP，單檔上限 " . $max_upload_size_kb . " KB",
+                "error" => hkai()->i18n()->get("prompt.error.attach_type") . $max_upload_size_kb . " KB",
             ], 400);
         }
 

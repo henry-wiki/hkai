@@ -87,6 +87,16 @@ class hkai_Class
         return process\process_Class::getInstance();
     }
 
+    /**
+     * 初始化自檢（每次頁面初始化跑一輪——preflight 域；回已修正條數）
+     *
+     * @return int
+     */
+    public function preflight()
+    {
+        return preflight\preflight_Class::getInstance()->run();
+    }
+
     
     // 初始化（__init__.php 載入語境時呼叫一次——manifest 設定＋sqlite 連線）
     public function initial()
