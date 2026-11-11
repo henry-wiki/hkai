@@ -144,6 +144,12 @@ class builder_Class
                     $outputLines[] = "<path d='M8 12h.01M12 12h.01M16 12h.01' stroke-width='2.3' stroke-linecap='round'/>";
                 $outputLines[] = "</svg>";
             $outputLines[] = "</button>";
+            $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--search' type='button' title='" . hkai()->i18n()->get("nav.search") . "'>";
+                $outputLines[] = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'>";
+                    $outputLines[] = "<circle cx='11' cy='11' r='6.5'/>";
+                    $outputLines[] = "<path d='m16.2 16.2 4.3 4.3'/>";
+                $outputLines[] = "</svg>";
+            $outputLines[] = "</button>";
             $outputLines[] = "<button class='sc_rail__btn sc_rail__btn--ranking' type='button' title='" . hkai()->i18n()->get("nav.ranking") . "'>";
                 $outputLines[] = "<i class='fa-solid fa-ranking-star'></i>";
             $outputLines[] = "</button>";

@@ -58,6 +58,17 @@ class _model_selector {
         return this.j_modal.find(".side_provider_item");
     }
 
+    // 取左欄類別標題（.side_provider_group_label——modal 未開 → null）
+    get_side_provider_group_labels() {
+        if (!this.j_modal)
+            return null;
+
+        if (!this.j_modal.length)
+            return null;
+
+        return this.j_modal.find(".side_provider_group_label");
+    }
+
     // 取左欄 provider 按鈕（.side_provider_tab_button——modal 未開 → null）
     get_side_provider_tab_buttons() {
         if (!this.j_modal)

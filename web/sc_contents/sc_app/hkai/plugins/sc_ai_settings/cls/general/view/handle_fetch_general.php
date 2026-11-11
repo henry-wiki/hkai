@@ -25,7 +25,7 @@ trait handle_fetch_general
         $general_rows[] = [
             "key"      => "language",
             "label"    => hkai()->i18n()->get("settings.general.language_label"),
-            "options"  => ["zh-HK" => "繁體中文", "en-US" => "English"],
+            "options"  => ["zh-HK" => "繁體中文", "zh-CN" => "简体中文", "en-US" => "English", "ja-JP" => "日本語", "ko-KR" => "한국어"],
             "selected" => $language,
         ];
         $general_rows[] = [

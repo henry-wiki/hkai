@@ -109,6 +109,9 @@ trait message_list_fetch
             array_shift($message_rows);
         }
 
+        // 對賬：DB 鏡像 ← 輪詢目錄狀態檔（工作中嘅列——返回對話即刻準確；DB 可能仍係派工一刻嘅舊值；同場就地更新本窗列）
+        $this->sync_live_message_status($message_rows);
+
         // 本窗游標（最舊一條——下一輪「更舊」keyset 游標；空窗＝0）
         $window_cursor = 0;
         if (count($message_rows) > 0) {

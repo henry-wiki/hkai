@@ -89,7 +89,7 @@ class activity_Class
             $activity_records = $activity_records[0];
         }
 
-        $activity_json = json_encode($activity_records, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        $activity_json = sc_pretty_json($activity_records);
 
         file_put_contents($activity_file, $activity_json, LOCK_EX);
     }

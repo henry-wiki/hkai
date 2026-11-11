@@ -9,11 +9,12 @@ trait delete_message
 {
 
     //---------------------------------------------------------
+    // 0. 回應中（非終態）＝拒刪——回 {ok:false, error:"message_responding"}，唔郁任何嘢
     // 1. 刪 DB（回應＋訊息＋重算數）
     // 2. 刪訊息檔案
     // 3. 對話清空＝連對話一齊刪
     //---------------------------------------------------------
-    // 回傳：["chat_deleted" => bool]（true ＝ 對話已連帶清掉——前端導向專案根）
+    // 回傳：["ok" => bool, "error" => string, "chat_deleted" => bool]（chat_deleted ＝ 對話已連帶清掉——前端導向專案根）
     public function delete_message($message_row)
     {
         $chat_id      = (int)$message_row["chat_id"];
@@ -21,6 +22,21 @@ trait delete_message
 
         // 診斷 log：開始
         hkai()->runtime()->logger()->info("delete_message start: chat_id=" . $chat_id . " message_id=" . $message_id);
+
+        // 回應中＝唔准刪（終態先准刪——刪同停兩件事互不干涉：停只認對話維度，冇指名目標）
+        $message_status = (string)($message_row["message_status"] ?? "");
+
+        // 判定：目標仲喺回應中 → 回錯誤（唔刪；前端據此顯示原因）
+        if (sc_ai_chats()->fsm()->is_terminal_status($message_status) !== true) {
+            hkai()->runtime()->logger()->info("delete_message refused: still responding | message_id=" . $message_id . " | status=" . $message_status);
+
+            $refuse_result = [];
+            $refuse_result["ok"]           = false;
+            $refuse_result["error"]        = "message_responding";
+            $refuse_result["chat_deleted"] = false;
+
+            return $refuse_result;
+        }
 
         // 身份（project_slug 由 chat 列解析——路徑唯一來源 get_poll_dir_name）
         $chat_row     = sc_ai_chats()->chat()->get_chat_row($chat_id);
@@ -30,9 +46,6 @@ trait delete_message
         if ($project_slug === "") {
             throw new \RuntimeException("delete_message missing project_slug: chat_id=" . $chat_id);
         }
-
-        // 停止回應（共用入口：停抽取＋標 cancelled＋殺 worker 樹——同 Stop 掣同一支）
-        sc_ai_chats()->prompt()->handle_prompt_stop($message_id);
 
         // msg 檔案硬刪（現行箱＋歸檔箱——各自域路徑層）
         sc_ai_chats()->poll()->delete_poll_files($project_slug, $message_id);
@@ -57,6 +70,7 @@ trait delete_message
         hkai()->runtime()->logger()->info("delete_message db rows removed");
 
         $remove_result = [];
+        $remove_result["ok"]           = true;
         $remove_result["chat_deleted"] = false;
 
         // 判定：對話已無訊息（剛刪掉最後一則）→ 先看仲有冇排隊中訊息

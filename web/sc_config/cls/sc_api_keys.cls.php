@@ -27,7 +27,7 @@ class sc_api_keys_Class
 
     public function __construct()
     {
-        $this->load();
+        $this->init_api_keys();
     }
 
     // 設定檔路徑（<data_dir>/config/api_keys.json）
@@ -36,8 +36,8 @@ class sc_api_keys_Class
         return sc_data_path()->get_data_sub_dir("config/api_keys.json");
     }
 
-    // 載入全部 key（__construct 呼叫一次）
-    public function load()
+    // 初始化 key 表（讀 config/api_keys.json——只讀一次；無檔／解析失敗＝空表）
+    public function init_api_keys()
     {
         // 判定：已載入 → 跳過
         if ($this->loaded) {
@@ -64,7 +64,7 @@ class sc_api_keys_Class
     }
 
     // 讀單一 key（JSON 冇 → fallback .env）
-    public function get($key, $default = null)
+    public function get_api_key($key, $default = null)
     {
         // 判定：JSON 有值（非空字串）→ 回 JSON
         if (isset($this->key_values[$key])) {
@@ -76,37 +76,19 @@ class sc_api_keys_Class
         return $env_value;
     }
 
-    // 讀全部（JSON 原形）
-    public function get_all()
-    {
-        return $this->key_values;
-    }
-
     // 寫單一 key（空字串＝清除；原子覆寫）
-    public function set($key, $value)
+    public function set_api_key($key, $value)
     {
-        $this->load();
+        $this->init_api_keys();
 
         $this->key_values[$key] = $value;
 
         $this->write_file();
     }
 
-    // 寫入 JSON（先建目錄→暫存檔→rename）
+    // 寫入 JSON（sc_write_json——美化＋建目錄＋原子 rename）
     private function write_file()
     {
-        $config_file     = $this->get_config_file();
-        $config_dir      = dirname($config_file);
-        $config_text     = json_encode($this->key_values, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-        $temporary_file  = $config_file . ".tmp";
-
-        // 判定：目錄唔存在 → 建立
-        if (!is_dir($config_dir)) {
-            mkdir($config_dir, 0777, true);
-        }
-
-        file_put_contents($temporary_file, $config_text . "\n", LOCK_EX);
-
-        rename($temporary_file, $config_file);
+        sc_write_json($this->get_config_file(), $this->key_values);
     }
 }

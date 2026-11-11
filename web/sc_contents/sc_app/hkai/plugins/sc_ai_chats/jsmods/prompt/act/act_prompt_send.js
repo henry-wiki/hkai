@@ -1,5 +1,5 @@
 // jsmods/prompt/act/act_prompt_send.js —— 發送訊息流程（act 層——一檔一事）
-// 職責：prompt_send（接線 handler——送出＋回呼；驗證歸後台——E_VALIDATION_FATAL 錯誤卡）
+// 職責：prompt_send（接線 handler——送出＋回呼；前端只擋基本無效（空內容），驗證權威歸後台——E_VALIDATION_FATAL 錯誤卡）
 // 本機側程序同檔：prompt_before_send（發送前）／prompt_send_success（已收下——含 RECOVERABLE 已記錄→入畫面）／prompt_send_error（未收下——還原輸入＋提示）
 // 包含：append_render_message（訊息模板 insert——queue_dispatch 共用）／replace_slots（槽位替換）；主按鈕兩態交 prompt 域 prompt_send_button_state().refresh()（唯一決策者）
 // 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
@@ -25,6 +25,23 @@ class _act_prompt_send {
 
             return;
         }
+
+        // 橋接駁（prompt 域 act 橋——主按鈕兩態唯一決策者；借用其「有冇可送內容」判定）
+        const prompt_send_button_state_instance = await prompt_instance.act().prompt_send_button_state();
+
+        // *** : 步驟 0——基本檢查；撳發送一刻即判，必須早過任何畫面動作（唔清輸入、唔貼氣泡、唔送）
+        // 判定：冇可送內容（輸入框無字又無附件）→ 警告＋中止（後端仍係唯一權威，前端只擋最明顯無效）
+        if (!prompt_send_button_state_instance.has_sendable_input()) {
+            registry().shared().sc_alert().warning(registry().sc_i18n().get("prompt.error.no_content"));
+
+            return;
+        }
+
+        // 橋接駁（prompt 域 act 橋——草稿節流寫入；送出前要先取消未到期嘅計時器）
+        const prompt_draft_save_instance = await prompt_instance.act().prompt_draft_save();
+
+        // *** : 步驟 0b——取消未到期嘅節流草稿寫入（同步驟 0 同批＝送出前準備）；唔取消＝計時器會在清空輸入之後才 fire，讀到空字串寫入草稿 → 工序 7 上帶讀到空草稿 → 500
+        prompt_draft_save_instance.cancel_pending_prompt_draft();
 
         // *** : 步驟 1——先讀走文字（只讀一次）；必須早過畫面清空，否則 before_send 清空之後就冇字可送
         // 送出即擷取最終文字（唔再等 draft_save_meta 往返——文字隨 prompt_send 一併送，後端寫入 meta）
@@ -211,13 +228,14 @@ class _act_prompt_send {
         registry().sc_ai_chats().execute_hook_after("prompt_sent", response_data);
 
         // 判定：送出期間曾撳停止（空窗期）→ 訊息一到手即發取消（B 方案配套）
+        // 唔帶 message_id——目標由後端掃 polling 目錄反查
         if (jQuery(document).data("sc_stop_pending")) {
             jQuery(document).data("sc_stop_pending", false);
 
             const prompt_stop_act_instance = await prompt_instance.act().prompt_stop();
 
             await prompt_stop_act_instance.prompt_stop(
-                { message_id: response_data.message_id },
+                {},
                 { j_stop_button: jQuery("[data-action='stop']"), j_dock_textarea: ui_context.j_dock_textarea }
             );
         }

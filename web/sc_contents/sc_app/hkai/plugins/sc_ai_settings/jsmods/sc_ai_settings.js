@@ -48,6 +48,10 @@ class _sc_ai_settings {
         const general_instance = await this.general();
         await general_instance.init();
 
+        // 域召集（about 域——事件綁定；內層 tab 切換）
+        const about_instance = await this.about();
+        await about_instance.init();
+
         // modal 層 init（settings_modal ref 接線）
         const modal_domain = await this.modal();
         const settings_modal_instance = await modal_domain.act().settings_modal();

@@ -13,6 +13,7 @@ class message_Class
     use action\delete_message;
     use action\repair_stale_message_status;
     use action\set_message_meta_status;
+    use action\sync_live_message_status;
     use request\handle_message_delete;
     use request\message_list_fetch;
 

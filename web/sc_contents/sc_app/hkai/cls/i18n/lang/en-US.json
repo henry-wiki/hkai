@@ -13,6 +13,7 @@
     "chat.restore_confirm": "Restore this chat? It will return to the normal list.",
     "chat.delete_confirm": "Delete this chat? The chat and all its messages will be permanently removed.",
     "message.delete_failed": "Delete failed. Please try again.",
+    "message.delete_responding": "This message is still responding and cannot be deleted yet. Please stop the response first, then try again.",
     "chat.delete": "Delete",
     "chat.delete_failed": "Delete chat failed. Please try again.",
     "chat.archive": "Archive",
@@ -171,6 +172,24 @@
     "settings.about.issues": "Issues",
     "settings.about.repository": "Source",
     "settings.about.tagline": "Nothing is impossible — only unimagined.",
+    "settings.about.fact.version": "Software version",
+    "settings.about.fact.build": "Build number",
+    "settings.about.fact.release_date": "Release date",
+    "settings.about.fact.engine": "Core engine",
+    "settings.about.fact.platform": "Platform",
+    "settings.about.fact.license": "License",
+    "settings.about.tab.about": "Info",
+    "settings.about.tab.thanks": "Thanks",
+    "settings.about.tab.credits": "Tech Stack",
+    "settings.about.tab.sponsors": "Sponsors",
+    "settings.about.quick_links": "Quick links",
+    "settings.about.link.website": "Website",
+    "settings.about.link.manual": "Manual",
+    "settings.about.link.changelog": "Changelog",
+    "settings.about.link.privacy": "Privacy Policy",
+    "settings.about.link.license": "License Agreement",
+    "settings.about.footer_link": "Open full credits & licenses",
+    "settings.about.empty_state": "No entries yet",
     "settings.general.language_label": "Language",
     "settings.general.theme_label": "Theme",
     "settings.general.saved": "Saved.",
@@ -340,6 +359,7 @@
     "nav.collapse_all": "Collapse all panels",
     "nav.projects": "Projects",
     "nav.chats": "Chats",
+    "nav.search": "Search",
     "nav.ranking": "Leaderboard",
     "nav.db": "Database",
     "nav.settings": "Settings",
@@ -387,7 +407,9 @@
     "provider.apply": "Apply",
     "provider.coding": "Coding",
     "provider.context": "Context",
-    "provider.download": "download model list",
+    "provider.download": "download model list",
+    "provider.kind.aggregator": "Aggregators",
+    "provider.kind.direct": "Direct providers",
     "provider.label": "Provider",
     "provider.name": "Name",
     "provider.search_filter": "search / provider filtering",

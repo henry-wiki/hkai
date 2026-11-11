@@ -50,9 +50,16 @@ class _message_delete {
                 thisObject.message_delete_success(payload, j_message_panel, response_data);
             },
             // 後端失敗／網路失敗 → 提示後中止（畫面不動）
-            error: async function () {
+            error: async function (result) {
                 // 動態載入（registry——用先載）
                 const i18n = registry().sc_i18n();
+
+                // 判定：後端拒絕刪除（目標仍在回應中）→ 顯示原因（唔顯示通用失敗）
+                if (result.error === "message_responding") {
+                    toastr.error(i18n.get("message.delete_responding"));
+
+                    return;
+                }
 
                 toastr.error(i18n.get("message.delete_failed"));
             }

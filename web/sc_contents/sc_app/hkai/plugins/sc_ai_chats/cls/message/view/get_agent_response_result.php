@@ -18,6 +18,8 @@ trait get_agent_response_result
         $_section_status = (string)($response_row["response_status"] ?? "");
         $_section_content_length = mb_strlen($_section_content);
         $_section_response_started_at = (string)($response_row["response_started_at"] ?? "");
+        // 段輪次（data_response_index——前端 _get_segment 靠佢配對同一輪同一段；冇＝前端另造空 meta 段）
+        $_section_response_index = (string)($response_row["response_index"] ?? "");
 
         // 模型顯示文（message_row——provider/model；同問題列同一口徑）
         $_message_provider_id = (string)($message_row["message_provider_id"] ?? "");
@@ -37,6 +39,7 @@ trait get_agent_response_result
         $_response_cssClass = implode(" ",$_response_cssClass);
         
         $_response_attrs = [];
+        $_response_attrs[] = "data_response_index='" . $_section_response_index . "'";
         $_response_attrs[] = "data-response_id='" . $_section_response_id . "'";
         $_response_attrs[] = "data-start_at='" . $_section_response_started_at . "'";
         $_response_attrs[] = "data-response_status='" . $_section_status . "'";

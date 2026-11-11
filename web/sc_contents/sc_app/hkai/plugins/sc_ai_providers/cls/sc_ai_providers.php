@@ -83,4 +83,124 @@ class sc_ai_providers_Class
     {
         return provider\openrouter\provider_openrouter_Class::getInstance();
     }
+
+    /**
+     * provider 實例（hermes_agent——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\hermes_agent\provider_hermes_agent_Class
+     */
+    public function instance__hermes_agent()
+    {
+        return provider\hermes_agent\provider_hermes_agent_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（groq——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\groq\provider_groq_Class
+     */
+    public function instance__groq()
+    {
+        return provider\groq\provider_groq_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（zai——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\zai\provider_zai_Class
+     */
+    public function instance__zai()
+    {
+        return provider\zai\provider_zai_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（moonshot——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\moonshot\provider_moonshot_Class
+     */
+    public function instance__moonshot()
+    {
+        return provider\moonshot\provider_moonshot_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（opencode——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\opencode\provider_opencode_Class
+     */
+    public function instance__opencode()
+    {
+        return provider\opencode\provider_opencode_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（deepinfra——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\deepinfra\provider_deepinfra_Class
+     */
+    public function instance__deepinfra()
+    {
+        return provider\deepinfra\provider_deepinfra_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（mistral——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\mistral\provider_mistral_Class
+     */
+    public function instance__mistral()
+    {
+        return provider\mistral\provider_mistral_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（github——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\github\provider_github_Class
+     */
+    public function instance__github()
+    {
+        return provider\github\provider_github_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（cohere——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\cohere\provider_cohere_Class
+     */
+    public function instance__cohere()
+    {
+        return provider\cohere\provider_cohere_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（openai——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\openai\provider_openai_Class
+     */
+    public function instance__openai()
+    {
+        return provider\openai\provider_openai_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（anthropic——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\anthropic\provider_anthropic_Class
+     */
+    public function instance__anthropic()
+    {
+        return provider\anthropic\provider_anthropic_Class::getInstance();
+    }
+
+    /**
+     * provider 實例（gemini——具名分派；IDE 直接跳）
+     *
+     * @return \sc\app\hkai\plugins\sc_ai_providers\provider\gemini\provider_gemini_Class
+     */
+    public function instance__gemini()
+    {
+        return provider\gemini\provider_gemini_Class::getInstance();
+    }
 }

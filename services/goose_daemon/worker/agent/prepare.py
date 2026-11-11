@@ -28,6 +28,10 @@ from .chat_mode import get_chat_mode
 SYSTEM_PROMPT_RELATIVE = "instructions/system_prompt.md"
 SYSTEM_ENV_RELATIVE = "instructions/system_env.md"
 
+# provider 檔 User-Agent（標準 product/version——Nous 站頭 Cloudflare 會 403 攔無 UA 請求）
+USER_AGENT_VERSION_RELATIVE = "VERSION"
+USER_AGENT_PRODUCT = "HKAI"
+
 
 def prepare_goose_env(goose_env: dict[str, str]) -> None:
     """備妥 goose 子程序環境（GOOSE_PATH_ROOT／hints／上下文上限／自訂 provider／GOOSE_MODE——原地改 goose_env）。"""
@@ -69,6 +73,7 @@ def prepare_goose_env(goose_env: dict[str, str]) -> None:
 
     # 落 ACP 子程序環境（GOOSE_MODE——get_chat_mode 必有值，未對映＝auto）
     goose_env["GOOSE_MODE"] = chat_mode
+
 
     # Windows：cmd 出口強制 UTF-8（ComSpec 指向包裝 bat——chcp 65001 再交真 cmd）
     if sys.platform == "win32":
@@ -135,6 +140,24 @@ def write_goose_hints_file(goose_path_root: str) -> None:
     os.replace(temporary_file, hints_file)
     sc_logger.log("goose hints written: " + str(hints_file) + " (" + str(len(hints_text)) + " chars)")
 
+
+def build_provider_user_agent() -> str:
+    """組 provider 檔 User-Agent（HKAI/<版本>——版本取自站台 VERSION 檔，剝 v 前綴；讀唔到＝0.0.0）。"""
+    # 站台根（prepare.py → agent／worker／goose_daemon／services／站台根）
+    version_file_path = Path(__file__).resolve().parents[4] / USER_AGENT_VERSION_RELATIVE
+
+    version_text = "0.0.0"
+
+    # 判定：版本檔存在 → 讀內容（去頭尾空白）
+    if version_file_path.is_file() is True:
+        version_text = version_file_path.read_text(encoding="utf-8").strip()
+
+    # 剝版本前綴 v（UA 規範 product/version——版本位只放數字版本）
+    version_text = version_text.lstrip("vV")
+
+    return USER_AGENT_PRODUCT + "/" + version_text
+
+
 def write_custom_provider_file(goose_path_root: str, model_name: str, context_length: int | None) -> None:
     """
     寫 goose 自訂 provider 檔（<GOOSE_PATH_ROOT>/config/custom_providers/<前綴>.json——goose 原生讀取位；
@@ -167,6 +190,7 @@ def write_custom_provider_file(goose_path_root: str, model_name: str, context_le
         "description":        provider_conf["description"],
         "api_key_env":        provider_conf["api_key_env"],
         "base_url":           provider_conf["base_url"],
+        "headers":            {"User-Agent": build_provider_user_agent()},
         "models":             [model_item],
         "supports_streaming": True,
         "requires_auth":      True,

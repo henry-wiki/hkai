@@ -26,6 +26,30 @@ trait handle_redownload_provider_models
             $result = sc_ai_providers()->instance__openrouter()->redownload_provider_models();
         } elseif ($provider_id === "deepseek") {
             $result = sc_ai_providers()->instance__deepseek()->redownload_provider_models();
+        } elseif ($provider_id === "hermes_agent") {
+            $result = sc_ai_providers()->instance__hermes_agent()->redownload_provider_models();
+        } elseif ($provider_id === "groq") {
+            $result = sc_ai_providers()->instance__groq()->redownload_provider_models();
+        } elseif ($provider_id === "zai") {
+            $result = sc_ai_providers()->instance__zai()->redownload_provider_models();
+        } elseif ($provider_id === "moonshot") {
+            $result = sc_ai_providers()->instance__moonshot()->redownload_provider_models();
+        } elseif ($provider_id === "opencode") {
+            $result = sc_ai_providers()->instance__opencode()->redownload_provider_models();
+        } elseif ($provider_id === "deepinfra") {
+            $result = sc_ai_providers()->instance__deepinfra()->redownload_provider_models();
+        } elseif ($provider_id === "mistral") {
+            $result = sc_ai_providers()->instance__mistral()->redownload_provider_models();
+        } elseif ($provider_id === "github") {
+            $result = sc_ai_providers()->instance__github()->redownload_provider_models();
+        } elseif ($provider_id === "cohere") {
+            $result = sc_ai_providers()->instance__cohere()->redownload_provider_models();
+        } elseif ($provider_id === "openai") {
+            $result = sc_ai_providers()->instance__openai()->redownload_provider_models();
+        } elseif ($provider_id === "anthropic") {
+            $result = sc_ai_providers()->instance__anthropic()->redownload_provider_models();
+        } elseif ($provider_id === "gemini") {
+            $result = sc_ai_providers()->instance__gemini()->redownload_provider_models();
         } else {
             // 無對應 provider（唔係 kilo／openrouter）→ 400（前端顯示失敗）
             return sc_response()->json(["ok" => false, "error" => "unknown provider: " . $provider_id], 400);

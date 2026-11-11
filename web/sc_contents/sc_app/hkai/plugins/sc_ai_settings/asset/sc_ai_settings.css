@@ -542,74 +542,262 @@
     color: rgba(238, 255, 255, 0.35);
 }
 
-/* 關於 HKAI 分頁（settings about section——值＝hkai_config.json about 節） */
-.sc_about__head {
+/* ===== 關於 HKAI 分頁（hero＋內層 tab＋資料卡格＋快速連結＋footer——統一走 --set_* / --modal_* token；方角） ===== */
+.sc_about {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 4px 0 14px;
+    flex-direction: column;
+}
+/* hero 頭：logo＋名稱列＋tagline＋狀態鈕 */
+.sc_about__hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 4px 0 16px;
     border-bottom: 1px solid var(--set_border);
 }
 .sc_about__logo {
-    width: 40px;
-    height: 40px;
+    width: 52px;
+    height: 52px;
+    flex: none;
 }
-.sc_about__title {
+.sc_about__hero_text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 6px;
+    min-width: 0;
 }
-.sc_about__name {
-    font-size: 15px;
-    color: var(--set_text);
-}
-.sc_about__tagline {
-    font-size: 11px;
-    color: var(--modal_text_dim);
-}
-.sc_about__rows {
-    padding: 10px 0;
-}
-.sc_about__row {
+.sc_about__name_row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 6px 0;
+    gap: 8px;
 }
-.sc_about__label {
-    width: 84px;
-    flex: none;
-    white-space: nowrap;
-    color: var(--modal_text_dim);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-}
-.sc_about__value {
-    flex: 1;
+.sc_about__name {
+    font-size: 18px;
     color: var(--set_text);
-    font-size: 12px;
+    letter-spacing: 0.02em;
 }
-.sc_about__check {
-    flex: none;
-    padding: 3px 10px;
-    border: 1px solid var(--set_border);
-    background: transparent;
-    color: var(--set_text_mute);
+.sc_about__version_badge {
+    padding: 1px 7px;
+    border: 1px solid transparent;
+    background: var(--modal_accent_dim);
+    color: var(--set_accent);
     font-size: 11px;
-    cursor: pointer;
+}
+.sc_about__tagline {
+    font-size: 12px;
+    color: var(--modal_text_dim);
+}
+.sc_about__actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+}
+/* 更新狀態（前置圓點＝currentColor——按狀態換色） */
+.sc_about__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 9px;
+    border: 1px solid var(--set_border);
+    font-size: 11px;
+    color: var(--set_text_mute);
+}
+.sc_about__status::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+}
+.sc_about__status--ok {
+    color: var(--modal_ok);
+}
+.sc_about__status--warn {
+    color: var(--modal_warn);
+}
+.sc_about__status--muted {
+    color: var(--modal_text_dim);
+}
+.sc_about__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_hover);
+    color: var(--set_text);
+    font-size: 11px;
     text-decoration: none;
 }
-.sc_about__check:hover {
+.sc_about__action:hover {
+    border-color: var(--set_accent);
+}
+/* 內層 tab 列（底線式——active 用 accent 底線） */
+.sc_about__tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding-top: 10px;
+    border-bottom: 1px solid var(--set_border);
+}
+.sc_about__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--set_text_mute);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+.sc_about__tab:hover {
     color: var(--set_text);
     background: var(--set_bg_hover);
 }
+.sc_about__tab.active {
+    color: var(--set_text);
+    border-bottom-color: var(--set_accent);
+}
+.sc_about__tab i {
+    font-size: 11px;
+}
+.sc_about__tab_count {
+    padding: 0 6px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_hover);
+    color: var(--modal_text_dim);
+    font-size: 10px;
+}
+.sc_about__tab.active .sc_about__tab_count {
+    border-color: var(--set_accent);
+    color: var(--set_accent);
+}
+/* 面板（一次顯示一個——非 active 帶 hidden 屬性） */
+.sc_about__panel {
+    padding: 16px 0 4px;
+}
+/* 資料卡格（兩欄；窄螢幕單欄） */
+.sc_about__facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.sc_about__fact {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px 13px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_read);
+}
+.sc_about__fact_label {
+    color: var(--modal_text_dim);
+    font-size: 11px;
+    letter-spacing: 0.03em;
+}
+.sc_about__fact_value {
+    color: var(--set_text);
+    font-size: 12.5px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    overflow-wrap: anywhere;
+}
+/* 小標題（快速連結） */
+.sc_about__subtitle {
+    margin: 18px 0 9px;
+    color: var(--modal_text_dim);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+}
+/* 快速連結（按鈕式——icon 用 accent） */
+.sc_about__shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sc_about__shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 12px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_hover);
+    color: var(--set_text_mute);
+    font-size: 12px;
+    text-decoration: none;
+}
+.sc_about__shortcut:hover {
+    border-color: var(--set_accent);
+    color: var(--set_text);
+}
+.sc_about__shortcut i {
+    color: var(--set_accent);
+    font-size: 11px;
+}
+/* 名單面板（鳴謝／開源／贊助共用） */
+.sc_about__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.sc_about__list_item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 13px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_read);
+    color: var(--set_text);
+    text-decoration: none;
+}
+a.sc_about__list_item:hover {
+    border-color: var(--set_accent);
+}
+.sc_about__list_name {
+    font-size: 12.5px;
+}
+.sc_about__list_note {
+    color: var(--modal_text_dim);
+    font-size: 11px;
+}
+/* footer（版權＋完整鳴謝與授權頁） */
 .sc_about__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid var(--set_border);
 }
 .sc_about__copyright {
     color: var(--modal_text_dim);
     font-size: 11px;
+}
+.sc_about__foot_link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border: 1px solid var(--set_border);
+    background: var(--set_bg_hover);
+    color: var(--set_text_mute);
+    font-size: 11px;
+    text-decoration: none;
+}
+.sc_about__foot_link:hover {
+    border-color: var(--set_accent);
+    color: var(--set_text);
+}
+/* 窄螢幕：資料卡改單欄 */
+@media (max-width: 760px) {
+    .sc_about__facts {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* 設定提示（琥珀警告——如 API key 已改未重啟） */
@@ -644,21 +832,4 @@
 .provider_key_row[data-provider_state='empty'] [data-provider_part='reset'],
 .provider_key_row[data-provider_state='empty'] [data-provider_part='cancel'] {
     display: none;
-}
-
-/* About：對外連結（橫排、可換行；沿用文字色） */
-.sc_about__links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.sc_about__link {
-    color: inherit;
-    text-decoration: underline;
-    opacity: 0.9;
-}
-
-.sc_about__link:hover {
-    opacity: 1;
 }

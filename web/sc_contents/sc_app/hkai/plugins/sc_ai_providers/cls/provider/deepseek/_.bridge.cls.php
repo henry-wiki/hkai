@@ -140,6 +140,18 @@ class provider_deepseek_Class
         return $this->provider_item["models_api_url"];
     }
 
+    // 本 provider 鎖匙（sc_api_keys——聲明 api_key_env；未設回空字串）
+    public function get_provider_api_key()
+    {
+        return sc_api_keys()->get_api_key($this->provider_item["api_key_env"], "");
+    }
+
+    // 本 provider 鎖匙環境變數名（聲明 api_key_env——錯誤訊息用）
+    public function get_provider_api_key_env()
+    {
+        return $this->provider_item["api_key_env"];
+    }
+
     // dirty 過濾開關（來源＝initial 分派嗰份自身聲明——缺省 1＝開啟）
     public function get_provider_dirty_filter()
     {

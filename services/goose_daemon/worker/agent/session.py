@@ -40,6 +40,27 @@ from .acp_client import PromptImage, SessionCallbacks, SessionRequest
 # 權限請求等待上限（秒——無人決定即自動拒；本側常數——暫唔 expose 喺 hkai_config.json）
 PERMISSION_WAIT_TIMEOUT_SEC = 60
 
+# 文字附件注入上限（字元——超出截斷並標示；避免佔爆 provider bytes）
+TEXT_ATTACHMENT_LIMIT_CHARS = 200000
+
+
+
+def read_text_attachment(attachment_path: str) -> str:
+    """讀文字附件（UTF-8；超過上限截斷並註明——回空字串＝讀唔到）。"""
+    # 判定：檔案唔存在 → 空
+    if os.path.isfile(attachment_path) is False:
+        return ""
+
+    try:
+        attachment_text = Path(attachment_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+    # 判定：超長 → 截斷（明確標示，免模型以為全文）
+    if len(attachment_text) > TEXT_ATTACHMENT_LIMIT_CHARS:
+        attachment_text = attachment_text[:TEXT_ATTACHMENT_LIMIT_CHARS] + "\n…（已截斷）"
+
+    return attachment_text
 
 
 class StreamState(TypedDict):
@@ -53,6 +74,7 @@ class StreamState(TypedDict):
     usage: dict[str, object]
     tool_signatures: dict[str, str]
     tool_seq_by_id: dict[str, int]
+    tool_name_by_id: dict[str, str]
     tool_open_ids: dict[str, bool]
 
 
@@ -107,6 +129,16 @@ def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
         attachment_size_bytes = int(str(attachment_file_item.get("file_size", 0) or 0))
         attachment_width = int(str(attachment_file_item.get("image_width", 0) or 0))
         attachment_height = int(str(attachment_file_item.get("image_height", 0) or 0))
+        attachment_mime_type = str(attachment_file_item.get("mime_type", "") or "")
+
+        # 判定：文字附件（上傳時抽出嘅 .txt）→ 內容直接注入，唔交路徑
+        if attachment_mime_type.startswith("text/"):
+            attachment_text = read_text_attachment(attachment_path)
+
+            # 判定：讀到內容 → 併入 prompt（保留原檔名做標題）
+            if attachment_text != "":
+                attachment_lines.append("《" + attachment_original_name + "》內容：\n" + attachment_text)
+                continue
 
         attachment_line = attachment_path + " （" + attachment_original_name
         # 判定：有尺寸 → 補寬高
@@ -120,7 +152,7 @@ def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
 
     # 判定：有附件 → 補清單同使用指示
     if len(attachment_lines) > 0:
-        attachment_header = chr(10) + chr(10) + "[附件圖片（本機檔案；需要睇圖時請呼叫 read_image 工具讀取對應路徑——唔會自動送上）]" + chr(10)
+        attachment_header = chr(10) + chr(10) + "[附件（文字檔內容已直接附上；圖片係本機檔案——需要睇圖時請呼叫 read_image 工具讀取對應路徑）]" + chr(10)
         prompt_text = prompt_text + attachment_header + chr(10).join(attachment_lines)
 
     # provider／model（litellm 式 provider/model；model 可再含 "/"）
@@ -128,9 +160,8 @@ def prepare_session(goose_env: dict[str, str]) -> SessionRequest:
     provider_name = model_parts[0]
     model_name = model_parts[2]
 
-    # 判定：自訂 provider（goose 內部名＝custom_<前綴>）→ 轉官方 config 值
-    if provider_name in paths.CUSTOM_PROVIDER_TABLE:
-        provider_name = "custom_" + provider_name
+    # 自訂 provider 嘅註冊名＝custom_providers/<前綴>.json 內嘅 name（即前綴本身）——唔加 custom_ 前綴
+    # （加咗＝goose 認唔到：session/set_config_option 回 Unknown provider）
 
     # 本次連線參數（dict——key 同名變數喺 acp_client 內解包）
     session_request: SessionRequest = {
@@ -196,6 +227,7 @@ def build_callbacks(session_request: SessionRequest) -> SessionCallbacks:
         "usage":                {},
         "tool_signatures":      {},
         "tool_seq_by_id":       {},
+        "tool_name_by_id":      {},
         "tool_open_ids":        {},
     }
 
@@ -313,6 +345,17 @@ def _on_update(update_kind: str, update_payload: dict[str, object], stream_state
         # 判定：冇工具名 → 用 title
         if display_name == "":
             display_name = tool_title
+
+        # 工具名對照（id → 名——`tool_call_update` 通常唔帶名，靠呢張表沿用）
+        tool_name_by_id = stream_state.setdefault("tool_name_by_id", {})
+
+        # 判定：今次兩個來源都冇名 → 沿用同一 id 之前記落嘅名
+        if display_name == "":
+            display_name = tool_name_by_id.get(tool_call_id, "")
+
+        # 判定：今次有名 → 記住，供後續無名更新沿用
+        if display_name != "":
+            tool_name_by_id[tool_call_id] = display_name
 
         tool_signature = tool_call_id + "|" + tool_status + "|" + tool_title
 

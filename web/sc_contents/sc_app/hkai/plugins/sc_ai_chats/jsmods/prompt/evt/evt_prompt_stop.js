@@ -14,24 +14,16 @@ class _evt_prompt_stop {
             .on("click.sc_ai_chats_prompt_stop", "[data-action='stop']", this.prompt_stop.bind(this));
     }
 
-    // 停止（[data-action='stop'] → prepare data（回覆中嗰條嘅 message_id）→ 交 act/act_prompt_stop）
+    // 停止（[data-action='stop'] → 交 act/act_prompt_stop；唔查訊息狀態——目標由後端按對話反查）
     async prompt_stop(event) {
         const j_stop_button   = jQuery(event.currentTarget);
         const j_dock_textarea = jQuery("#sc_input");
 
         const request_data = {};
 
-        // 目標：回覆中嗰條（細 status 四態——preparing 都要停得到；取第一條嘅 message_id）
-        const j_reply_message = jQuery(".sc_thread__viewport .message_wrapper[data-status='preparing'], .sc_thread__viewport .message_wrapper[data-status='connecting'], .sc_thread__viewport .message_wrapper[data-status='summarizing'], .sc_thread__viewport .message_wrapper[data-status='replying']").first();
-
-        request_data.message_id = j_reply_message.attr("data-message_id");
-
-        // 判定：冇回覆中 → 空窗期（送出進行中）就記低待停止旗標，否則唔處理
-        if (!request_data.message_id) {
-            // 判定：送出仍喺 loading（POST 未返）→ 記旗標，等 prompt_send 回應一到即取消
-            if (jQuery("[data-action='send']").attr("data-state") === "loading") {
-                jQuery(document).data("sc_stop_pending", true);
-            }
+        // 判定：送出仍在途（訊息未落地，場上仲未有目標）→ 記等停旗標，等 prompt_send 回應一到即取消（空窗期配套）
+        if (jQuery("[data-action='send']").attr("data-state") === "loading") {
+            jQuery(document).data("sc_stop_pending", true);
 
             return;
         }

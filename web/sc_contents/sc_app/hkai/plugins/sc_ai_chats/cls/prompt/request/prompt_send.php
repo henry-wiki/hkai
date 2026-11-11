@@ -24,9 +24,6 @@ trait prompt_send
         $context["project_slug"] = isset($input_data["project_slug"]) ? $input_data["project_slug"] : "";
         $context["chat_sid"]     = isset($input_data["chat_sid"]) ? $input_data["chat_sid"] : "";
 
-        // 送出即取消旗標（送出期間已按停止 → 建訊息後即刻取消，唔開回覆）
-        $context["stop_after_create"] = (isset($input_data["stop_after_create"]) && $input_data["stop_after_create"] === true);
-
         // 判定：請求直接帶文字（前端唔再等 draft_save_meta）→ 即場寫入草稿 meta（零 HTTP 往返）
         if (isset($input_data["prompt_text"])) {
             $draft_project_slug = $context["project_slug"];
@@ -127,15 +124,8 @@ trait prompt_send
         // 工序 9：UI（message view——新氣泡＋完整隊列）
         $context = sc_ai_chats()->message()->view()->render_prompt_send_result($context);
 
-        // 判定：送出即取消（旗標）→ 先寫取消終態＋殺子進程
-        if ($context["stop_after_create"] === true && $shift_result["dispatched"] === true) {
-            sc_ai_chats()->prompt()->handle_prompt_stop((int)$context["new_message_id"]);
-
-            $context["stopped_after_create"] = true;
-        }
-
-        // 判定：真係推咗帶（且未取消）→ 最後開關開回覆
-        if ($shift_result["dispatched"] === true && $context["stop_after_create"] !== true) {
+        // 判定：真係推咗帶 → 最後開關開回覆
+        if ($shift_result["dispatched"] === true) {
             // 測試時 // 停用下面一句：箱照入 polling，唔叫 AI
             sc_ai_chats()->queue()->dispatch_polling_job();
         }
@@ -174,7 +164,6 @@ trait prompt_send
         $response_json["message_id"]            = $context["new_message_id"];
         $response_json["prompt_id"]             = $prompt_id;
         $response_json["is_new_chat_row"]       = $context["is_new_chat_row"];
-        $response_json["stopped_after_create"]  = (isset($context["stopped_after_create"]) ? $context["stopped_after_create"] : false);
         $response_json["chat_url"]              = sc_ai_chats()->chat()->build_chat_url($context["project_slug"], "normal", $context["chat_sid"]);
 
         $response_json["html"]["new_message"]   = $context["new_message"];

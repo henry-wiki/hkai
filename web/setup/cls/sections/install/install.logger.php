@@ -84,7 +84,7 @@ trait install_logger
         $installation_data["pass_count"] = $installation_counts["pass_count"];
         $installation_data["fail_count"] = $installation_counts["fail_count"];
 
-        $installation_json = json_encode($installation_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $installation_json = sc_pretty_json($installation_data);
 
         file_put_contents($installation_log, $installation_json, LOCK_EX);
     }
@@ -110,7 +110,7 @@ trait install_logger
 
         $process_data["done_at"] = date("Y-m-d H:i:s");
 
-        $process_json = json_encode($process_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $process_json = sc_pretty_json($process_data);
 
         file_put_contents($setup_process, $process_json);
 

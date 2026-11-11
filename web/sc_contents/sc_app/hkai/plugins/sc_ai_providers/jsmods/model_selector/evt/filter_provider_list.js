@@ -33,14 +33,19 @@ class _filter_provider_list {
         j_search
             .off("input.model_selector")
             .on("input.model_selector", function (event) {
+                // 類別標題（聚合器／直連——搜尋時一併收起，免空標題殘留）
+                const j_group_labels = model_selector_instance.get_side_provider_group_labels();
+
                 let keyword = jQuery(this).val();
                     keyword = keyword.toLowerCase();
                     keyword = keyword.trim();
 
                 if (keyword === "") {
                     j_side_provider_items.show();
+                    j_group_labels.show();
                 }
                 else {
+                    j_group_labels.hide();
                     j_side_provider_items.hide();
                     j_side_provider_items.filter(function () {
 

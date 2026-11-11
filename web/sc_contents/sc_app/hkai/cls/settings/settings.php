@@ -155,7 +155,7 @@ class settings_Class
     // 原子寫設定檔（temp＋rename；美化 JSON、保留中文與斜線）
     private function write_settings_file($settings_file, $settings)
     {
-        $settings_text = json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $settings_text = sc_pretty_json($settings);
 
         // 判定：編碼失敗 → false
         if ($settings_text === false) {

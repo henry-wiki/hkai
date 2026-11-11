@@ -34,8 +34,15 @@ trait handle_message_delete
         // 診斷 log：定位成功
         hkai()->runtime()->logger()->info("message_delete target: chat_id=" . $chat_id . " message_id=" . $message_id);
 
-        // 停止＋硬刪（停止走共用入口 handle_prompt_stop——喺 delete_message 內一次過做）
+        // 硬刪（回應中＝拒刪——delete_message 內部已把關，唔會呼喚停止）
         $remove_result = sc_ai_chats()->message()->delete_message($message_row);
+
+        // 判定：拒刪（目標仲喺回應中）→ 409＋原因碼（前端據此顯示解釋）
+        if ($remove_result["ok"] === false) {
+            hkai()->runtime()->logger()->info("message_delete refused: message_id=" . $message_id . " error=" . $remove_result["error"]);
+
+            return sc_response()->json(["ok" => false, "error" => $remove_result["error"]], 409);
+        }
 
         // 診斷 log：完成（chat_deleted ＝ 對話有冇連帶清）
         hkai()->runtime()->logger()->info("message_delete done: chat_deleted=" . json_encode($remove_result["chat_deleted"]));

@@ -1,5 +1,6 @@
 // jsmods/prompt/act/act_prompt_draft_save.js —— 草稿即時保存（act 層——一檔一事）
-// 職責：prompt_draft_save（#sc_input 內容有變／chat options 提交 → 寫 draft meta——文字＋model＋reasoning＋chat_mode）
+// 職責：prompt_draft_save（#sc_input 內容有變／chat options 提交 → 寫 draft meta——文字＋model＋reasoning＋chat_mode）／cancel_pending_prompt_draft（送出前取消未到期嘅節流寫入）
+// 送出前一律先叫 cancel_pending_prompt_draft——pending 計時器唔准在輸入框清空之後才 fire（會讀到空字串＝寫入空草稿）
 // 舊 activity prompt_draft 已停用（本檔改為唯一草稿寫入點）
 // 結構同 sc_ai_projects 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
@@ -15,6 +16,7 @@ class _act_prompt_draft_save {
     }
 
     // 草稿寫入排程（input 事件→節流；change／提交點→即寫）
+    // 上游：evt_prompt_draft_save（#sc_input 嘅 input／change）／submit_chat_options（提交點）
     prompt_draft_save(save_immediately) {
         clearTimeout(this.throttle_timer);
 
@@ -26,6 +28,12 @@ class _act_prompt_draft_save {
 
         // input（打字中）→ 節流排程（停手 0.1 秒先寫）
         this.throttle_timer = setTimeout(this.write_prompt_draft.bind(this), this.throttle_delay_ms);
+    }
+
+    // 取消未到期嘅節流寫入（上游：act_prompt_send 送出前；下游：clearTimeout）
+    cancel_pending_prompt_draft() {
+        clearTimeout(this.throttle_timer);
+        this.throttle_timer = null;
     }
 
     // 送出前最後一次保存（清走未到期嘅節流、即寫一次；回 Promise——等寫完先送）

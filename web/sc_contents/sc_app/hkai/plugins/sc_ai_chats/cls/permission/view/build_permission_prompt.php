@@ -79,7 +79,7 @@ trait build_permission_prompt
         // 工具參數顯示文字（陣列 → pretty JSON；純字串直接用）
         $tool_input_text = $tool_input;
         if (is_array($tool_input)) {
-            $tool_input_text = json_encode($tool_input, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $tool_input_text = sc_pretty_json($tool_input);
         }
         $tool_input_text = (string)$tool_input_text;
 

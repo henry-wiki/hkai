@@ -1,20 +1,24 @@
 # Changelog
 
-## 0.3.1 — 2026-11-10
+## 0.3.3 — 2026-11-11
 
-0.3.1 is a maintenance release. It fixes the reliability problems reported after 0.3.0, so long conversations and back-to-back questions behave the way the screen says they do.
+0.3.3 adds twelve model providers, lets the assistant read PDF/Word/plain-text attachments, adds Japanese, Korean and Simplified Chinese interface languages, and fixes provider switching, duplicated agent segments and unescaped prompt text.
+
+### Added
+
+- Twelve new model providers with icons: OpenAI, Anthropic, Gemini, Groq, Cohere, Mistral, DeepInfra, Moonshot, Z.ai, GitHub Models, OpenCode and Hermes Agent.
+- Provider model pipelines: cached model lists are re-downloaded and normalised (pricing, context length, coding index, reasoning flag) and sorted by tier before display.
+- Attachments can be documents: PDF, DOCX and plain-text files are detected, stored and extracted, so the assistant reads their text instead of being limited to images.
+- Three new interface languages: Japanese, Korean and Simplified Chinese.
 
 ### Changed
 
-- Very long conversations no longer fail every time with "Bad request (400)": the app realigns the conversation history automatically and the chat can continue.
-- Sending another question while the previous reply is still streaming no longer freezes that earlier reply halfway.
-- Replies no longer come back blank (an empty shell with no text).
-- The "working" indicator no longer stays on after a reply has finished, and it lights up on time when work starts.
-- The waiting list refreshes by itself, and the queue moves on as soon as a reply finishes.
-- A question that arrives exactly while the background engine is shutting down is no longer ignored.
-- The bubble shown the moment you press Send now looks like a real message bubble (border, icons, model line) instead of plain left-aligned text.
-- Provider problems are explained in plain words (for example "API key rejected") instead of a bare "Request Error".
-- Settings and playground no longer show old folder paths that no longer exist.
-- Opening the app no longer waits about 45 seconds before the first page appears.
-- Occasional random "session expired" rejections on ordinary clicks are fixed.
-- A rare first-load error caused by creating the same built-in project twice is fixed.
+- Switching to a custom provider (Kilo, DeepSeek, Hermes Agent) now really applies the provider and model instead of failing quietly with "Unknown provider".
+- While an answer is still streaming, every thinking/result segment carries its own start time, status and length, so a segment in progress is no longer indistinguishable from a finished one.
+- Tool activity lines keep the tool name for later progress updates instead of showing a nameless "in_progress".
+- Prompt text is escaped both when it is sent and when a chat is reloaded: HTML/JS typed into the prompt is displayed as text and never executed.
+- Outbound HTTP goes through one client that always identifies itself as HKAI/<version>.
+
+### Removed
+
+- The legacy state-watch modules, the old status-bar fetch chain and four duplicate cURL helpers are gone; each had already been replaced by a single current implementation.

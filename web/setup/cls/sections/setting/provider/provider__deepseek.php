@@ -56,12 +56,12 @@ class provider__deepseek_Class
 
         // 判定：狀態檔未有值 → 用暫存 .env（搬遷複本）預填
         if ($deepseek_recorded_value === "") {
-            $deepseek_recorded_value = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
+            $deepseek_recorded_value = sc_api_keys()->get_api_key("DEEPSEEK_API_KEY", "");
         }
 
         // 判定：暫存仍冇 → 用本機 .env 現值
         if ($deepseek_recorded_value === "") {
-            $deepseek_recorded_value = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
+            $deepseek_recorded_value = sc_api_keys()->get_api_key("DEEPSEEK_API_KEY", "");
         }
 
         $check_result["input"] = [
@@ -86,7 +86,7 @@ class provider__deepseek_Class
         }
 
         // 寫 data/config/api_keys.json（缺先加·已有唔覆蓋）
-        sc_api_keys()->set("DEEPSEEK_API_KEY", $deepseek_recorded_value);
+        sc_api_keys()->set_api_key("DEEPSEEK_API_KEY", $deepseek_recorded_value);
 
         return ["ok" => true, "result" => "written", "detail" => setup()->i18n()->get("install.detail.written")];
     }

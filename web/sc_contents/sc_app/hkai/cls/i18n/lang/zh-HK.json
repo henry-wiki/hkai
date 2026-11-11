@@ -13,6 +13,7 @@
     "chat.restore_confirm": "確定還原此對話？對話會回到正常清單。",
     "chat.delete_confirm": "確定刪除此對話？對話與全部訊息會永久刪除，無法復原。",
     "message.delete_failed": "刪除失敗，請再試一次。",
+    "message.delete_responding": "此訊息仍在回應中，暫未能刪除。請先停止回應，再試刪除。",
     "chat.delete": "刪除",
     "chat.delete_failed": "刪除對話失敗，請再試一次。",
     "chat.archive": "歸檔",
@@ -171,6 +172,24 @@
     "settings.about.issues": "已回報問題",
     "settings.about.repository": "原始碼",
     "settings.about.tagline": "沒有做不到，只有想不到",
+    "settings.about.fact.version": "軟件版本",
+    "settings.about.fact.build": "組譯編號",
+    "settings.about.fact.release_date": "發佈日期",
+    "settings.about.fact.engine": "核心引擎",
+    "settings.about.fact.platform": "執行環境",
+    "settings.about.fact.license": "授權模式",
+    "settings.about.tab.about": "關於",
+    "settings.about.tab.thanks": "鳴謝名單",
+    "settings.about.tab.credits": "技術與開源",
+    "settings.about.tab.sponsors": "贊助名單",
+    "settings.about.quick_links": "快速連結",
+    "settings.about.link.website": "官方網站",
+    "settings.about.link.manual": "使用說明書",
+    "settings.about.link.changelog": "更新日誌",
+    "settings.about.link.privacy": "隱私政策",
+    "settings.about.link.license": "授權合約",
+    "settings.about.footer_link": "開啟完整鳴謝與授權頁",
+    "settings.about.empty_state": "暫未有資料",
     "settings.general.language_label": "介面語言",
     "settings.general.theme_label": "主題",
     "settings.general.saved": "已儲存。",
@@ -340,6 +359,7 @@
     "nav.collapse_all": "收合全部欄",
     "nav.projects": "專案",
     "nav.chats": "對話",
+    "nav.search": "搜尋",
     "nav.ranking": "排行榜",
     "nav.db": "資料庫",
     "nav.settings": "設定",
@@ -387,7 +407,9 @@
     "provider.apply": "套用",
     "provider.coding": "編碼",
     "provider.context": "上下文",
-    "provider.download": "下載模型清單",
+    "provider.download": "下載模型清單",
+    "provider.kind.aggregator": "聚合器",
+    "provider.kind.direct": "直連廠商",
     "provider.label": "供應商",
     "provider.name": "名稱",
     "provider.search_filter": "搜尋／篩選供應商",

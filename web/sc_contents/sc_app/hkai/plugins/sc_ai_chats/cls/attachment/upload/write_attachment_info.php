@@ -15,8 +15,7 @@ trait write_attachment_info
         $attachments_dir = sc_ai_chats()->draft()->get_draft_item_dir($project_slug, $chat_sid) . "/attachments";
         $info_filepath   = $attachments_dir . "/" . $attachment_info["filename"] . ".json";
 
-        $info_json  = json_encode($attachment_info, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $write_result = @file_put_contents($info_filepath, $info_json);
+        $write_result = sc_write_json($info_filepath, $attachment_info);
 
         return ($write_result !== false);
     }

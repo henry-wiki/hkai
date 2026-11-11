@@ -4,7 +4,8 @@ namespace sc\app\hkai\plugins\sc_ai_settings\provider;
 
 // == sc_ai_settings provider：provider 域本體（bridge 檔——singleton；呼叫形 sc_ai_settings()->provider()） ==
 // == 動作（trait——一檔一動作） ==
-// == 職責：Provider 分頁（模型 API 來源——一頁列全部 provider；每 provider 一鎖匙列：已設＝唯讀＋重設／按重設＝輸入＋儲存＋取消／未設＝輸入＋儲存；儲存寫 .env） ==
+// == 職責：Provider 分頁（一頁列全部 provider；每 provider 一鎖匙列：已設＝唯讀＋重設／按重設＝輸入＋儲存＋取消／未設＝輸入＋儲存；儲存寫 .env） ==
+// == 清單來源（2026-11-10）：sc_ai_providers 可用 provider 聲明派生（api_key_env）——加 provider 即自動多一列；只有鎖匙嘅額外項列於 extra_providers ==
 
 class provider_Class
 {
@@ -25,15 +26,64 @@ class provider_Class
     public function __construct()
     {}
 
-    // provider 清單（硬編——單一來源：頁面列＋儲存驗證一律由此讀；一 provider＝一節＝一條 token）
+    // provider 清單（唯一來源：sc_ai_providers 可用 provider 聲明——加 provider 即自動多一列）
     private function get_providers()
     {
-        $providers   = [];
-        $providers[] = ["id" => "openrouter",      "name" => "OpenRouter",           "env_key" => "OPENROUTER_API_KEY"];
-        $providers[] = ["id" => "kilo",            "name" => "Kilo",                 "env_key" => "KILO_API_KEY"];
-        $providers[] = ["id" => "deepseek",        "name" => "DeepSeek",             "env_key" => "DEEPSEEK_API_KEY"];
-        $providers[] = ["id" => "mimo_token_plan", "name" => "MiMo（Token Plan）",    "env_key" => "MIMO_TOKEN_PLAN_API_KEY"];
-        $providers[] = ["id" => "mimo",            "name" => "MiMo（Pay as you go）", "env_key" => "MIMO_API_KEY"];
+        $providers = [];
+
+        // 可用 provider 聲明（sc_ai_providers plugin——存在＝前台可用）
+        $available_providers = sc_ai_providers()->main()->get_available_providers();
+
+        // 逐個 provider 派生鎖匙列（id／顯示名／鎖匙環境變數名／類別——四項各自落同名變數）
+        foreach ($available_providers as $provider_id => $provider_item) {
+            // 鎖匙環境變數名（聲明提供；未提供＝此 provider 唔用鎖匙）
+            $provider_env_key = isset($provider_item["api_key_env"]) ? $provider_item["api_key_env"] : "";
+
+            // 判定：未提供鎖匙環境變數名 → 跳過（唔列鎖匙列）
+            if ($provider_env_key === "") {
+                continue;
+            }
+
+            $provider_name = $provider_item["provider_name"];
+
+            // 類別（聚合器／直連——聲明提供；缺省＝直連）
+            $provider_kind = isset($provider_item["provider_kind"]) ? $provider_item["provider_kind"] : "direct";
+
+            $provider_row           = [];
+            $provider_row["id"]      = $provider_id;
+            $provider_row["name"]    = $provider_name;
+            $provider_row["env_key"] = $provider_env_key;
+            $provider_row["kind"]    = $provider_kind;
+
+            $providers[] = $provider_row;
+        }
+
+        // 額外鎖匙（只有鎖匙、無模型來源——唔屬 provider 模組，故唔由聲明派生）
+        $extra_providers   = [];
+        $extra_providers[] = ["id" => "mimo_token_plan", "name" => "MiMo（Token Plan）",    "env_key" => "MIMO_TOKEN_PLAN_API_KEY", "kind" => "direct"];
+        $extra_providers[] = ["id" => "mimo",            "name" => "MiMo（Pay as you go）", "env_key" => "MIMO_API_KEY",            "kind" => "direct"];
+
+        // 逐項併入（額外鎖匙排最後——維持原頁面次序）
+        foreach ($extra_providers as $extra_provider_item) {
+            $providers[] = $extra_provider_item;
+        }
+
+        // 分組排序（聚合器行先、直連在後；組內維持原本次序）
+        $aggregator_providers = [];
+        $direct_providers     = [];
+
+        // 逐列依類別歸組
+        foreach ($providers as $provider_item) {
+            // 判定：聚合器 → 歸聚合器組
+            if ($provider_item["kind"] === "aggregator") {
+                $aggregator_providers[] = $provider_item;
+                continue;
+            }
+
+            $direct_providers[] = $provider_item;
+        }
+
+        $providers = array_merge($aggregator_providers, $direct_providers);
 
         return $providers;
     }
@@ -69,30 +119,12 @@ class provider_Class
         return str_repeat("*", 18) . substr($token_value, -4);
     }
 
-    // token 正規化（剝外層配對引號——用戶可能連引號一齊貼上）
-    private function normalize_token($token_value)
+    // token 清洗（API key 唔會含引號／空白／換行——一律移除，最後 trim）
+    private function sanitize_token($token_value)
     {
-        $value = trim($token_value);
+        $removed_chars = ["\"", "'", " ", "\r", "\n"];
 
-        // 判定：短過 2 字 → 無引號可剝
-        if (strlen($value) < 2) {
-            return $value;
-        }
-
-        $first_char = $value[0];
-        $last_char  = substr($value, -1);
-
-        // 判定：首字唔係引號 → 原樣
-        if (!in_array($first_char, ['"', "'"])) {
-            return $value;
-        }
-
-        // 判定：首尾唔同款引號 → 原樣（唔配對唔剝）
-        if ($first_char !== $last_char) {
-            return $value;
-        }
-
-        return substr($value, 1, -1);
+        return trim(str_replace($removed_chars, "", $token_value));
     }
 
     // Provider 分頁組裝（一頁列全部 provider——讀 .env 現值出 mask；每列鎖匙三態〔唯讀＋重設／輸入＋儲存＋取消／輸入＋儲存〕）
@@ -106,16 +138,32 @@ class provider_Class
 
         // === body ===
         $modal_body   = [];
-        $modal_body[] = "<div class='modal__content-main modal-form'>";
+        $modal_body[] = "<div class='modal__content-main modal-form api_key_list'>";
+        $modal_body[] = "<table class='api_key_list_table'>";
+        $modal_body[] = "<tbody>";
 
-            // 逐 provider 生成鎖匙列（三態：saved＝唯讀＋重設；resetting＝輸入＋儲存＋取消；empty＝輸入＋儲存）
+            // 上一個 provider 類別（分組標題列判定——初值空＝第一列必出標題）
+            $last_provider_kind = "";
+
+            // 逐 provider 生成鎖匙列（table 一列一 provider——三態：saved＝唯讀＋重設；resetting＝輸入＋儲存＋取消；empty＝輸入＋儲存）
             foreach ($providers as $provider_item) {
                 $provider_name    = $provider_item["name"];
                 $provider_id      = $provider_item["id"];
                 $provider_env_key = $provider_item["env_key"];
+                $provider_kind    = $provider_item["kind"];
+
+                // 組標題列（類別轉變時出一次——聚合器／直連分組）
+                if ($provider_kind !== $last_provider_kind) {
+                    $group_label        = hkai()->i18n()->get("provider.kind." . $provider_kind);
+                    $last_provider_kind = $provider_kind;
+
+                    $modal_body[] = "<tr class='api_key_list_group_row'>";
+                    $modal_body[] = "<td colspan='3'>" . $group_label . "</td>";
+                    $modal_body[] = "</tr>";
+                }
 
                 // 讀 api_keys.json（唯一來源——同 handle_save_provider_settings 寫入同一處）
-                $current_value = sc_api_keys()->get($provider_env_key, "");
+                $current_value = sc_api_keys()->get_api_key($provider_env_key, "");
                 $mask_value    = $this->mask_token($current_value);
                 $mask_encoded  = sc_html_encode($mask_value);
 
@@ -133,12 +181,18 @@ class provider_Class
                     $input_placeholder = hkai()->i18n()->get("settings.provider.token_placeholder_new");
                 }
 
-                $modal_body[] = "<div class='modal-form__row form_row provider_key_row' data-provider_state='" . $provider_state . "'>";
-                    $modal_body[] = "<div class='modal-form__icon'></div>";
-                    $modal_body[] = "<div class='modal-form__info'>";
+                // provider 品牌圖示修飾類（依 provider_id——未有圖嘅 provider 無 background-image＝留空位）
+                $icon_class   = "api_key_list_item_icon";
+                $icon_class  .= " api_key_list_item_icon--" . $provider_id;
+
+                $modal_body[] = "<tr class='form_row provider_key_row api_key_list_row' data-provider_state='" . $provider_state . "'>";
+                    $modal_body[] = "<td class='api_key_list_cell_icon'>";
+                        $modal_body[] = "<div class='" . $icon_class . "'></div>";
+                    $modal_body[] = "</td>";
+                    $modal_body[] = "<td class='api_key_list_cell_name'>";
                         $modal_body[] = "<div class='modal-form__label'>" . $provider_name . "</div>";
-                    $modal_body[] = "</div>";
-                    $modal_body[] = "<div class='modal-form__content'>";
+                    $modal_body[] = "</td>";
+                    $modal_body[] = "<td class='api_key_list_cell_value'>";
                         $modal_body[] = "<div class='modal-form__content_double'>";
 
                             // 唯讀值（saved 態顯示 mask；其餘態 CSS 收起；唔帶 data-field＝唔收錯誤標記）
@@ -194,12 +248,13 @@ class provider_Class
 
                         $modal_body[] = "</div>";
                         $modal_body[] = "<div class='form_err'></div>";
-                    $modal_body[] = "</div>";
-                $modal_body[] = "</div>";
+                    $modal_body[] = "</td>";
+                $modal_body[] = "</tr>";
             }
 
+        $modal_body[] = "</tbody>";
+        $modal_body[] = "</table>";
         $modal_body[] = "</div>";
-
         $html = [
             "header" => implode("\r\n", $modal_header),
             "footer" => "",

@@ -43,7 +43,42 @@ trait upload_attachment
             return sc_response()->json(["ok" => false, "error" => hkai()->i18n()->get("prompt.error.attach_format")], 400);
         }
 
-        $attachment_row = sc_ai_chats()->attachment()->store_uploaded_image($project_row, $original_filename, $mime_type, $binary_data);
+        // 先判圖片（原流程不變）
+        $detected_image_mime_type = sc_ai_chats()->attachment()->detect_image_mime_type($binary_data);
+
+        $attachment_row = null;
+
+        // 判定：係圖片 → 走原本落地流程
+        if ($detected_image_mime_type !== "") {
+            $attachment_row = sc_ai_chats()->attachment()->store_uploaded_image($project_row, $original_filename, $mime_type, $binary_data);
+        } else {
+            // 非圖片 → 判文件類別（html／js／css／txt／md／php／pdf／docx）
+            $document_kind_result = sc_ai_chats()->attachment()->detect_document_kind($binary_data, $original_filename);
+
+            $document_kind = (string)$document_kind_result["kind"];
+
+            $document_text = null;
+
+            // 判定：純文字 → 直接抽文字
+            if ($document_kind === "text") {
+                $document_text = sc_ai_chats()->attachment()->extract_text_from_plain($binary_data);
+            }
+
+            // 判定：PDF → 抽文字層（掃描版回 null）
+            if ($document_kind === "pdf") {
+                $document_text = sc_ai_chats()->attachment()->extract_text_from_pdf($binary_data);
+            }
+
+            // 判定：DOCX → 解壓抽文字
+            if ($document_kind === "docx") {
+                $document_text = sc_ai_chats()->attachment()->extract_text_from_docx($binary_data);
+            }
+
+            // 判定：抽到文字 → 落地
+            if ($document_text !== null) {
+                $attachment_row = sc_ai_chats()->attachment()->store_uploaded_document($project_row, $original_filename, $document_text);
+            }
+        }
 
         // 判定：落地失敗（類型／大小）→ 拒絕
         if ($attachment_row === null) {

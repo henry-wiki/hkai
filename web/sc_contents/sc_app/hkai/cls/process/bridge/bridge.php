@@ -34,44 +34,39 @@ class bridge_Class
         $server_port = $server_settings["port"];
         $request_url = "http://" . $server_host . ":" . $server_port . "/" . ltrim($path, "/");
         
-        $curl_handle = curl_init($request_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_POST, true);
-        curl_setopt($curl_handle, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        curl_setopt($curl_handle, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, 300);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, $timeout_sec);
-        $response_body = curl_exec($curl_handle);
-        $http_code     = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
+        // 標準 HTTP（sc_curl——自動 UA；連接上限 300ms、總時限由呼叫端定）
+        $curl_result = sc_curl($request_url, [
+            "method"             => "POST",
+            "json"               => true,
+            "post"               => $data,
+            "connect_timeout_ms" => 300,
+            "timeout"            => $timeout_sec,
+        ]);
 
-        // curl 錯誤碼（curl_close 之後讀唔到——先記落嚟）
-        $curl_errno = curl_errno($curl_handle);
-
-        curl_close($curl_handle);
-        
         // 判定：超時（時限到——操作可能仲喺橋嗰邊跑緊，唔等於橋壞）→ 失敗（帶時限秒數）
-        if ($curl_errno === CURLE_OPERATION_TIMEDOUT) {
+        if ($curl_result["errno"] === CURLE_OPERATION_TIMEDOUT) {
             return ["ok" => false, "error" => "bridge request timed out (" . $timeout_sec . "s)"];
         }
 
-        // 判定：連唔上（bridge 未運行）→ 失敗
-        if ($response_body === false) {
+        // 判定：其他傳輸錯誤（bridge 未運行）→ 失敗
+        if ($curl_result["errno"] !== 0) {
             return ["ok" => false, "error" => "python bridge not running"];
         }
-        
+
         // 判定：HTTP 非 200（路由不存在／bridge 未更新／內部錯誤）→ 寫 log、回失敗
-        if ($http_code !== 200) {
-            hkai()->runtime()->logger()->warn("bridge request " . $path . " http " . $http_code);
+        if ($curl_result["status"] !== 200) {
+            hkai()->runtime()->logger()->warn("bridge request " . $path . " http " . $curl_result["status"]);
+
             return ["ok" => false, "error" => "bridge request failed"];
         }
-        
-        $decoded = json_decode($response_body, true);
-        
+
+        $decoded = $curl_result["json"];
+
         // 判定：回應不可解析 → 失敗
         if (!is_array($decoded)) {
             return ["ok" => false, "error" => "invalid bridge output"];
         }
-        
+
         return $decoded;
     }
 
@@ -85,23 +80,18 @@ class bridge_Class
         $server_port = (int)($server_settings["port"] ?? 0);
         $request_url = "http://" . $server_host . ":" . $server_port . "/" . ltrim($path, "/");
 
-        $curl_handle = curl_init($request_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl_handle, CURLOPT_POST, true);
-        curl_setopt($curl_handle, CURLOPT_POSTFIELDS, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        curl_setopt($curl_handle, CURLOPT_HTTPHEADER, ["Content-Type: application/json"]);
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT_MS, 300);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT_MS, $timeout_ms);
-        $response_body = curl_exec($curl_handle);
+        // 標準 HTTP（sc_curl——自動 UA；連接上限 300ms、整體上限由呼叫端定）
+        $curl_result = sc_curl($request_url, [
+            "method"             => "POST",
+            "json"               => true,
+            "post"               => $data,
+            "connect_timeout_ms" => 300,
+            "timeout_ms"         => $timeout_ms,
+        ]);
 
-        // curl 錯誤碼（curl_close 之後讀唔到——先記落嚟）
-        $curl_errno = curl_errno($curl_handle);
-
-        curl_close($curl_handle);
-
-        // 判定：連唔上（bridge 未運行）→ false（唔等、唔重試——重入時 resume 會補派）
-        if ($response_body === false && $curl_errno !== CURLE_OPERATION_TIMEDOUT) {
-            hkai()->runtime()->logger()->warn("bridge fire_and_forget failed: " . $path . " curl_errno=" . $curl_errno);
+        // 判定：連唔上（bridge 未運行；超時除外）→ false（唔等、唔重試——重入時 resume 會補派）
+        if ($curl_result["errno"] !== 0 && $curl_result["errno"] !== CURLE_OPERATION_TIMEDOUT) {
+            hkai()->runtime()->logger()->warn("bridge fire_and_forget failed: " . $path . " curl_errno=" . $curl_result["errno"]);
 
             return false;
         }

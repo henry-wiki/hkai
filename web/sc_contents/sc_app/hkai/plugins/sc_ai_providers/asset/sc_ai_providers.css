@@ -55,6 +55,15 @@
     display:block;
     width:100%;
 }
+
+/* 左欄類別標題（聚合器／直連——細字暗色；分組之間留白） */
+.side_provider_group_label {
+    padding: 12px 10px 4px;
+    color: var(--modal_text_dim);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
 .side_provider_tab_button {
     display: flex;
     align-items: center;
@@ -292,4 +301,134 @@
 .model_selector_effort_button.active {
     background: var(--modal_accent);
     color: #ffffff;
+}
+
+/* ============================================
+   API key 列（settings → Provider 分頁）——provider 品牌圖示
+   ============================================ */
+
+/* 圖示（正方形——背景圖 contain 滿版；圖源＝下方各 provider 修飾類，唔用內聯樣式） */
+.api_key_list_item_icon {
+    flex: none;
+    width: 48px;
+    height: 48px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-color: #ffffff;
+}
+
+/* Hermes Agent（Nous Portal） */
+.api_key_list_item_icon--hermes_agent {
+    background-image: url("icons/hermes_agent.png");
+}
+
+/* OpenRouter */
+.api_key_list_item_icon--openrouter {
+    background-image: url("icons/openrouter.png");
+}
+
+/* Kilo */
+.api_key_list_item_icon--kilo {
+    background-image: url("icons/kilo.png");
+}
+
+/* DeepSeek */
+.api_key_list_item_icon--deepseek {
+    background-image: url("icons/deepseek.png");
+}
+
+/* MiMo（Token Plan／Pay as you go——同一品牌圖示） */
+.api_key_list_item_icon--mimo_token_plan,
+.api_key_list_item_icon--mimo {
+    background-image: url("icons/mimo.png");
+}
+
+/* Groq */
+.api_key_list_item_icon--groq {
+    background-image: url("icons/groq.png");
+}
+
+/* Z.ai */
+.api_key_list_item_icon--zai {
+    background-image: url("icons/zai.png");
+}
+
+/* Moonshot */
+.api_key_list_item_icon--moonshot {
+    background-image: url("icons/moonshot.png");
+}
+
+/* OpenCode */
+.api_key_list_item_icon--opencode {
+    background-image: url("icons/opencode.png");
+}
+
+/* DeepInfra */
+.api_key_list_item_icon--deepinfra {
+    background-image: url("icons/deepinfra.png");
+}
+
+/* Mistral */
+.api_key_list_item_icon--mistral {
+    background-image: url("icons/mistral.png");
+}
+
+/* GitHub Models */
+.api_key_list_item_icon--github {
+    background-image: url("icons/github.png");
+}
+
+/* Cohere */
+.api_key_list_item_icon--cohere {
+    background-image: url("icons/cohere.png");
+}
+
+/* OpenAI */
+.api_key_list_item_icon--openai {
+    background-image: url("icons/openai.png");
+}
+
+/* Anthropic */
+.api_key_list_item_icon--anthropic {
+    background-image: url("icons/anthropic.png");
+}
+
+/* Gemini */
+.api_key_list_item_icon--gemini {
+    background-image: url("icons/gemini.png");
+}
+
+/* API key 清單（table 佈局——一列一 provider；唔用 flex／grid 行） */
+.api_key_list_table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.api_key_list_row > td {
+    padding: 10px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--modal_line);
+}
+
+/* 鎖匙清單類別標題列（聚合器／直連——細字暗色；橫跨三欄） */
+.api_key_list_group_row > td {
+    padding: 14px 8px 6px;
+    color: var(--set_text_mute);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--modal_line);
+}
+.api_key_list_cell_icon {
+    width: 48px;
+    padding-right: 12px;
+}
+.api_key_list_cell_name {
+    width: 200px;
+    padding-right: 12px;
+    font-size: 13px;
+    color: var(--modal_text);
+}
+.api_key_list_cell_value {
+    width: auto;
 }

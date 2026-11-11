@@ -1,11 +1,12 @@
 // jsmods/prompt/act/act_prompt_stop.js —— 取消查詢流程（act 層——一檔一事）
-// 職責：prompt_stop（接線 handler——取消＋回呼；目標 id 由畫面讀）／prompt_stop_success（已取消→畫面回收：標記 cancelled／對話已清切走）／prompt_stop_error（取消失敗→不動作）
+// 職責：prompt_stop（接線 handler——取消＋回呼）／prompt_stop_success（已取消→畫面回收：標記 cancelled／對話已清切走）／prompt_stop_error（取消失敗→不動作）
+// 目標 id：前端唔查訊息狀態——完全唔帶 message_id，用後端掃 polling 目錄反查結果（response_data.message_ids）
 // 結構同 callback 家族：export const + eager 單例 closure factory（動態 import 用——零 .default）
 
 class _act_prompt_stop {
     constructor() {}
 
-    // 取消目前查詢（目標 id 由畫面讀——bind 已備好 request_data）
+    // 取消目前查詢（目標由後端按對話反查——bind 只備好 request_data）
     async prompt_stop(request_data, ui_context) {
         // 橋接駁（同域 req 橋——新方式）
         const prompt_instance = await registry().sc_ai_chats().prompt();
@@ -30,10 +31,15 @@ class _act_prompt_stop {
         // mini loading 收尾（按鈕還原——後續顯隱交按鈕對賬）
         ui_context.j_stop_button.removeClass("loading");
 
-        const j_target_message = jQuery(".sc_thread__viewport .message_wrapper[data-message_id='" + request_data.message_id + "']");
+        // 已停訊息（後端掃 polling 目錄反查；前端從不帶 message_id）
+        const stopped_message_ids = response_data.message_ids;
 
-        // 已派工取消 → 標記 cancelled 氣泡
-        j_target_message.attr("data-status", "cancelled");
+        // 逐條已停：標記 cancelled 氣泡
+        for (const stopped_message_id_item of stopped_message_ids) {
+            const j_target_message = jQuery(".sc_thread__viewport .message_wrapper[data-message_id='" + stopped_message_id_item + "']");
+
+            j_target_message.attr("data-status", "cancelled");
+        }
 
         jQuery("#sc_input").trigger("input");
 

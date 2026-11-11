@@ -13,24 +13,20 @@ trait get_host_port_test_result
         $health_url = $server_base_url . "/health";
 
         // curl 請求（本機探測——1s 連線逾時、2s 整體逾時）
-        $curl_handle = curl_init($health_url);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
-        $cacert_path = sc_bundled_cacert_path();
-        if ($cacert_path !== "") {
-            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
-        }
-
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 1);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, 2);
-        $response_body = curl_exec($curl_handle);
-        $http_code     = curl_getinfo($curl_handle, CURLINFO_RESPONSE_CODE);
-        curl_close($curl_handle);
+        // 標準 HTTP（sc_curl——自動 UA＋憑證驗證；本機探測 1s 連線、2s 整體）
+        $curl_result = sc_curl($health_url, [
+            "method"          => "GET",
+            "connect_timeout" => 1,
+            "timeout"         => 2,
+        ]);
 
         // 判定：連不上（refused／timeout／DNS 失敗）→ error
-        if ($response_body === false) {
+        if ($curl_result["errno"] !== 0) {
             return ["state" => "error", "message" => hkai()->i18n()->get("settings.server.test_no_response")];
         }
+
+        $response_body = $curl_result["body"];
+        $http_code     = $curl_result["status"];
 
         // 判定：HTTP 2xx（成功範圍——分段判、單一條件）
         $is_http_success = false;

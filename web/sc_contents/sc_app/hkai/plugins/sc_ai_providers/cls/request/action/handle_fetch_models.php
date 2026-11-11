@@ -28,6 +28,30 @@ trait handle_fetch_models
             $model_list_page = sc_ai_providers()->instance__openrouter()->view()->get_model_list_page($provider_id);
         } elseif ($provider_id === "deepseek") {
             $model_list_page = sc_ai_providers()->instance__deepseek()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "hermes_agent") {
+            $model_list_page = sc_ai_providers()->instance__hermes_agent()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "groq") {
+            $model_list_page = sc_ai_providers()->instance__groq()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "zai") {
+            $model_list_page = sc_ai_providers()->instance__zai()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "moonshot") {
+            $model_list_page = sc_ai_providers()->instance__moonshot()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "opencode") {
+            $model_list_page = sc_ai_providers()->instance__opencode()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "deepinfra") {
+            $model_list_page = sc_ai_providers()->instance__deepinfra()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "mistral") {
+            $model_list_page = sc_ai_providers()->instance__mistral()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "github") {
+            $model_list_page = sc_ai_providers()->instance__github()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "cohere") {
+            $model_list_page = sc_ai_providers()->instance__cohere()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "openai") {
+            $model_list_page = sc_ai_providers()->instance__openai()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "anthropic") {
+            $model_list_page = sc_ai_providers()->instance__anthropic()->view()->get_model_list_page($provider_id);
+        } elseif ($provider_id === "gemini") {
+            $model_list_page = sc_ai_providers()->instance__gemini()->view()->get_model_list_page($provider_id);
         } else {
             // 無對應 provider（唔係 kilo／openrouter）→ 400（前端顯示失敗）
             return sc_response()->json(["ok" => false, "error" => "unknown provider: " . $provider_id], 400);

@@ -39,7 +39,7 @@ trait handle_settings_save_general
 
         // 判定：語言非空但唔支援 → 錯誤（現行語言檔＝cls/i18n/lang）
         if ($language !== "") {
-            if (!in_array($language, ["zh-HK", "en-US"], true)) {
+            if (!in_array($language, ["zh-HK", "zh-CN", "en-US", "ja-JP", "ko-KR"], true)) {
                 $errors["language"] = hkai()->i18n()->get("settings.general.error_language_unsupported") . $language;
             }
         }

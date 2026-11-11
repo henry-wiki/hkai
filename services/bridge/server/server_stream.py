@@ -548,12 +548,28 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
     # 首個事件：貼上當刻全文，偏移置檔尾（重連＝續傳，唔重播）
     snapshot_texts: dict[str, str] = {}
 
+    # 段狀態快照（ready 一併帶落——前端一建立段即刻有 meta，唔使等之後 append／turn_done 補）
+    ready_segment_meta: dict[str, dict[str, Any]] = {}
+
     for response_kind in ("thinking", "result"):
         snapshot_path = _response_file_path(current_dir, response_kind, current_index)
         snapshot_text, snapshot_offset, _snapshot_truncated = _read_appended(snapshot_path, 0)
 
         snapshot_texts[response_kind] = snapshot_text
         file_offsets[response_kind] = snapshot_offset
+
+        ready_entry = _poll_list_entry(current_dir, current_index, response_kind)
+        ready_content_length = ready_entry.get("content_length", 0)
+
+        # 判定：長度唔係整數 → 當 0（前端只認整數）
+        if isinstance(ready_content_length, int) is False:
+            ready_content_length = 0
+
+        ready_segment_item: dict[str, Any] = {}
+        ready_segment_item["response_status"] = str(ready_entry.get("status", ""))
+        ready_segment_item["start_at"] = str(ready_entry.get("start_at", ""))
+        ready_segment_item["content_length"] = ready_content_length
+        ready_segment_meta[response_kind] = ready_segment_item
 
     ready_logs, log_offset = _activity_log_entries(current_dir, 0)
 
@@ -566,6 +582,7 @@ async def _message_event_generator(request: Request, project_slug: str, chat_sid
             "thinking": snapshot_texts["thinking"],
             "result": snapshot_texts["result"],
             "activity_log": ready_logs,
+            "segment_meta": ready_segment_meta,
         },
     )
 

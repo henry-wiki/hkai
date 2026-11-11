@@ -31,13 +31,20 @@ class _queue_dispatch {
     async handle_shift_result(response_data) {
         const result_html = response_data.html || {};
 
-        // 判定：後端帶新訊息氣泡（有訊息進場）→ insert
+        // 判定：後端帶新訊息氣泡（有訊息進場／已在處理中嘅嗰條）→ 畫面未有才 insert
         if (result_html.new_message) {
-            // 橋接駁（prompt 域 act 橋——跨域新方式）
-            const prompt_instance = await registry().sc_ai_chats().prompt();
-            const prompt_send_instance = await prompt_instance.act().prompt_send();
+            const new_message_id = String(response_data.message_id || "");
+            const j_existing_message = jQuery(".sc_thread__viewport .message_wrapper[data-message_id='" + new_message_id + "']");
+            const is_message_in_dom = j_existing_message.length > 0;
 
-            prompt_send_instance.append_render_message(result_html.new_message, response_data);
+            // 判定：畫面已有該條氣泡 → 唔重複插（重複派工／後台 sweep 已推走）
+            if (is_message_in_dom === false) {
+                // 橋接駁（prompt 域 act 橋——跨域新方式）
+                const prompt_instance = await registry().sc_ai_chats().prompt();
+                const prompt_send_instance = await prompt_instance.act().prompt_send();
+
+                prompt_send_instance.append_render_message(result_html.new_message, response_data);
+            }
         }
 
         // 判定：後端帶隊列 UI → 整排替換

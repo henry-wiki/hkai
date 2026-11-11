@@ -10,6 +10,11 @@ class attachment_Class
 {
     use guard\detect_image_mime_type;
     use guard\webp_to_jpg_or_gif_to_png;
+    use guard\detect_document_kind;
+    use extract\extract_text_from_plain;
+    use extract\extract_text_from_pdf;
+    use extract\extract_text_from_docx;
+    use action\store_uploaded_document;
     use action\insert_message_attachments;
     use action\store_uploaded_image;
     use action\delete_by_project;

@@ -47,8 +47,33 @@ trait handle_queue_dispatch
         $response_data["ok"]   = true;
         $response_data["html"] = ["queue_list" => sc_ai_chats()->prompt()->render_queue_list($chat_id)];
 
-        // 判定：留隊（前任務處理中）→ 只更新隊列，冇新氣泡
+        // 判定：留隊（前任務處理中／後台 sweep 已推走）→ 隊列照回，並附上處理中喰條氣泡
         if ($shift_result["dispatched"] === false) {
+            $poll_jobs        = sc_ai_chats()->poll()->file()->get_poll_jobs_by_identity($project_slug, $chat_sid);
+            $live_message_row = null;
+
+            // 逐個 polling 任務：搵未終態喰條（＝正在處理嘅訊息）
+            foreach ($poll_jobs as $poll_job_item) {
+                // 判定：已終態 → 跳過
+                if ($poll_job_item["is_terminal"] === true) {
+                    continue;
+                }
+
+                $live_message_id  = (int)$poll_job_item["message_id"];
+                $live_message_row = sc_ai_chats()->message()->repo_select()->get_message_row($live_message_id);
+
+                // 判定：讀到訊息列 → 收工
+                if (is_array($live_message_row) === true) {
+                    break;
+                }
+            }
+
+            // 判定：有處理中訊息 → 一併交氣泡模板（前端據 message_id 判畫面上有冇）
+            if (is_array($live_message_row) === true) {
+                $response_data["message_id"]          = (int)$live_message_row["message_id"];
+                $response_data["html"]["new_message"] = sc_ai_chats()->message()->view()->get_chat_message_slot($live_message_row, [], true);
+            }
+
             return sc_response()->json($response_data);
         }
 

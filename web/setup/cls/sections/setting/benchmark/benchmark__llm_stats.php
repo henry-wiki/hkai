@@ -57,12 +57,12 @@ class benchmark__llm_stats_Class
 
         // 判定：狀態檔未有值 → 用暫存 .env（搬遷複本）預填
         if ($llm_stats_recorded_value === "") {
-            $llm_stats_recorded_value = sc_api_keys()->get("BENCHMARK_SRC_LLM_STATS_API_KEY", "");
+            $llm_stats_recorded_value = sc_api_keys()->get_api_key("BENCHMARK_SRC_LLM_STATS_API_KEY", "");
         }
 
         // 判定：暫存仍冇 → 用本機 .env 現值
         if ($llm_stats_recorded_value === "") {
-            $llm_stats_recorded_value = sc_api_keys()->get("BENCHMARK_SRC_LLM_STATS_API_KEY", "");
+            $llm_stats_recorded_value = sc_api_keys()->get_api_key("BENCHMARK_SRC_LLM_STATS_API_KEY", "");
         }
 
         $check_result["input"] = [
@@ -87,7 +87,7 @@ class benchmark__llm_stats_Class
         }
 
         // 寫 data/config/api_keys.json（缺先加·已有唔覆蓋）
-        sc_api_keys()->set("BENCHMARK_SRC_LLM_STATS_API_KEY", $llm_stats_recorded_value);
+        sc_api_keys()->set_api_key("BENCHMARK_SRC_LLM_STATS_API_KEY", $llm_stats_recorded_value);
 
         return ["ok" => true, "result" => "written", "detail" => setup()->i18n()->get("install.detail.written")];
     }

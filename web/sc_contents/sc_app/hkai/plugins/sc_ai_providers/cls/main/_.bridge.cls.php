@@ -38,6 +38,40 @@ class main_Class
 
         $this->provider_bundle["deepseek"] = [];
         $this->provider_bundle["deepseek"]["reset_instance"] = sc_ai_providers()->instance__deepseek();
+
+        $this->provider_bundle["hermes_agent"] = [];
+        $this->provider_bundle["hermes_agent"]["reset_instance"] = sc_ai_providers()->instance__hermes_agent();
+
+        $this->provider_bundle["groq"] = [];
+        $this->provider_bundle["groq"]["reset_instance"] = sc_ai_providers()->instance__groq();
+
+        $this->provider_bundle["zai"] = [];
+        $this->provider_bundle["zai"]["reset_instance"] = sc_ai_providers()->instance__zai();
+
+        $this->provider_bundle["moonshot"] = [];
+        $this->provider_bundle["moonshot"]["reset_instance"] = sc_ai_providers()->instance__moonshot();
+        $this->provider_bundle["opencode"] = [];
+        $this->provider_bundle["opencode"]["reset_instance"] = sc_ai_providers()->instance__opencode();
+
+        $this->provider_bundle["deepinfra"] = [];
+        $this->provider_bundle["deepinfra"]["reset_instance"] = sc_ai_providers()->instance__deepinfra();
+
+        $this->provider_bundle["mistral"] = [];
+        $this->provider_bundle["mistral"]["reset_instance"] = sc_ai_providers()->instance__mistral();
+
+        $this->provider_bundle["github"] = [];
+        $this->provider_bundle["github"]["reset_instance"] = sc_ai_providers()->instance__github();
+
+        $this->provider_bundle["cohere"] = [];
+        $this->provider_bundle["cohere"]["reset_instance"] = sc_ai_providers()->instance__cohere();
+        $this->provider_bundle["openai"] = [];
+        $this->provider_bundle["openai"]["reset_instance"] = sc_ai_providers()->instance__openai();
+
+        $this->provider_bundle["anthropic"] = [];
+        $this->provider_bundle["anthropic"]["reset_instance"] = sc_ai_providers()->instance__anthropic();
+
+        $this->provider_bundle["gemini"] = [];
+        $this->provider_bundle["gemini"]["reset_instance"] = sc_ai_providers()->instance__gemini();
     }
 
     public function setup($config = [])

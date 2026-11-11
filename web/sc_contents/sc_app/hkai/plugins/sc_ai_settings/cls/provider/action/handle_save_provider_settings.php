@@ -13,7 +13,7 @@ trait handle_save_provider_settings
         $request_data = sc_request()->json();
 
         $provider_id = trim($request_data["provider_id"] ?? "");
-        $api_token   = trim($request_data["api_token"] ?? "");
+        $api_token   = (string)($request_data["api_token"] ?? "");
 
         // 判定：未知 provider → 非欄位錯誤（400）
         $provider_item = $this->find_provider($provider_id);
@@ -22,10 +22,10 @@ trait handle_save_provider_settings
         }
 
         $env_key       = $provider_item["env_key"];
-        $current_value = sc_api_keys()->get($env_key, "");
+        $current_value = sc_api_keys()->get_api_key($env_key, "");
 
-        // 值正規化（剝外層引號——用戶可能連引號一齊貼上）
-        $api_token = $this->normalize_token($api_token);
+        // 值清洗（引號／空白／換行一律移除——API key 本身不含呢啲字元）
+        $api_token = $this->sanitize_token($api_token);
 
         // 判定：提交值＝現值 mask（未改動）→ no-op 直接 ok
         $current_mask = $this->mask_token($current_value);
@@ -36,13 +36,8 @@ trait handle_save_provider_settings
         // 欄位驗證（§18——field_key 對應 data-field）
         $errors = [];
 
-        // 判定：含換行 → 欄位錯誤（防寫入多行）
-        if (preg_match("/[\r\n]/", $api_token)) {
-            $errors["api_token"] = hkai()->i18n()->get("settings.provider.token_multiline_error");
-        }
-
-        // 判定：長度不合（所有 provider 一律 > 20 字；空白＝清除，唔驗）→ 欄位錯誤
-        if (isset($errors["api_token"]) === false && $api_token !== "" && strlen($api_token) <= 20) {
+        // 判定：非空且短過 13 字 → 長度不合（空白＝清除，唔驗）
+        if ($api_token !== "" && strlen($api_token) < 13) {
             $errors["api_token"] = hkai()->i18n()->get("settings.provider.token_too_short");
         }
 
@@ -52,7 +47,7 @@ trait handle_save_provider_settings
         }
 
         // 寫入 api_keys.json（原子覆蓋——$api_token 為空＝以空值寫入＝清除）
-        sc_api_keys()->set($env_key, $api_token);
+        sc_api_keys()->set_api_key($env_key, $api_token);
 
         return sc_response()->json(["ok" => true]);
     }

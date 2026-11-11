@@ -11,6 +11,10 @@ trait get_user_prompt
     public function get_user_prompt($row, $message_model_text = "")
     {
         $message_content = (isset($row["message_content"]) ? $row["message_content"] : null);
+
+        // 顯示層轉義一次過（問題內容出自使用者——防 HTML／JS 注入；直顯同歷史記錄共用本支）
+        $message_content_html = sc_html_encode((string)$message_content);
+
         $user_zoom_title = hkai()->i18n()->get("user.zoom_title");
         $answer_zoom     = hkai()->i18n()->get("answer.zoom");
         $answer_copy     = hkai()->i18n()->get("answer.copy");
@@ -18,14 +22,16 @@ trait get_user_prompt
 
         // 模型顯示 HTML（plain——provider/model；空＝唔出）
         $message_model_html = "";
-        // 判定：有模型資訊 → 砌 span（copy 之後）
+
+        // 判定：有模型資訊 → 砌 span（copy 之後——文字先轉義，防注入）
         if ($message_model_text !== "") {
-            $message_model_html = "<span class='message_model'>{$message_model_text}</span>";
+            $message_model_text_html = sc_html_encode($message_model_text);
+            $message_model_html      = "<span class='message_model'>{$message_model_text_html}</span>";
         }
         
         // 顯示層只放純變數（取值／i18n 一律先落變數——唔內嵌）
         $content = [];
-        $content[] = "<div class='user_prompt' data-text='user_content'>{$message_content}</div>";
+        $content[] = "<div class='user_prompt' data-text='user_content'>{$message_content_html}</div>";
         $content[] = "<div class='user_prompt_bar'>";
             $content[] = "{$message_model_html}";
             $content[] = "

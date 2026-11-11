@@ -98,7 +98,7 @@ class state_Class
 
         $process_data["sections"][$section_id][$check_item_code] = $section_value_entry;
 
-        $process_json = json_encode($process_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $process_json = sc_pretty_json($process_data);
 
         file_put_contents($setup_process, $process_json, LOCK_EX);
     }
@@ -134,7 +134,7 @@ class state_Class
 
         $process_data["sections"][$section_id][$check_item_code] = $setting_value;
 
-        $process_json = json_encode($process_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $process_json = sc_pretty_json($process_data);
 
         file_put_contents($setup_process, $process_json, LOCK_EX);
     }
@@ -170,7 +170,7 @@ class state_Class
 
         unset($process_data["sections"][$section_id][$check_item_code]);
 
-        $process_json = json_encode($process_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        $process_json = sc_pretty_json($process_data);
 
         file_put_contents($setup_process, $process_json, LOCK_EX);
     }

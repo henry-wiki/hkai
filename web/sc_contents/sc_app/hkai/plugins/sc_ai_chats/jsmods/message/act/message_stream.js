@@ -17,9 +17,6 @@ class _message_stream {
         // 各段全文緩衝（append 累加——餵 writer 用）
         this.seg_texts = {};
 
-        // 本輪仲未開段嘅類型（turn 設 true——首次寫入時開新段；防新一輪貼入上一段）
-        this.turn_new_kinds = {};
-
         // 每秒用時 ticker（全頁一個；ready 時起）
         this.tick_timer = null;
 
@@ -213,7 +210,6 @@ class _message_stream {
         this.pending_appends = [];
         this.applied_activity_uids = {};
         this.turn_switching = false;
-        this.turn_new_kinds = {};
         this.tool_segment = null;
     }
 
@@ -408,7 +404,35 @@ class _message_stream {
         return jQuery(".message_wrapper[data-message_id='" + panel_message_id + "']").first();
     }
 
-    // 取段（kind＝thinking／result）：換輪後第一次寫入＝開新段；其餘寫返最後一段；冇段＝造骨架
+    // 按輪次插入新段：搵第一個「index 更大」嘅段（thinking／result／tool 一齊比），插佢前面；否則貼尾
+    // 上游：_get_segment／_get_tool_segment
+    // 下游：DOM（.agent_message 內段次序）
+    _insert_segment_by_index(j_agent_message, j_new_segment, segment_index) {
+        // 判定：冇有效輪次 → 貼尾
+        if (Number.isFinite(segment_index) === false) {
+            j_agent_message.append(j_new_segment);
+
+            return;
+        }
+
+        const j_later_segment = j_agent_message.find(".seg--thinking, .seg--result, .seg--tool").filter(function () {
+            const later_index = Number(jQuery(this).attr("data_response_index"));
+
+            // 判定：冇有效輪次嘅段 → 唔參與比較
+            return Number.isFinite(later_index) && later_index > segment_index;
+        }).first();
+
+        // 判定：搵到更大輪次 → 插佢前面
+        if (j_later_segment.length > 0) {
+            j_later_segment.before(j_new_segment);
+
+            return;
+        }
+
+        j_agent_message.append(j_new_segment);
+    }
+
+    // 取段（kind＝thinking／result）：一律以輪次 index 為準（同一輪同型只有一段；查唔到＝造新段）
     _get_segment(response_kind, response_index) {
         const j_message_panel = this._get_panel();
 
@@ -422,28 +446,27 @@ class _message_stream {
         // 模型顯示文（wrapper attribute——同後端工具列同一口徑）
         const message_model_text = String(j_message_panel.attr("data-model_text") || "");
 
-        // 判定：本輪首次寫入呢一型 → 先落旗標（下面決定開新段抑或重用空段）
-        const is_turn_first_write = this.turn_new_kinds[response_kind] === true;
+        // payload 有冇帶輪次（有＝一切以它為準；冇＝ready 全文重播，用當前輪）
+        const has_response_index = Number.isFinite(Number(response_index));
 
-        this.turn_new_kinds[response_kind] = false;
-
-        const segment_index = Number.isFinite(Number(response_index)) ? Number(response_index) : this.current_response_index;
+        const segment_index = has_response_index ? Number(response_index) : this.current_response_index;
 
         let j_segment = jQuery();
 
-        // 判定：有輪次 index → 先搵同一輪嘅段（位置精準，唔會寫錯輪）
+        // 判定：有輪次 index → 只認同一輪嘅段（唔受換輪旗標影響；查唔到＝該輪未有段）
         if (Number.isFinite(segment_index)) {
             j_segment = j_agent_message.find(".seg--" + response_kind + "[data_response_index='" + segment_index + "']").last();
         }
 
-        // 判定：搵唔到（舊段未帶 index）→ 沿用最後一段
-        if (j_segment.length === 0) {
-            j_segment = j_agent_message.find(".seg--" + response_kind).last();
-        }
+        // 判定：payload 冇帶 index 且查唔到 → 只可沿用「未有輪次標記」嘅舊段
+        if (!has_response_index && j_segment.length === 0) {
+            const j_last_segment = j_agent_message.find(".seg--" + response_kind).last();
+            const last_segment_index = String(j_last_segment.attr("data_response_index") || "");
 
-        // 判定：換輪首次寫入 且 最後一段已用過 → 唔可以再寫入（開新段）
-        if (is_turn_first_write === true && this._is_segment_used(j_segment) === true) {
-            j_segment = jQuery();
+            // 判定：最後一段帶住輪次（屬其他輪）→ 唔沿用，交下面造新段
+            if (j_last_segment.length > 0 && last_segment_index === "") {
+                j_segment = j_last_segment;
+            }
         }
 
         // 判定：未有可寫段 → 造骨架（thinking／result 兩種結構，同後端輸出一致）
@@ -483,9 +506,12 @@ class _message_stream {
                     + "</div>";
             }
 
-            j_agent_message.append(segment_html);
+            // *** : 步驟 3——造好骨架；有輪次就按 index 排位插入（thinking／result／tool 同一條規則）
+            const j_new_segment = jQuery(segment_html);
 
-            j_segment = j_agent_message.find(".seg--" + response_kind).last();
+            this._insert_segment_by_index(j_agent_message, j_new_segment, segment_index);
+
+            j_segment = j_new_segment;
 
             // 段帶輪次（同一輪同型只有一段——前端據此精準寫入）
             j_segment.attr("data_response_index", Number.isFinite(segment_index) ? String(segment_index) : "");
@@ -538,25 +564,6 @@ class _message_stream {
         }
     }
 
-    // 段用過未（有內容 或 已綁真 response_id 即算用過——重連攞返嘅空段可以重用）
-    _is_segment_used(j_segment) {
-        // 判定：冇段 → 當用過（呼叫端要開新段）
-        if (j_segment.length === 0) {
-            return true;
-        }
-
-        const segment_response_id = String(j_segment.attr("data-response_id") || "");
-
-        // 判定：已綁真身份 → 用過
-        if (segment_response_id !== "") {
-            return true;
-        }
-
-        const segment_text = j_segment.find(".seg__text").text().trim();
-
-        return segment_text !== "";
-    }
-
     // ready：貼全文（餵 writer——自動接續印）
     async _apply_ready(payload) {
         this.message_id = Number(payload.message_id || this.message_id);
@@ -566,8 +573,19 @@ class _message_stream {
 
         this._apply_state({ status: payload.status });
 
-        await this._write_segment_text("thinking", String(payload.thinking || ""));
-        await this._write_segment_text("result", String(payload.result || ""));
+        // 段身份／狀態（ready 帶落——每型一份；連輪次一齊餵，段一建立就有 meta，唔使等之後 append／turn_done）
+        const ready_segment_meta_map = payload.segment_meta || {};
+
+        const thinking_segment_meta = {};
+        thinking_segment_meta.response_index = this.current_response_index;
+        Object.assign(thinking_segment_meta, ready_segment_meta_map.thinking || {});
+
+        const result_segment_meta = {};
+        result_segment_meta.response_index = this.current_response_index;
+        Object.assign(result_segment_meta, ready_segment_meta_map.result || {});
+
+        await this._write_segment_text("thinking", String(payload.thinking || ""), thinking_segment_meta);
+        await this._write_segment_text("result", String(payload.result || ""), result_segment_meta);
 
         // 由 SSE 重建活動日誌（避免同後端初次 render 重複疊加）
         const ready_log_entries = payload.activity_log || [];
@@ -873,9 +891,12 @@ class _message_stream {
             + "</div>"
             + "</div>";
 
-        j_agent_message.append(segment_html);
+        // *** : 步驟 2——工具段同樣按 index 插入（thinking／result／tool 用同一條規則）
+        const j_new_tool_segment = jQuery(segment_html);
 
-        this.tool_segment = j_agent_message.find(".seg--tool").last();
+        this._insert_segment_by_index(j_agent_message, j_new_tool_segment, this.current_response_index);
+
+        this.tool_segment = j_new_tool_segment;
         this.tool_segment.attr("data-started_ms", String(Date.now()));
 
         // 段帶輪次（多輪工具同時吐時靠佢對位）
@@ -926,10 +947,6 @@ class _message_stream {
 
         this.turn_switching = true;
         this.seg_texts = {};
-
-        // 本輪 thinking／result 都未開段（寫入時各開一個新段）
-        this.turn_new_kinds["thinking"] = true;
-        this.turn_new_kinds["result"] = true;
 
         // 新一輪 → 上一輪工具段收邊（補狀態＋凍結用時），下一個工具段另開
         this._close_tool_items("completed");
@@ -986,14 +1003,13 @@ class _message_stream {
         this.pending_appends = [];
         this.applied_activity_uids = {};
         this.turn_switching = false;
-        this.turn_new_kinds = {};
         this.tool_segment = null;
 
-        // 收尾：派工由後台 sweep 負責（cleanup.php dispatch_next_queued_job）——前端只讀現況
+        // 收尾：即刻推隊頭（後端先對賬終態再前移——回新氣泡＋整排隊列；前端唯一砌氣泡者）
         const queue_instance = await registry().sc_ai_chats().queue();
-        const queue_act_instance = await queue_instance.act().queue_list();
+        const queue_dispatch_instance = await queue_instance.act().queue_dispatch();
 
-        await queue_act_instance.queue_list();
+        await queue_dispatch_instance.queue_dispatch(this.chat_sid);
     }
 
     // 工具段用時凍結（全部格都有狀態＝本段完成 → 定住秒數，唔再跳）

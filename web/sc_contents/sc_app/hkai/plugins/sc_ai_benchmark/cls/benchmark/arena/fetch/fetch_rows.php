@@ -107,30 +107,21 @@ trait fetch_rows
         $request_url .= "?" . http_build_query($fetch_query);
 
         // curl 請求（HTTP 方法照最終規格嘅 fetch_method；RETURNTRANSFER 收 body；連線/整體逾時分開設）
-        $curl_handle = curl_init($request_url);
-        curl_setopt($curl_handle, CURLOPT_CUSTOMREQUEST, strtoupper($navigation_item["fetch_method"]));
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
-        $cacert_path = sc_bundled_cacert_path();
-        if ($cacert_path !== "") {
-            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        // 標準 HTTP（sc_curl——自動 UA＋憑證驗證）
+        $curl_result = sc_curl($request_url, [
+            "method"          => strtoupper($navigation_item["fetch_method"]),
+            "connect_timeout" => 10,
+            "timeout"         => 60,
+        ]);
+
+        // 判定：傳輸層錯誤 → 回錯誤
+        if ($curl_result["errno"] !== 0) {
+            return ["ok" => false, "error" => "curl error: " . $curl_result["error"]];
         }
 
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, 60);
-        $response_body = curl_exec($curl_handle);
-        $curl_error    = curl_error($curl_handle);
-        $curl_status   = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
-        curl_close($curl_handle);
+        $response_body = $curl_result["body"];
+        $curl_status   = $curl_result["status"];
 
-        // 判定：回應 false → 傳輸層錯誤
-        if ($response_body === false) {
-            return ["ok" => false, "error" => "curl response false: " . $curl_error];
-        }
-        // 判定：curl 錯誤字串非空 → 回錯誤
-        if ($curl_error !== "") {
-            return ["ok" => false, "error" => "curl error: " . $curl_error];
-        }
         // 判定：非 200 → 回錯誤（附 body 頭 300 字）
         if ($curl_status !== 200) {
             return ["ok" => false, "error" => "http " . $curl_status . ": " . substr($response_body, 0, 300)];

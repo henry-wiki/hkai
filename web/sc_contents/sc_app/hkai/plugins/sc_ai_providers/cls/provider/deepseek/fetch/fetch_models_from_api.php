@@ -7,57 +7,41 @@ namespace sc\app\hkai\plugins\sc_ai_providers\provider\deepseek\fetch;
 
 trait fetch_models_from_api
 {
-    // 抓取 DeepSeek models 清單（公開 API——免 key；php.ini 已配 cainfo——verifypeer 正常開）
+    // 抓取 DeepSeek models 清單（sc_curl 標準：自動 UA／憑證驗證；有鎖匙即帶 Bearer——API 需驗證）
     private function fetch_models_from_api()
     {
-        // API key（DeepSeek /models 需要 Bearer token——.env 即時讀取）
-        $deepseek_api_key = sc_api_keys()->get("DEEPSEEK_API_KEY", "");
+        // 本 provider 鎖匙（Settings › Provider 存入 sc_api_keys——可為空：留空即匿名請求）
+        $api_key = provider()->get_provider_api_key();
 
-        // 判定：冇 key → 唔發請求（回錯誤明細）
-        if ($deepseek_api_key === "") {
-            return ["error" => "DEEPSEEK_API_KEY is empty (.env)"];
-        }
+        $curl_args            = [];
+        $curl_args["timeout"] = 30;
 
-        // curl 請求（RETURNTRANSFER 收 body；連線/整體逾時分開設）
-        $curl_handle = curl_init(provider()->get_provider_models_api_url());
-        curl_setopt($curl_handle, CURLOPT_HTTPHEADER, [
-            "Authorization: Bearer " . $deepseek_api_key,
-        ]);
-        curl_setopt($curl_handle, CURLOPT_RETURNTRANSFER, true);
-        // CA bundle（相對 PHP 執行檔——唔靠 php.ini 寫死路徑）
-        $cacert_path = sc_bundled_cacert_path();
-        if ($cacert_path !== "") {
-            curl_setopt($curl_handle, CURLOPT_CAINFO, $cacert_path);
+        // 判定：有鎖匙 → 帶 Bearer 驗證
+        if ($api_key !== "") {
+            $curl_args["headers"] = ["Authorization: Bearer " . $api_key];
         }
 
-        curl_setopt($curl_handle, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($curl_handle, CURLOPT_TIMEOUT, 30);
-        $response_body = curl_exec($curl_handle);
-        $curl_error    = curl_error($curl_handle);
-        $curl_status   = curl_getinfo($curl_handle, CURLINFO_HTTP_CODE);
-        curl_close($curl_handle);
-        
-        // 傳輸失敗（錯誤訊息或非 200）→ 回錯誤明細（原文截 300 字）
-        if ($response_body === false) {
-            return ["error" => "curl failed: " . $curl_error];
+        // 標準 HTTP 請求（逾時 30 秒）
+        $curl_result = sc_curl(provider()->get_provider_models_api_url(), $curl_args);
+
+        // 判定：請求失敗（傳輸錯誤或 HTTP >= 400）→ null（呼叫端回錯誤）
+        if ($curl_result["ok"] !== true) {
+            return null;
         }
-        if ($curl_error !== "") {
-            return ["error" => "curl error: " . $curl_error];
-        }
-        if ($curl_status !== 200) {
-            return ["error" => "HTTP " . $curl_status . ": " . substr((string)$response_body, 0, 300)];
-        }
-        
-        // 解析 JSON（無 data 鍵或非陣列 → 回錯誤明細）
-        $api_data = json_decode($response_body, true);
+
+        // 解析結果（sc_curl 已解 JSON——非 JSON 即 null）
+        $api_data = $curl_result["json"];
+
+        // 判定：無 data 鍵 → null
         if (!isset($api_data["data"])) {
-            return ["error" => "unexpected payload: " . substr((string)$response_body, 0, 300)];
+            return null;
         }
+
+        // 判定：data 非陣列 → null
         if (!is_array($api_data["data"])) {
-            return ["error" => "data is not array"];
+            return null;
         }
-        
-        
+
         return $api_data["data"];
     }
 }

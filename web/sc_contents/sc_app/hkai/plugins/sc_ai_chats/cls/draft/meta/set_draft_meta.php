@@ -92,26 +92,11 @@ trait set_draft_meta
     // 寫 meta.json（原子：先寫 .tmp 再 rename——讀者永不見半份；回 bool）
     private function _write_meta_file($draft_dir, $meta_data)
     {
-        $meta_file     = $draft_dir . "/meta.json";
-        $meta_tmp_file = $meta_file . ".tmp";
-        $meta_json     = json_encode($meta_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        $written       = @file_put_contents($meta_tmp_file, $meta_json);
+        $meta_file = $draft_dir . "/meta.json";
 
-        // 判定：寫入失敗 → 假
-        if ($written === false) {
-            return false;
-        }
-        $renamed = @rename($meta_tmp_file, $meta_file);
+        $write_result = sc_write_json($meta_file, $meta_data);
 
-        // 判定：改名失敗 → 清 tmp 並回假
-        if ($renamed === false) {
-            @unlink($meta_tmp_file);
-
-            return false;
-        }
-
-
-        return true;
+        return ($write_result !== false);
     }
 
     // meta 模板（新草稿起點——空值一律 null＝未提交）

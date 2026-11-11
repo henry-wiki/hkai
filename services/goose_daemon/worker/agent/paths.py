@@ -45,6 +45,12 @@ CUSTOM_PROVIDER_TABLE = {
         "api_key_env":  "DEEPSEEK_API_KEY",
         "base_url":     "https://api.deepseek.com/chat/completions",
     },
+    "hermes_agent": {
+        "display_name": "Hermes Agent",
+        "description":  "Nous Portal（OpenAI 相容）",
+        "api_key_env":  "HERMES_AGENT_API_KEY",
+        "base_url":     "https://inference-api.nousresearch.com/v1/chat/completions",
+    },
 }
 
 

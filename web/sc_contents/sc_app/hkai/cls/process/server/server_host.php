@@ -94,10 +94,71 @@ class server_host_Class
         }
 
         // 整份覆寫（今次來源以外嘅條目全部清走）
-        @file_put_contents($whitelist_file, implode("\r\n", $origin_variants) . "\r\n", LOCK_EX);
+        // *** : 步驟 1——先讀入舊白名單（舊實作整份覆寫，會同其他 origin 互相踢走）
+        $existing_lines = [];
+
+        // 判定：舊白名單存在 → 讀入（讀唔到就當空）
+        if (is_file($whitelist_file) === true) {
+            $existing_lines = @file($whitelist_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        }
+
+        $whitelist_entries = $this->collect_whitelist_entries($existing_lines, $origin_variants);
+
+        // *** : 步驟 2——寫回（既有 ∪ 本次 origin ∪ 本機萬用），CRLF 結尾
+        @file_put_contents($whitelist_file, implode("\r\n", array_keys($whitelist_entries)) . "\r\n", LOCK_EX);
     }
 
     // 砌來源變體（domain → http/https × apex/www 四條；IP／localhost／單段名／IPv6 → http/https 兩條）
+    // 合併白名單：既有條目 ∪ 本次 origin ∪ 本機萬用（埠每次隨機，故寫 http://127.0.0.1:*）
+    private function collect_whitelist_entries($existing_lines, $origin_variants)
+    {
+        $whitelist_entries = $this->normalize_whitelist_lines($existing_lines);
+
+        // 判定：本次請求推導出的 origin → 逐個併入
+        foreach ((array)$origin_variants as $origin_variant) {
+            $whitelist_entries[(string)$origin_variant] = true;
+        }
+
+        // 判定：bridge 埠每次啟動會變 → 永遠寫入本機萬用（bridge 端 origin_is_allowed 支援 :*）
+        $whitelist_entries["http://127.0.0.1:*"]  = true;
+        $whitelist_entries["https://127.0.0.1:*"] = true;
+
+        // 判定：條目過多 → 只保留最後 50 條，避免無限增長
+        if (count($whitelist_entries) > 50) {
+            $whitelist_entries = array_slice($whitelist_entries, -50, 50, true);
+        }
+
+        return $whitelist_entries;
+    }
+
+    // 把檔案行整理成 set（去空白、去註解）
+    private function normalize_whitelist_lines($raw_lines)
+    {
+        $whitelist_entries = [];
+
+        // 判定：讀唔到（false）→ 回空集合
+        if (is_array($raw_lines) === false) {
+            return $whitelist_entries;
+        }
+
+        foreach ($raw_lines as $raw_line) {
+            $whitelist_line = trim((string)$raw_line);
+
+            // 判定：空白行 → 跳過
+            if ($whitelist_line === "") {
+                continue;
+            }
+
+            // 判定：註解行 → 跳過
+            if (strpos($whitelist_line, "#") === 0) {
+                continue;
+            }
+
+            $whitelist_entries[$whitelist_line] = true;
+        }
+
+        return $whitelist_entries;
+    }
     private function build_origin_variants($origin)
     {
         $origin_parts = parse_url($origin);

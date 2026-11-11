@@ -168,9 +168,7 @@ class runtime_Class
     // runtime.json 落地（唯一寫檔尾）
     public function save_runtime_configs($runtime_configs)
     {
-        $runtime_configs_json = json_encode($runtime_configs, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        file_put_contents($this->get_runtime_config_file(), $runtime_configs_json, LOCK_EX);
+        sc_write_json($this->get_runtime_config_file(), $runtime_configs);
     }
 
     // runtime.json 是否與最新 runtime configs 不同（檔案不存在 / checksum 不符 → true）
@@ -178,7 +176,7 @@ class runtime_Class
     {
         $runtime_configs = $this->get_runtime_configs();
 
-        $runtime_configs_json     = json_encode($runtime_configs, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        $runtime_configs_json     = sc_pretty_json($runtime_configs);
         $runtime_configs_checksum = md5($runtime_configs_json);
 
         $runtime_config_path = $this->get_runtime_config_file();
